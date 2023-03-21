@@ -108,7 +108,7 @@ CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am__objects_1 = amvp_app-app_main.$(OBJEXT) amvp_app-app_cli.$(OBJEXT) \
-	amvp_app-app_utils.$(OBJEXT)
+	amvp_app-app_utils.$(OBJEXT) amvp_app-app_sha.$(OBJEXT)
 am_amvp_app_OBJECTS = $(am__objects_1)
 amvp_app_OBJECTS = $(am_amvp_app_OBJECTS)
 am__DEPENDENCIES_1 =
@@ -137,6 +137,7 @@ depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = ./$(DEPDIR)/amvp_app-app_cli.Po \
 	./$(DEPDIR)/amvp_app-app_main.Po \
+	./$(DEPDIR)/amvp_app-app_sha.Po \
 	./$(DEPDIR)/amvp_app-app_utils.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
@@ -321,6 +322,7 @@ top_srcdir = @top_srcdir@
 tmp_sources = app_main.c \
               app_cli.c \
               app_utils.c \
+              app_sha.c \
               app_lcl.h \
               ketopt.h
 
@@ -427,6 +429,7 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_app-app_cli.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_app-app_main.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_app-app_sha.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_app-app_utils.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
@@ -500,6 +503,20 @@ amvp_app-app_utils.obj: app_utils.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='app_utils.c' object='amvp_app-app_utils.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(amvp_app_CFLAGS) $(CFLAGS) -c -o amvp_app-app_utils.obj `if test -f 'app_utils.c'; then $(CYGPATH_W) 'app_utils.c'; else $(CYGPATH_W) '$(srcdir)/app_utils.c'; fi`
+
+amvp_app-app_sha.o: app_sha.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(amvp_app_CFLAGS) $(CFLAGS) -MT amvp_app-app_sha.o -MD -MP -MF $(DEPDIR)/amvp_app-app_sha.Tpo -c -o amvp_app-app_sha.o `test -f 'app_sha.c' || echo '$(srcdir)/'`app_sha.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/amvp_app-app_sha.Tpo $(DEPDIR)/amvp_app-app_sha.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='app_sha.c' object='amvp_app-app_sha.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(amvp_app_CFLAGS) $(CFLAGS) -c -o amvp_app-app_sha.o `test -f 'app_sha.c' || echo '$(srcdir)/'`app_sha.c
+
+amvp_app-app_sha.obj: app_sha.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(amvp_app_CFLAGS) $(CFLAGS) -MT amvp_app-app_sha.obj -MD -MP -MF $(DEPDIR)/amvp_app-app_sha.Tpo -c -o amvp_app-app_sha.obj `if test -f 'app_sha.c'; then $(CYGPATH_W) 'app_sha.c'; else $(CYGPATH_W) '$(srcdir)/app_sha.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/amvp_app-app_sha.Tpo $(DEPDIR)/amvp_app-app_sha.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='app_sha.c' object='amvp_app-app_sha.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(amvp_app_CFLAGS) $(CFLAGS) -c -o amvp_app-app_sha.obj `if test -f 'app_sha.c'; then $(CYGPATH_W) 'app_sha.c'; else $(CYGPATH_W) '$(srcdir)/app_sha.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -637,6 +654,7 @@ clean-am: clean-binPROGRAMS clean-generic clean-libtool mostlyclean-am
 distclean: distclean-am
 		-rm -f ./$(DEPDIR)/amvp_app-app_cli.Po
 	-rm -f ./$(DEPDIR)/amvp_app-app_main.Po
+	-rm -f ./$(DEPDIR)/amvp_app-app_sha.Po
 	-rm -f ./$(DEPDIR)/amvp_app-app_utils.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
@@ -685,6 +703,7 @@ installcheck-am:
 maintainer-clean: maintainer-clean-am
 		-rm -f ./$(DEPDIR)/amvp_app-app_cli.Po
 	-rm -f ./$(DEPDIR)/amvp_app-app_main.Po
+	-rm -f ./$(DEPDIR)/amvp_app-app_sha.Po
 	-rm -f ./$(DEPDIR)/amvp_app-app_utils.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
