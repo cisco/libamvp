@@ -1,0 +1,38 @@
+[
+  {
+    "amvVersion": "0.5"
+  },
+  {
+    "testGroups": [
+      {
+        "testType": "AFT",
+        "tgId": 999,
+        "keyLen": 128,
+        "direction": "encrypt",
+        "tests": [
+          {
+            "iv": "00000000000000000000000000000000",
+            "key": "00000000000000000000000000000000",
+            "pt": "F34481EC3CC627BACD5DC3FB08F273E6",
+            "tcId": 1
+          }
+        ]
+      },
+      {
+        "testType": "AFT",
+        "tgId": 999,
+        "keyLen": 128,
+        "direction": "decrypt",
+        "tests": [
+          {
+            "iv": "00000000000000000000000000000000",
+            "tcId": 1040,
+            "key": "00000000000000000000000000000000"
+          }
+        ]
+      }
+    ],
+    "algorithm": "AMVP-AES-CBC",
+    "vsId": 23207
+  }
+]

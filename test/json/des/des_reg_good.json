@@ -1,0 +1,83 @@
+[
+  {
+    "amvVersion": "0.5"
+  },
+  {
+    "capabilityExchange": {
+      "algorithms": [
+        {
+          "algorithm": "TDES-ECB",
+          "direction": [
+            "encrypt",
+            "decrypt"
+          ],
+          "keyingOption": [
+            1
+          ]
+        },
+        {
+          "algorithm": "TDES-CBC",
+          "direction": [
+            "encrypt",
+            "decrypt"
+          ],
+          "keyingOption": [
+            1
+          ]
+        },
+        {
+          "algorithm": "TDES-OFB",
+          "direction": [
+            "encrypt",
+            "decrypt"
+          ],
+          "keyingOption": [
+            1
+          ]
+        },
+        {
+          "algorithm": "TDES-CFB64",
+          "direction": [
+            "encrypt",
+            "decrypt"
+          ],
+          "keyingOption": [
+            1
+          ]
+        },
+        {
+          "algorithm": "TDES-CFB8",
+          "direction": [
+            "encrypt",
+            "decrypt"
+          ],
+          "keyingOption": [
+            1
+          ]
+        },
+        {
+          "algorithm": "TDES-CFB1",
+          "direction": [
+            "encrypt",
+            "decrypt"
+          ],
+          "keyingOption": [
+            1
+          ]
+        },
+        {
+          "algorithm": "TDES-CTR",
+          "direction": [
+              "encrypt",
+              "decrypt"
+          ],
+          "incrementalCounter": true,
+          "overflowCounter": true,
+          "keyingOption": [
+              1
+          ]
+        }
+      ]
+    }
+  }
+]

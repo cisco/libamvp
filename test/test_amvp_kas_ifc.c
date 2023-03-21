@@ -1,0 +1,496 @@
+/** @file */
+/*
+ * Copyright (c) 2021, Cisco Systems, Inc.
+ *
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
+ * this file except in compliance with the License.  You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * https://github.com/cisco/libamvp/LICENSE
+ */
+
+
+#include "ut_common.h"
+#include "amvp/amvp_lcl.h"
+
+static AMVP_CTX *ctx = NULL;
+static AMVP_RESULT rv = 0;
+static JSON_Object *obj = NULL;
+static JSON_Value *val = NULL;
+static char cvalue[] = "same";
+
+static void setup(void) {
+    setup_empty_ctx(&ctx);
+    char *expo_str = calloc(7, sizeof(char));
+    strncpy(expo_str, "010001", 7); // RSA_F4
+
+    /* Support is for IFC-SSC for hashZ only */
+    rv = amvp_cap_kas_ifc_enable(ctx, AMVP_KAS_IFC_SSC, &dummy_handler_success);
+    cr_assert(rv == AMVP_SUCCESS);
+    rv = amvp_cap_set_prereq(ctx, AMVP_KAS_IFC_SSC, AMVP_PREREQ_RSA, cvalue);
+    cr_assert(rv == AMVP_SUCCESS);
+    rv = amvp_cap_set_prereq(ctx, AMVP_KAS_IFC_SSC, AMVP_PREREQ_RSADP, cvalue);
+    cr_assert(rv == AMVP_SUCCESS);
+    rv = amvp_cap_set_prereq(ctx, AMVP_KAS_IFC_SSC, AMVP_PREREQ_SHA, cvalue);
+    cr_assert(rv == AMVP_SUCCESS);
+    rv = amvp_cap_set_prereq(ctx, AMVP_KAS_IFC_SSC, AMVP_PREREQ_DRBG, cvalue);
+    cr_assert(rv == AMVP_SUCCESS);
+    rv = amvp_cap_kas_ifc_set_parm(ctx, AMVP_KAS_IFC_SSC, AMVP_KAS_IFC_KAS1, AMVP_KAS_IFC_INITIATOR);
+    cr_assert(rv == AMVP_SUCCESS);
+    rv = amvp_cap_kas_ifc_set_parm(ctx, AMVP_KAS_IFC_SSC, AMVP_KAS_IFC_KAS1, AMVP_KAS_IFC_RESPONDER);
+    cr_assert(rv == AMVP_SUCCESS);
+    rv = amvp_cap_kas_ifc_set_parm(ctx, AMVP_KAS_IFC_SSC, AMVP_KAS_IFC_MODULO, 2048);
+    cr_assert(rv == AMVP_SUCCESS);
+    rv = amvp_cap_kas_ifc_set_parm(ctx, AMVP_KAS_IFC_SSC, AMVP_KAS_IFC_MODULO, 3072);
+    cr_assert(rv == AMVP_SUCCESS);
+    rv = amvp_cap_kas_ifc_set_parm(ctx, AMVP_KAS_IFC_SSC, AMVP_KAS_IFC_MODULO, 4096);
+    cr_assert(rv == AMVP_SUCCESS);
+    rv = amvp_cap_kas_ifc_set_parm(ctx, AMVP_KAS_IFC_SSC, AMVP_KAS_IFC_KEYGEN_METHOD, AMVP_KAS_IFC_RSAKPG1_BASIC);
+    cr_assert(rv == AMVP_SUCCESS);
+    rv = amvp_cap_kas_ifc_set_parm(ctx, AMVP_KAS_IFC_SSC, AMVP_KAS_IFC_HASH, AMVP_SHA512);
+    cr_assert(rv == AMVP_SUCCESS);
+    rv = amvp_cap_kas_ifc_set_exponent(ctx, AMVP_KAS_IFC_SSC, AMVP_KAS_IFC_FIXEDPUBEXP, expo_str);
+    cr_assert(rv == AMVP_SUCCESS);
+
+    free(expo_str);
+}
+
+static void teardown(void) {
+    if (ctx) teardown_ctx(&ctx);
+}
+
+/*
+ * Test capabilites API.
+ */
+Test(KAS_IFC_CAPABILITY, good) {
+    char *expo_str = calloc(7, sizeof(char));
+    strncpy(expo_str, "010001", 7); // RSA_F4
+
+    setup_empty_ctx(&ctx);
+    /* Support is for IFC-SSC for hashZ only */
+    rv = amvp_cap_kas_ifc_enable(ctx, AMVP_KAS_IFC_SSC, &dummy_handler_success);
+    cr_assert(rv == AMVP_SUCCESS);
+    rv = amvp_cap_set_prereq(ctx, AMVP_KAS_IFC_SSC, AMVP_PREREQ_RSA, cvalue);
+    cr_assert(rv == AMVP_SUCCESS);
+    rv = amvp_cap_set_prereq(ctx, AMVP_KAS_IFC_SSC, AMVP_PREREQ_RSADP, cvalue);
+    cr_assert(rv == AMVP_SUCCESS);
+    rv = amvp_cap_set_prereq(ctx, AMVP_KAS_IFC_SSC, AMVP_PREREQ_SHA, cvalue);
+    cr_assert(rv == AMVP_SUCCESS);
+    rv = amvp_cap_set_prereq(ctx, AMVP_KAS_IFC_SSC, AMVP_PREREQ_DRBG, cvalue);
+    cr_assert(rv == AMVP_SUCCESS);
+    rv = amvp_cap_kas_ifc_set_parm(ctx, AMVP_KAS_IFC_SSC, AMVP_KAS_IFC_KAS1, AMVP_KAS_IFC_INITIATOR);
+    cr_assert(rv == AMVP_SUCCESS);
+    rv = amvp_cap_kas_ifc_set_parm(ctx, AMVP_KAS_IFC_SSC, AMVP_KAS_IFC_KAS1, AMVP_KAS_IFC_RESPONDER);
+    cr_assert(rv == AMVP_SUCCESS);
+    rv = amvp_cap_kas_ifc_set_parm(ctx, AMVP_KAS_IFC_SSC, AMVP_KAS_IFC_MODULO, 2048);
+    cr_assert(rv == AMVP_SUCCESS);
+    rv = amvp_cap_kas_ifc_set_parm(ctx, AMVP_KAS_IFC_SSC, AMVP_KAS_IFC_MODULO, 3072);
+    cr_assert(rv == AMVP_SUCCESS);
+    rv = amvp_cap_kas_ifc_set_parm(ctx, AMVP_KAS_IFC_SSC, AMVP_KAS_IFC_MODULO, 4096);
+    cr_assert(rv == AMVP_SUCCESS);
+    rv = amvp_cap_kas_ifc_set_parm(ctx, AMVP_KAS_IFC_SSC, AMVP_KAS_IFC_KEYGEN_METHOD, AMVP_KAS_IFC_RSAKPG1_BASIC);
+    cr_assert(rv == AMVP_SUCCESS);
+    rv = amvp_cap_kas_ifc_set_parm(ctx, AMVP_KAS_IFC_SSC, AMVP_KAS_IFC_HASH, AMVP_SHA512);
+    cr_assert(rv == AMVP_SUCCESS);
+    rv = amvp_cap_kas_ifc_set_exponent(ctx, AMVP_KAS_IFC_SSC, AMVP_KAS_IFC_FIXEDPUBEXP, expo_str);
+    cr_assert(rv == AMVP_SUCCESS);
+
+    teardown_ctx(&ctx);
+    free(expo_str);
+}
+
+/*
+ * Test the KAT handler API.
+ * The ctx is empty (no capabilities), expecting failure.
+ * SSC mode.
+ */
+Test(KAS_IFC_SSC_API, empty_ctx) {
+    setup_empty_ctx(&ctx);
+
+    val = json_parse_file("json/kas_ifc/kas_ifc_ssc.json");
+
+    obj = ut_get_obj_from_rsp(val);
+    if (!obj) {
+        AMVP_LOG_ERR("JSON obj parse error");
+        goto end;
+    }
+
+    rv  = amvp_kas_ifc_ssc_kat_handler(ctx, obj);
+    cr_assert(rv == AMVP_UNSUPPORTED_OP);
+    json_value_free(val);
+
+end:
+    if (ctx) teardown_ctx(&ctx);
+}
+
+/*
+ * Test KAT handler API.
+ * The ctx is NULL, expecting failure.
+ */
+Test(KAS_IFC_API, null_ctx) {
+    val = json_parse_file("json/kas_ifc/kas_ifc_ssc.json");
+
+    obj = ut_get_obj_from_rsp(val);
+    if (!obj) {
+        AMVP_LOG_ERR("JSON obj parse error");
+        return;
+    }
+
+    /* Test with NULL JSON object */
+    rv  = amvp_kas_ifc_ssc_kat_handler(NULL, obj);
+    cr_assert(rv == AMVP_NO_CTX);
+    json_value_free(val);
+}
+
+/*
+ * Test the KAT handler API.
+ * The obj is null, expecting failure.
+ */
+Test(KAS_IFC_API, null_json_obj, .init = setup, .fini = teardown) {
+    rv  = amvp_kas_ifc_ssc_kat_handler(ctx, NULL);
+    cr_assert(rv == AMVP_MALFORMED_JSON);
+}
+
+/* //////////////////////
+ * SSC mode
+ * /////////////////////
+ */
+
+/*
+ * This is a good JSON.
+ * Expecting success.
+ */
+Test(KAS_IFC_SSC_HANDLER, good, .init = setup, .fini = teardown) {
+    val = json_parse_file("json/kas_ifc/kas_ifc_ssc.json");
+
+    obj = ut_get_obj_from_rsp(val);
+    if (!obj) {
+        AMVP_LOG_ERR("JSON obj parse error");
+        return;
+    }
+    rv = amvp_kas_ifc_ssc_kat_handler(ctx, obj);
+    cr_assert(rv == AMVP_SUCCESS);
+    json_value_free(val);
+}
+
+/*
+ * The key:"algorithm" is missing.
+ */
+Test(KAS_IFC_SSC_HANDLER, missing_algorithm, .init = setup, .fini = teardown) {
+    val = json_parse_file("json/kas_ifc/kas_ifc_ssc_1.json");
+
+    obj = ut_get_obj_from_rsp(val);
+    if (!obj) {
+        AMVP_LOG_ERR("JSON obj parse error");
+        return;
+    }
+    rv = amvp_kas_ifc_ssc_kat_handler(ctx, obj);
+    cr_assert(rv == AMVP_MALFORMED_JSON);
+    json_value_free(val);
+}
+
+/*
+ * The key:"testType" is missing.
+ */
+Test(KAS_IFC_SSC_HANDLER, missing_testType, .init = setup, .fini = teardown) {
+    val = json_parse_file("json/kas_ifc/kas_ifc_ssc_2.json");
+
+    obj = ut_get_obj_from_rsp(val);
+    if (!obj) {
+        AMVP_LOG_ERR("JSON obj parse error");
+        return;
+    }
+    rv = amvp_kas_ifc_ssc_kat_handler(ctx, obj);
+    cr_assert(rv == AMVP_MISSING_ARG);
+    json_value_free(val);
+}
+
+/*
+ * The value for key:"testType" is wrong.
+ */
+Test(KAS_IFC_SSC_HANDLER, wrong_testType, .init = setup, .fini = teardown) {
+    val = json_parse_file("json/kas_ifc/kas_ifc_ssc_3.json");
+
+    obj = ut_get_obj_from_rsp(val);
+    if (!obj) {
+        AMVP_LOG_ERR("JSON obj parse error");
+        return;
+    }
+    rv = amvp_kas_ifc_ssc_kat_handler(ctx, obj);
+    cr_assert(rv == AMVP_INVALID_ARG);
+    json_value_free(val);
+}
+
+/*
+ * The key:"hashFunctionZ" is missing.
+ */
+Test(KAS_IFC_SSC_HANDLER, missing_hashFunctionZ, .init = setup, .fini = teardown) {
+    val = json_parse_file("json/kas_ifc/kas_ifc_ssc_4.json");
+
+    obj = ut_get_obj_from_rsp(val);
+    if (!obj) {
+        AMVP_LOG_ERR("JSON obj parse error");
+        return;
+    }
+    rv = amvp_kas_ifc_ssc_kat_handler(ctx, obj);
+    cr_assert(rv == AMVP_MISSING_ARG);
+    json_value_free(val);
+}
+
+/*
+ * The value for key:"hashFunctionZ" is wrong.
+ */
+Test(KAS_IFC_SSC_HANDLER, wrong_hashFunctionZ, .init = setup, .fini = teardown) {
+    val = json_parse_file("json/kas_ifc/kas_ifc_ssc_5.json");
+
+    obj = ut_get_obj_from_rsp(val);
+    if (!obj) {
+        AMVP_LOG_ERR("JSON obj parse error");
+        return;
+    }
+    rv = amvp_kas_ifc_ssc_kat_handler(ctx, obj);
+    cr_assert(rv == AMVP_INVALID_ARG);
+    json_value_free(val);
+}
+
+/*
+ * The key:"iutP" is missing.
+ */
+Test(KAS_IFC_SSC_HANDLER, missing_p, .init = setup, .fini = teardown) {
+    val = json_parse_file("json/kas_ifc/kas_ifc_ssc_6.json");
+
+    obj = ut_get_obj_from_rsp(val);
+    if (!obj) {
+        AMVP_LOG_ERR("JSON obj parse error");
+        return;
+    }
+    rv = amvp_kas_ifc_ssc_kat_handler(ctx, obj);
+    cr_assert(rv == AMVP_MISSING_ARG);
+    json_value_free(val);
+}
+
+/*
+ * The key:"iutQ" is missing.
+ */
+Test(KAS_IFC_SSC_HANDLER, missing_q, .init = setup, .fini = teardown) {
+    val = json_parse_file("json/kas_ifc/kas_ifc_ssc_7.json");
+
+    obj = ut_get_obj_from_rsp(val);
+    if (!obj) {
+        AMVP_LOG_ERR("JSON obj parse error");
+        return;
+    }
+    rv = amvp_kas_ifc_ssc_kat_handler(ctx, obj);
+    cr_assert(rv == AMVP_MISSING_ARG);
+    json_value_free(val);
+}
+
+/*
+ * The key:"iutD" is missing.
+ */
+Test(KAS_IFC_SSC_HANDLER, missing_d, .init = setup, .fini = teardown) {
+    val = json_parse_file("json/kas_ifc/kas_ifc_ssc_8.json");
+
+    obj = ut_get_obj_from_rsp(val);
+    if (!obj) {
+        AMVP_LOG_ERR("JSON obj parse error");
+        return;
+    }
+    rv = amvp_kas_ifc_ssc_kat_handler(ctx, obj);
+    cr_assert(rv == AMVP_MISSING_ARG);
+    json_value_free(val);
+}
+
+/*
+ * The key:"iutE" is missing.
+ */
+Test(KAS_IFC_SSC_HANDLER, missing_e, .init = setup, .fini = teardown) {
+    val = json_parse_file("json/kas_ifc/kas_ifc_ssc_9.json");
+
+    obj = ut_get_obj_from_rsp(val);
+    if (!obj) {
+        AMVP_LOG_ERR("JSON obj parse error");
+        return;
+    }
+    rv = amvp_kas_ifc_ssc_kat_handler(ctx, obj);
+    cr_assert(rv == AMVP_MISSING_ARG);
+    json_value_free(val);
+}
+
+/*
+ * The key:"iutN" is missing.
+ */
+Test(KAS_IFC_SSC_HANDLER, missing_n, .init = setup, .fini = teardown) {
+    val = json_parse_file("json/kas_ifc/kas_ifc_ssc_10.json");
+
+    obj = ut_get_obj_from_rsp(val);
+    if (!obj) {
+        AMVP_LOG_ERR("JSON obj parse error");
+        return;
+    }
+    rv = amvp_kas_ifc_ssc_kat_handler(ctx, obj);
+    cr_assert(rv == AMVP_MISSING_ARG);
+    json_value_free(val);
+}
+
+/*
+ * The key:"ServerC" is missing.
+ */
+Test(KAS_IFC_SSC_HANDLER, missing_serverc, .init = setup, .fini = teardown) {
+    val = json_parse_file("json/kas_ifc/kas_ifc_ssc_11.json");
+
+    obj = ut_get_obj_from_rsp(val);
+    if (!obj) {
+        AMVP_LOG_ERR("JSON obj parse error");
+        return;
+    }
+    rv = amvp_kas_ifc_ssc_kat_handler(ctx, obj);
+    cr_assert(rv == AMVP_MISSING_ARG);
+    json_value_free(val);
+}
+
+/*
+ * The key:"ServerE" is missing.
+ */
+Test(KAS_IFC_SSC_HANDLER, missing_servere, .init = setup, .fini = teardown) {
+    val = json_parse_file("json/kas_ifc/kas_ifc_ssc_12.json");
+
+    obj = ut_get_obj_from_rsp(val);
+    if (!obj) {
+        AMVP_LOG_ERR("JSON obj parse error");
+        return;
+    }
+    rv = amvp_kas_ifc_ssc_kat_handler(ctx, obj);
+    cr_assert(rv == AMVP_MISSING_ARG);
+    json_value_free(val);
+}
+
+/*
+ * The key:"iutC" is missing.
+ */
+Test(KAS_IFC_SSC_HANDLER, missing_c, .init = setup, .fini = teardown) {
+    val = json_parse_file("json/kas_ifc/kas_ifc_ssc_13.json");
+
+    obj = ut_get_obj_from_rsp(val);
+    if (!obj) {
+        AMVP_LOG_ERR("JSON obj parse error");
+        return;
+    }
+    rv = amvp_kas_ifc_ssc_kat_handler(ctx, obj);
+    cr_assert(rv == AMVP_MISSING_ARG);
+    json_value_free(val);
+}
+/*
+ * The key:"z" is missing. NOTE: This only applies to test groups where a hash function is NOT provided
+ */
+Test(KAS_IFC_SSC_HANDLER, missing_z, .init = setup, .fini = teardown) {
+    val = json_parse_file("json/kas_ifc/kas_ifc_ssc_14.json");
+
+    obj = ut_get_obj_from_rsp(val);
+    if (!obj) {
+        AMVP_LOG_ERR("JSON obj parse error");
+        return;
+    }
+    rv = amvp_kas_ifc_ssc_kat_handler(ctx, obj);
+    cr_assert(rv == AMVP_MISSING_ARG);
+    json_value_free(val);
+}
+
+#if 0 /* hashZ is not required for KAS1 test. Re-enable when KAS2 tests are added if needed */
+/*
+ * The key:"hashZ" is missing.
+ */
+Test(KAS_IFC_SSC_HANDLER, missing_hashz, .init = setup, .fini = teardown) {
+    val = json_parse_file("json/kas_ifc/kas_ifc_ssc_15.json");
+
+    obj = ut_get_obj_from_rsp(val);
+    if (!obj) {
+        AMVP_LOG_ERR("JSON obj parse error");
+        return;
+    }
+    rv = amvp_kas_ifc_ssc_kat_handler(ctx, obj);
+    cr_assert(rv == AMVP_MISSING_ARG);
+    json_value_free(val);
+}
+#endif
+
+/*
+ * The key:"scheme" is missing.
+ */
+Test(KAS_IFC_SSC_HANDLER, missing_scheme, .init = setup, .fini = teardown) {
+    val = json_parse_file("json/kas_ifc/kas_ifc_ssc_16.json");
+
+    obj = ut_get_obj_from_rsp(val);
+    if (!obj) {
+        AMVP_LOG_ERR("JSON obj parse error");
+        return;
+    }
+    rv = amvp_kas_ifc_ssc_kat_handler(ctx, obj);
+    cr_assert(rv == AMVP_MISSING_ARG);
+    json_value_free(val);
+}
+
+/*
+ * The key:"kaskRole" is missing.
+ */
+Test(KAS_IFC_SSC_HANDLER, missing_kasrole, .init = setup, .fini = teardown) {
+    val = json_parse_file("json/kas_ifc/kas_ifc_ssc_17.json");
+
+    obj = ut_get_obj_from_rsp(val);
+    if (!obj) {
+        AMVP_LOG_ERR("JSON obj parse error");
+        return;
+    }
+    rv = amvp_kas_ifc_ssc_kat_handler(ctx, obj);
+    cr_assert(rv == AMVP_MISSING_ARG);
+    json_value_free(val);
+}
+
+/*
+ * The key:"keygen" is missing.
+ */
+Test(KAS_IFC_SSC_HANDLER, missing_keygen, .init = setup, .fini = teardown) {
+    val = json_parse_file("json/kas_ifc/kas_ifc_ssc_18.json");
+
+    obj = ut_get_obj_from_rsp(val);
+    if (!obj) {
+        AMVP_LOG_ERR("JSON obj parse error");
+        return;
+    }
+    rv = amvp_kas_ifc_ssc_kat_handler(ctx, obj);
+    cr_assert(rv == AMVP_MISSING_ARG);
+    json_value_free(val);
+}
+
+/*
+ * The key:"modulo" is missing.
+ */
+Test(KAS_IFC_SSC_HANDLER, missing_modulo, .init = setup, .fini = teardown) {
+    val = json_parse_file("json/kas_ifc/kas_ifc_ssc_19.json");
+
+    obj = ut_get_obj_from_rsp(val);
+    if (!obj) {
+        AMVP_LOG_ERR("JSON obj parse error");
+        return;
+    }
+    rv = amvp_kas_ifc_ssc_kat_handler(ctx, obj);
+    cr_assert(rv == AMVP_MISSING_ARG);
+    json_value_free(val);
+}
+
+/*
+ * The key:"fixedPubExp" is missing.
+ */
+Test(KAS_IFC_SSC_HANDLER, missing_fixedpub, .init = setup, .fini = teardown) {
+    val = json_parse_file("json/kas_ifc/kas_ifc_ssc_20.json");
+
+    obj = ut_get_obj_from_rsp(val);
+    if (!obj) {
+        AMVP_LOG_ERR("JSON obj parse error");
+        return;
+    }
+    rv = amvp_kas_ifc_ssc_kat_handler(ctx, obj);
+    cr_assert(rv == AMVP_MISSING_ARG);
+    json_value_free(val);
+}
+
+

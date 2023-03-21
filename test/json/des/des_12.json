@@ -1,0 +1,42 @@
+[
+  {
+    "amvVersion": "0.5"
+  },
+  {
+    "testGroups": [
+      {
+        "testType": "AFT",
+        "tgId": 999,
+        "keyingOption": 1,
+        "tests": [
+          {
+            "key2": "1046913489980131",
+            "key1": "1046913489980131",
+            "key3": "1046913489980131",
+            "tcId": 1,
+            "iv": "0000000000000000"
+          }
+        ],
+        "direction": "encrypt"
+      },
+      {
+        "testType": "AFT",
+        "tgId": 999,
+        "keyingOption": 1,
+        "tests": [
+          {
+            "key2": "1046913489980131",
+            "key1": "1046913489980131",
+            "key3": "1046913489980131",
+            "ct": "88D55E54F54C97B4",
+            "tcId": 236,
+            "iv": "0000000000000000"
+          }
+        ],
+        "direction": "decrypt"
+      }
+    ],
+    "vsId": 21906,
+    "algorithm": "AMVP-TDES-CBC"
+  }
+]
