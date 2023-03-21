@@ -34,14 +34,6 @@ libamvp also requires a client certificate and key pair,
 which the AMVP server uses to identify the client. You will need to
 contact NIST to register your client certificate with their server.
 
-The murl directory contains experimental code to replace the Curl
-dependency. This may be useful for target platforms that don't support
-Curl, such as Android or iOS. Murl is a "minimal" Curl implementation.
-It implements a handful of the Curl API entry points used by libamvp.
-The Murl code is currently in an experimental stage and is not supported
-or maintained as part of libamvp and should not be used in any
-production environment.
-
 
 ## Dependencies
 * autotools
