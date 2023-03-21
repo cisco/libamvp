@@ -1,0 +1,14 @@
+[
+    {
+      "url": "/amvp/v1/modules"
+    }, 
+    {
+        "name": "OpenSSL FOM Algorithms",
+        "version": "6.3",
+        "type": "Firmware",
+        "vendorUrl": "/amvp/v1/vendors/11175",
+        "addressUrl": "/amvp/v1/vendors/11175/addresses/11138",
+        "contactUrls": ["/amvp/v1/persons/14941" ],
+        "description" : "Software FOM"
+    }
+]
