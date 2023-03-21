@@ -166,13 +166,6 @@ else
     AC_MSG_RESULT(no)
 fi
 
-# Enable a wrapper to turn amvp_app into a small library (Only for static offline builds)
-AC_ARG_ENABLE([wrapper-library],
-[AS_HELP_STRING([--enable-wrapper-library],
-[Designed for use with offline builds, turns amvp_app into a single API library for processing offline tests])],
-[wraplib="$enableval"],
-[wrap_lib=false])
-
 ########################################################################################
 # End reading arguments. Begin testing presence of libs and setting certain make vars. #
 ########################################################################################
@@ -313,8 +306,6 @@ if test "x$with_criterion" != "xno" ; then
 fi
 
 AM_CONDITIONAL([UNIT_TEST_SUPPORTED], [test "x$with_criteriondir" != "xno"])
-
-AM_CONDITIONAL([BUILD_APP_AS_LIB], [test "x$wrap_lib" != "xfalse"])
 
 ##
 # SafeC Stub
