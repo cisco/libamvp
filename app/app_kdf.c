@@ -156,7 +156,7 @@ int app_kdf135_x942_handler(AMVP_TEST_CASE *test_case) {
         iter++;
         memcpy_s(&amvp_info[iter], info_len - iter, stc->supp_priv_info, stc->supp_priv_len);
 
-        OSSL_PARAM_BLD_push_octet_string(pbld, OSSL_KDF_PARAM_X942_AMVPINFO, amvp_info, info_len);
+        OSSL_PARAM_BLD_push_octet_string(pbld, OSSL_KDF_PARAM_X942_ACVPINFO, amvp_info, info_len);
     }
     OSSL_PARAM_BLD_push_int(pbld, OSSL_KDF_PARAM_X942_USE_KEYBITS, 0);
 
