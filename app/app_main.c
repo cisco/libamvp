@@ -57,32 +57,32 @@ char value[JSON_STRING_LENGTH] = "same";
 static void setup_session_parameters(void) {
     char *tmp;
 
-    server = getenv("ACV_SERVER");
+    server = getenv("AMV_SERVER");
     if (!server) {
          server = DEFAULT_SERVER;
      }
 
-    tmp = getenv("ACV_PORT");
+    tmp = getenv("AMV_PORT");
     if (tmp) port = atoi(tmp);
     if (!port) port = DEFAULT_PORT;
 
-    path_segment = getenv("ACV_URI_PREFIX");
+    path_segment = getenv("AMV_URI_PREFIX");
     if (!path_segment) path_segment = DEFAULT_URI_PREFIX;
 
-    api_context = getenv("ACV_API_CONTEXT");
+    api_context = getenv("AMV_API_CONTEXT");
     if (!api_context) api_context = "";
 
-    ca_chain_file = getenv("ACV_CA_FILE");
-    cert_file = getenv("ACV_CERT_FILE");
-    key_file = getenv("ACV_KEY_FILE");
+    ca_chain_file = getenv("AMV_CA_FILE");
+    cert_file = getenv("AMV_CERT_FILE");
+    key_file = getenv("AMV_KEY_FILE");
 
     printf("Using the following parameters:\n\n");
-    printf("    ACV_SERVER:     %s\n", server);
-    printf("    ACV_PORT:       %d\n", port);
-    printf("    ACV_URI_PREFIX: %s\n", path_segment);
-    if (ca_chain_file) printf("    ACV_CA_FILE:    %s\n", ca_chain_file);
-    if (cert_file) printf("    ACV_CERT_FILE:  %s\n", cert_file);
-    if (key_file) printf("    ACV_KEY_FILE:   %s\n", key_file);
+    printf("    AMV_SERVER:     %s\n", server);
+    printf("    AMV_PORT:       %d\n", port);
+    printf("    AMV_URI_PREFIX: %s\n", path_segment);
+    if (ca_chain_file) printf("    AMV_CA_FILE:    %s\n", ca_chain_file);
+    if (cert_file) printf("    AMV_CERT_FILE:  %s\n", cert_file);
+    if (key_file) printf("    AMV_KEY_FILE:   %s\n", key_file);
     printf("\n");
 }
 
@@ -318,7 +318,7 @@ int main(int argc, char **argv) {
 
     strncmp_s(DEFAULT_SERVER, DEFAULT_SERVER_LEN, server, DEFAULT_SERVER_LEN, &diff);
     if (!diff) {
-         printf("Warning: No server set, using default. Please define ACV_SERVER in your environment.\n");
+         printf("Warning: No server set, using default. Please define AMV_SERVER in your environment.\n");
          printf("Run amvp_app --help for more information on this and other environment variables.\n\n");
     }
 
@@ -385,7 +385,11 @@ int main(int argc, char **argv) {
         }
         goto end;
     }
-    
+
+    if (cfg.mod_cert_req) {
+        rv = amvp_mark_as_cert_req(ctx, cfg.mod_cert_req_file);
+    }
+
     /*
      * Run the test session.
      * Perform a FIPS validation on this test session if specified.

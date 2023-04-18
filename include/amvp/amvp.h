@@ -4410,7 +4410,8 @@ AMVP_SUB_DSA amvp_get_dsa_alg(AMVP_CIPHER cipher);
 AMVP_SUB_KDF amvp_get_kdf_alg(AMVP_CIPHER cipher);
 AMVP_SUB_DRBG amvp_get_drbg_alg(AMVP_CIPHER cipher);
 AMVP_SUB_KAS amvp_get_kas_alg(AMVP_CIPHER cipher);
-
+AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx);
+AMVP_RESULT amvp_mark_as_cert_req(AMVP_CTX *ctx, char *filename);
 /** @} */
 /** @internal ALL APIS SHOULD BE ADDED ABOVE THESE BLOCKS */
 

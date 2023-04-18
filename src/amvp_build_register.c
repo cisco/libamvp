@@ -4873,7 +4873,7 @@ AMVP_RESULT amvp_build_full_registration(AMVP_CTX *ctx, char **out, int *out_len
         return AMVP_MALLOC_FAIL;
     }
     top_array = json_array((const JSON_Value *)top_array_val);
-    json_array_append_value(top_array, amvp_version_json_value());
+    //json_array_append_value(top_array, amvp_version_json_value());
 
     val = json_value_init_object();
     obj = json_value_get_object(val);
@@ -4911,7 +4911,7 @@ AMVP_RESULT amvp_build_validation(AMVP_CTX *ctx,
      */
     top_array_val = json_value_init_array();
     top_array = json_array((const JSON_Value *)top_array_val);
-    json_array_append_value(top_array, amvp_version_json_value());
+    //json_array_append_value(top_array, amvp_version_json_value());
 
     /*
      * Start the next object, which will be appended to the top-level array

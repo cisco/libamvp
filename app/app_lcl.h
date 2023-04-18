@@ -68,6 +68,7 @@ typedef struct app_config {
     char kat_file[JSON_FILENAME_LENGTH + 1];
     char validation_metadata_file[JSON_FILENAME_LENGTH + 1];
     char save_file[JSON_FILENAME_LENGTH + 1];
+    char mod_cert_req_file[JSON_FILENAME_LENGTH + 1];
 
     /*
      * Algorithm Flags
@@ -80,6 +81,7 @@ typedef struct app_config {
     int kas_ecc; int kas_ffc; int kas_ifc; int kda; int kts_ifc;
     int kdf;
     int safe_primes;
+    int mod_cert_req;
     int testall; /* So the app can check whether the user indicated to test all possible algorithms */
 } APP_CONFIG;
 
