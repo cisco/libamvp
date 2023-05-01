@@ -849,11 +849,11 @@ AMVP_RESULT amvp_create_array(JSON_Object **obj, JSON_Value **val, JSON_Array **
         return AMVP_JSON_ERR;
     }
 
-    ver_val = json_value_init_object();
-    ver_obj = json_value_get_object(ver_val);
-    if (!ver_obj) {
-        return AMVP_JSON_ERR;
-    }
+    //ver_val = json_value_init_object();
+    //ver_obj = json_value_get_object(ver_val);
+    //if (!ver_obj) {
+        //return AMVP_JSON_ERR;
+    //}
 
     //json_object_set_string(ver_obj, "amvVersion", AMVP_VERSION);
     //if (json_array_append_value(reg_arry, ver_val) != JSONSuccess) {

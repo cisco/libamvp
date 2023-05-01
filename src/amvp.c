@@ -617,6 +617,7 @@ AMVP_RESULT amvp_free_test_session(AMVP_CTX *ctx) {
     if (ctx->save_filename) { free(ctx->save_filename); }
     if (ctx->post_filename) { free(ctx->post_filename); }
     if (ctx->put_filename) { free(ctx->put_filename); }
+    if (ctx->mod_cert_req_file) { free(ctx->mod_cert_req_file); }
     if (ctx->jwt_token) { free(ctx->jwt_token); }
     if (ctx->tmp_jwt) { free(ctx->tmp_jwt); }
     if (ctx->vs_list) {
@@ -2581,7 +2582,7 @@ AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx) {
         goto end;
     }
     ctx->registration = tmp_json;
-    reg = json_serialize_to_string_pretty(tmp_json, &reg_len);
+    reg = json_serialize_to_string(tmp_json, &reg_len);
     
     AMVP_LOG_STATUS("Sending module cert request...");
     AMVP_LOG_INFO("%s", reg);
