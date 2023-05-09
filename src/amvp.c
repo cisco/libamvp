@@ -2586,7 +2586,7 @@ AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx) {
     
     AMVP_LOG_STATUS("Sending module cert request...");
     AMVP_LOG_INFO("%s", reg);
-    rv = amvp_transport_post(ctx, "/amvp/v1/certRequest", reg, reg_len);
+    rv = amvp_transport_post(ctx, "/amv/v1/certRequest", reg, reg_len);
     
     if (rv == AMVP_SUCCESS) {
         rv = amvp_parse_mod_cert_req(ctx);
@@ -2828,7 +2828,7 @@ AMVP_RESULT amvp_notify_large(AMVP_CTX *ctx,
     /* 
      * Cut off the https://name:port/ prefix and /results suffix
      */
-    strstr_s((char *)url, AMVP_ATTR_URL_MAX, "/amvp/v1", 8, &substr);
+    strstr_s((char *)url, AMVP_ATTR_URL_MAX, "/amv/v1", 8, &substr);
     strcpy_s(snipped_url, AMVP_ATTR_URL_MAX, substr);
     strstr_s(snipped_url, AMVP_ATTR_URL_MAX, "/results", 8, &substr);
     if (!substr) {
@@ -3954,7 +3954,7 @@ AMVP_RESULT amvp_post_data(AMVP_CTX *ctx, char *filename) {
     json_array_append_value(reg_arry, post_val);
 
     json_result = json_serialize_to_string_pretty(reg_arry_val, &len);
-    AMVP_LOG_INFO("\nPOST Data: %s\n\n", json_result);
+    AMVP_LOG_INFO("\nPOST Data: %s, %s\n\n", path, json_result);
     json_value_free(reg_arry_val);
 
     rv = amvp_transport_post(ctx, path, json_result, len);
@@ -4221,7 +4221,7 @@ check:
     }
 
     if (ctx->mod_cert_req) {
-        static char validation[] = "[{ \"implementationUrls\": [\"/acvp/v1/1234\", \"/esv/v1/5678\", \"amvp/v1/13780\" ] }]";
+        static char validation[] = "[{ \"implementationUrls\": [\"/acvp/v1/1234\", \"/esv/v1/5678\", \"amv/v1/13780\" ] }]";
         int validation_len = sizeof(validation);
         /*
          * PUT the validation with the AMVP server and get the response,
