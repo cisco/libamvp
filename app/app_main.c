@@ -386,6 +386,10 @@ int main(int argc, char **argv) {
         goto end;
     }
 
+    if (cfg.post_resources) {
+        rv = amvp_mark_as_post_resources(ctx, cfg.post_resources_filename);
+    }
+
     if (cfg.mod_cert_req) {
         rv = amvp_mark_as_cert_req(ctx, cfg.mod_cert_req_file);
     }

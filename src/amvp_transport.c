@@ -63,6 +63,7 @@ typedef enum amvp_user_agent_env_type {
 typedef enum amvp_net_action {
     AMVP_NET_GET = 1, /**< Generic (get) */
     AMVP_NET_GET_VS, /**< Vector Set (get) */
+    AMVP_NET_GET_DOCS, /**< SP and DC (get) */
     AMVP_NET_GET_VS_RESULT, /**< Vector Set result (get) */
     AMVP_NET_GET_VS_SAMPLE, /**< Sample (get) */
     AMVP_NET_POST, /**< Generic (post) */
@@ -746,6 +747,35 @@ AMVP_RESULT amvp_retrieve_vector_set(AMVP_CTX *ctx, char *vsid_url) {
 
 /*
  * This is the top level function used within libamvp to retrieve
+ * documentation package 
+ */
+AMVP_RESULT amvp_retrieve_docs(AMVP_CTX *ctx, char *vsid_url) {
+#ifdef AMVP_OFFLINE 
+    AMVP_LOG_ERR("Curl not linked, exiting function"); 
+    return AMVP_TRANSPORT_FAIL;
+#else
+    AMVP_RESULT rv = 0;
+    char url[AMVP_ATTR_URL_MAX] = {0};
+
+    rv = sanity_check_ctx(ctx);
+    if (AMVP_SUCCESS != rv) return rv;
+
+    if (!vsid_url) {
+        AMVP_LOG_ERR("Missing vsid_url");
+        return AMVP_MISSING_ARG;
+    }
+
+    snprintf(url, AMVP_ATTR_URL_MAX - 1,
+            "https://%s:%d%s/docs",
+            ctx->server_name, ctx->server_port, vsid_url);
+
+
+    return amvp_network_action(ctx, AMVP_NET_GET_DOCS, url, NULL, 0);
+#endif
+}
+
+/*
+ * This is the top level function used within libamvp to retrieve
  * It can be used to get the results for an entire session, or
  * more specifically for a vectorSet
  */
@@ -1034,6 +1064,7 @@ static AMVP_RESULT execute_network_action(AMVP_CTX *ctx,
     switch(action) {
     case AMVP_NET_GET:
     case AMVP_NET_GET_VS:
+    case AMVP_NET_GET_DOCS:
     case AMVP_NET_GET_VS_RESULT:
     case AMVP_NET_GET_VS_SAMPLE:
         rc = amvp_curl_http_get(ctx, url);
@@ -1118,6 +1149,7 @@ static AMVP_RESULT execute_network_action(AMVP_CTX *ctx,
             switch(action) {
             case AMVP_NET_GET:
             case AMVP_NET_GET_VS:
+            case AMVP_NET_GET_DOCS:
             case AMVP_NET_GET_VS_RESULT:
             case AMVP_NET_GET_VS_SAMPLE:
                 rc = amvp_curl_http_get(ctx, url);
@@ -1199,6 +1231,10 @@ static void log_network_status(AMVP_CTX *ctx,
         AMVP_LOG_VERBOSE("GET Vector Set...\n\tStatus: %d\n\tUrl: %s\n\tResp:\n%s\n",
                          curl_code, url, ctx->curl_buf);
         break;
+    case AMVP_NET_GET_DOCS:
+        AMVP_LOG_VERBOSE("GET SP and DC...\n\tStatus: %d\n\tUrl: %s\n\tResp:\n%s\n",
+                         curl_code, url, ctx->curl_buf);
+        break;
     case AMVP_NET_GET_VS_RESULT:
         AMVP_LOG_VERBOSE("GET Vector Set Result...\n\tStatus: %d\n\tUrl: %s\n\tResp:\n%s\n",
                         curl_code, url, ctx->curl_buf);
@@ -1278,6 +1314,7 @@ static AMVP_RESULT amvp_network_action(AMVP_CTX *ctx,
     switch (action) {
     case AMVP_NET_GET:
     case AMVP_NET_GET_VS:
+    case AMVP_NET_GET_DOCS:
     case AMVP_NET_GET_VS_RESULT:
     case AMVP_NET_GET_VS_SAMPLE:
         generic_action = AMVP_NET_GET;

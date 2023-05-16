@@ -1742,6 +1742,8 @@ struct amvp_ctx_t {
     char *save_filename;    /* string used for file to save certain HTTP requests to */
     int mod_cert_req;
     char *mod_cert_req_file;    /* string used for file to save certain HTTP requests to */
+    int post_resources;
+    char *post_resources_filename;    /* string used for file to save certain HTTP requests to */
 
     AMVP_FIPS fips; /* Information related to a FIPS validation */
 

@@ -157,6 +157,9 @@ static void print_usage(int code) {
     printf("To request module certificate using a predefined request file:\n");
     printf("      --module_cert_req <request_file>\n");
     printf("\n");
+    printf("To post all resources a predefined resource json file:\n");
+    printf("      --post_resources <resource_file>\n");
+    printf("\n");
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
     printf("To disable FIPS mode for this run (Note, a warning will be issued):\n");
     printf("      -disable_fips\n");
@@ -258,6 +261,7 @@ static ko_longopt_t longopts[] = {
     { "debug", ko_no_argument, 417 },
     { "get_registration", ko_no_argument, 418 },
     { "module_cert_req", ko_required_argument, 419 },
+    { "post_resources", ko_required_argument, 420 },
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
     { "disable_fips", ko_no_argument, 500 },
 #endif
@@ -596,6 +600,14 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
             strcpy_s(cfg->mod_cert_req_file, JSON_FILENAME_LENGTH + 1, opt.arg);
             break;
 
+        case 420:
+            cfg->post_resources = 1;
+            if (!check_option_length(opt.arg, c, JSON_FILENAME_LENGTH)) {
+                return 1;
+            }
+            strcpy_s(cfg->post_resources_filename, JSON_FILENAME_LENGTH + 1, opt.arg);
+            break;
+
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
         case 500:
             cfg->disable_fips = 1;
@@ -627,7 +639,7 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
     }
 
     //Many args do not need an alg specified. Todo: make cleaner
-    if (cfg->empty_alg && !cfg->post && !cfg->get && !cfg->put && !cfg->get_results
+    if (cfg->empty_alg && !cfg->post && !cfg->get && !cfg->put && !cfg->get_results && !cfg->post_resources
             && !cfg->get_expected && !cfg->manual_reg && !cfg->vector_upload && !cfg->mod_cert_req
             && !cfg->delete && !cfg->cancel_session && !(cfg->resume_session && 
             cfg->vector_req)) {

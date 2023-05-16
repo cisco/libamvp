@@ -23,6 +23,8 @@
 #include "parson.h"
 #include "safe_lib.h"
 
+static AMVP_RESULT amvp_process_teid(AMVP_CTX *ctx, char *vsid_url, int count);
+
 /*
  * Forward prototypes for local functions
  */
@@ -616,6 +618,7 @@ AMVP_RESULT amvp_free_test_session(AMVP_CTX *ctx) {
     if (ctx->delete_string) { free(ctx->delete_string); }
     if (ctx->save_filename) { free(ctx->save_filename); }
     if (ctx->post_filename) { free(ctx->post_filename); }
+    if (ctx->post_resources_filename) { free(ctx->post_resources_filename); }
     if (ctx->put_filename) { free(ctx->put_filename); }
     if (ctx->mod_cert_req_file) { free(ctx->mod_cert_req_file); }
     if (ctx->jwt_token) { free(ctx->jwt_token); }
@@ -1154,10 +1157,8 @@ end:
 AMVP_RESULT amvp_upload_vectors_from_file(AMVP_CTX *ctx, const char *rsp_filename, int fips_validation) {
     JSON_Object *obj = NULL;
     JSON_Object *rsp_obj = NULL;
-    //JSON_Object *ver_obj = NULL;
     JSON_Value *vs_val = NULL;
     JSON_Value *new_val = NULL;
-    //JSON_Value *ver_val = NULL;
     JSON_Value *val = NULL;
     AMVP_RESULT rv = AMVP_SUCCESS;
     JSON_Array *reg_array;
@@ -1237,7 +1238,7 @@ AMVP_RESULT amvp_upload_vectors_from_file(AMVP_CTX *ctx, const char *rsp_filenam
 
     strcpy_s(ctx->jwt_token, AMVP_JWT_TOKEN_MAX + 1, jwt);
 
-    vect_sets = json_object_get_array(obj, "vectorSetUrls");
+    vect_sets = json_object_get_array(obj, "ieSetsId");
     vs_cnt = json_array_get_count(vect_sets);
     for (i = 0; i < vs_cnt; i++) {
         const char *vsid_url = json_array_get_string(vect_sets, i);
@@ -1282,12 +1283,6 @@ AMVP_RESULT amvp_upload_vectors_from_file(AMVP_CTX *ctx, const char *rsp_filenam
 
         vec_array_val = json_value_init_array();
         vec_array = json_array((const JSON_Value *)vec_array_val);
-
-        //ver_val = json_value_init_object();
-        //ver_obj = json_value_get_object(ver_val);
-
-        //json_object_set_string(ver_obj, "amvVersion", AMVP_VERSION);
-        //json_array_append_value(vec_array, ver_val);
 
         json_result = json_serialize_to_string_pretty(vs_val, NULL);
         new_val = json_parse_string(json_result);
@@ -2129,6 +2124,30 @@ AMVP_RESULT amvp_mark_as_post_only(AMVP_CTX *ctx, char *filename) {
     return AMVP_SUCCESS;
 }
 
+AMVP_RESULT amvp_mark_as_post_resources(AMVP_CTX *ctx, char *filename) {
+
+    if (!ctx) {
+        return AMVP_NO_CTX;
+    } 
+    if (!filename) {
+        return AMVP_MISSING_ARG;
+    }
+    if (strnlen_s(filename, AMVP_SESSION_PARAMS_STR_LEN_MAX + 1) > AMVP_SESSION_PARAMS_STR_LEN_MAX) {
+         AMVP_LOG_ERR("Request filename is suspiciously long...");
+        return AMVP_INVALID_ARG;
+    }
+
+    if (ctx->post_resources_filename) { free(ctx->post_resources_filename); }
+    ctx->post_resources_filename = calloc(AMVP_SESSION_PARAMS_STR_LEN_MAX + 1, sizeof(char));
+    if (!ctx->post_resources_filename) {
+        return AMVP_MALLOC_FAIL;
+    }
+
+    strcpy_s(ctx->post_resources_filename, AMVP_SESSION_PARAMS_STR_LEN_MAX + 1, filename);
+    ctx->post_resources = 1;
+    return AMVP_SUCCESS;
+}
+
 AMVP_RESULT amvp_mark_as_delete_only(AMVP_CTX *ctx, char *request_url) {
     if (!ctx) {
         return AMVP_NO_CTX;
@@ -2168,8 +2187,6 @@ int amvp_get_vector_set_count(AMVP_CTX *ctx) {
 static AMVP_RESULT amvp_build_login(AMVP_CTX *ctx, char **login, int *login_len, int refresh) {
     AMVP_RESULT rv = AMVP_SUCCESS;
     JSON_Value *reg_arry_val = NULL;
-    //JSON_Value *ver_val = NULL;
-    //JSON_Object *ver_obj = NULL;
     JSON_Value *pw_val = NULL;
     JSON_Object *pw_obj = NULL;
     JSON_Array *reg_arry = NULL;
@@ -2182,12 +2199,6 @@ static AMVP_RESULT amvp_build_login(AMVP_CTX *ctx, char **login, int *login_len,
      */
     reg_arry_val = json_value_init_array();
     reg_arry = json_array((const JSON_Value *)reg_arry_val);
-
-    //ver_val = json_value_init_object();
-    //ver_obj = json_value_get_object(ver_val);
-
-    //json_object_set_string(ver_obj, "amvVersion", AMVP_VERSION);
-    //json_array_append_value(reg_arry, ver_val);
 
     if (ctx->totp_cb || refresh) {
         pw_val = json_value_init_object();
@@ -2396,12 +2407,12 @@ end:
 static AMVP_RESULT amvp_process_teid(AMVP_CTX *ctx, char *vsid_url, int count) {
     AMVP_RESULT rv = AMVP_SUCCESS;
     JSON_Value *val = NULL;
-    JSON_Value *alg_val = NULL;
-    JSON_Array *alg_array = NULL;
-    JSON_Array *url_arr = NULL;
     JSON_Value *ts_val = NULL;
     JSON_Object *ts_obj = NULL;
     JSON_Object *obj = NULL;
+    JSON_Value *set_val = NULL;
+    JSON_Array *set_array = NULL;
+    JSON_Array *url_arr = NULL;
     AMVP_STRING_LIST *vs_entry = NULL;
     int retry_period = 0;
     int retry = 1;
@@ -2427,7 +2438,7 @@ static AMVP_RESULT amvp_process_teid(AMVP_CTX *ctx, char *vsid_url, int count) {
         retry_period = json_object_get_number(obj, "retry");
         if (retry_period) {
             /*
-             * Wait and try again to retrieve the VectorSet
+             * Wait and try again to retrieve the evSet
              */
             if (amvp_retry_handler(ctx, &retry_period, &time_waited_so_far, 1, AMVP_WAITING_FOR_TESTS) != AMVP_KAT_DOWNLOAD_RETRY) {
                 AMVP_LOG_STATUS("Maximum wait time with server reached! (Max: %d seconds)", AMVP_MAX_WAIT_TIME);
@@ -2437,14 +2448,14 @@ static AMVP_RESULT amvp_process_teid(AMVP_CTX *ctx, char *vsid_url, int count) {
             retry = 1;
         } else {
             /*
-             * Save the KAT VectorSet to file
+             * Save the Evidence Template to file
              */
             if (ctx->vector_req) {
                 
+                set_array = json_value_get_array(val);
+                set_val = json_array_get_value(set_array, 0);
+                
                 AMVP_LOG_STATUS("Saving vector set %s to file...", vsid_url);
-                alg_array = json_value_get_array(val);
-                alg_val = json_array_get_value(alg_array, 1);
-
                 /* track first vector set with file count */
                 if (count == 0) {
                     ts_val = json_value_init_object();
@@ -2454,8 +2465,8 @@ static AMVP_RESULT amvp_process_teid(AMVP_CTX *ctx, char *vsid_url, int count) {
                     json_object_set_string(ts_obj, "url", ctx->session_url);
                     json_object_set_boolean(ts_obj, "isSample", ctx->is_sample);
 
-                    json_object_set_value(ts_obj, "vectorSetUrls", json_value_init_array());
-                    url_arr = json_object_get_array(ts_obj, "vectorSetUrls");
+                    json_object_set_value(ts_obj, "ieSetsId", json_value_init_array());
+                    url_arr = json_object_get_array(ts_obj, "ieSetsId");
 
                     vs_entry = ctx->vsid_url_list;
                     while (vs_entry) {
@@ -2470,8 +2481,8 @@ static AMVP_RESULT amvp_process_teid(AMVP_CTX *ctx, char *vsid_url, int count) {
                         goto end;
                     }
                 } 
-                /* append vector set */
-                rv = amvp_json_serialize_to_file_pretty_a(alg_val, ctx->vector_req_file);
+                /* append the TE groups */
+                rv = amvp_json_serialize_to_file_pretty_a(set_val, ctx->vector_req_file);
                 json_value_free(ts_val);
                 goto end;
             }
@@ -2812,12 +2823,6 @@ AMVP_RESULT amvp_notify_large(AMVP_CTX *ctx,
 
     arr_val = json_value_init_array();
     arr = json_array((const JSON_Value *)arr_val);
-
-    //ver_val = json_value_init_object();
-    //ver_obj = json_value_get_object(ver_val);
-
-    //json_object_set_string(ver_obj, "amvVersion", AMVP_VERSION);
-    //json_array_append_value(arr, ver_val);
 
     /*
      * Start the large/ array
@@ -3540,21 +3545,6 @@ static AMVP_RESULT amvp_dispatch_ie_set(AMVP_CTX *ctx, JSON_Object *obj) {
 
             json_object_set_string(r_tobj, evidence, ev_str);
 
-            /*
-             * Output the test case results using JSON
-             */
-            //rv = amvp_evidence_output_tc(ctx, &stc, r_tobj);
-            if (rv != AMVP_SUCCESS) {
-                AMVP_LOG_ERR("JSON output failure in module evidence");
-                //amvp_evidence_release_tc(&stc);
-                json_value_free(r_tval);
-                goto err;
-            }
-            /*
-             * Release all the memory associated with the test case
-             */
-            //amvp_evidence_release_tc(&stc);
-
             /* Append the test response value to array */
             json_array_append_value(r_tarr, r_tval);
         }
@@ -3967,6 +3957,104 @@ end:
 
 }
 
+AMVP_RESULT amvp_post_resources(AMVP_CTX *ctx, const char *resource_file) {
+    AMVP_RESULT rv = AMVP_SUCCESS;
+    JSON_Array *vendor_array = NULL;
+    JSON_Object *obj = NULL;
+    JSON_Value *val = NULL;
+    JSON_Value *post_val = NULL;
+    JSON_Value *raw_val = NULL;
+    char *json_result = NULL;
+    int len;
+
+
+    if (!ctx) return AMVP_NO_CTX;
+    if (!resource_file) {
+        AMVP_LOG_ERR("Must provide string value for 'resource_file'");
+        return AMVP_MISSING_ARG;
+    }
+
+    if (strnlen_s(resource_file, AMVP_JSON_FILENAME_MAX + 1) > AMVP_JSON_FILENAME_MAX) {
+        AMVP_LOG_ERR("Provided 'resource_file' string length > max(%d)", AMVP_JSON_FILENAME_MAX);
+        return AMVP_INVALID_ARG;
+    }
+
+    val = json_parse_file(resource_file);
+    if (!val) {
+        AMVP_LOG_ERR("Failed to parse JSON in metadata file");
+        return AMVP_JSON_ERR;
+    }
+    obj = json_value_get_object(val);
+    if (!obj) {
+        AMVP_LOG_ERR("Failed to parse JSON object in metadata file");
+        return AMVP_JSON_ERR;
+    }
+
+    /* POST obj to labs */
+
+    vendor_array = json_object_get_array(obj, "lab");
+    if (!vendor_array) {
+        AMVP_LOG_ERR("Unable to resolve the 'lab' array");
+        return AMVP_JSON_ERR;
+    }
+
+    raw_val = json_array_get_value(vendor_array, 0);
+    json_result = json_serialize_to_string_pretty(raw_val, &len);
+    post_val = json_parse_string(json_result);
+
+
+    AMVP_LOG_INFO("\nPOST Data: %s, %s\n\n", "/amv/v1/labs", json_result);
+    rv = amvp_transport_post(ctx, "/amv/v1/labs", json_result, len);
+    AMVP_LOG_STATUS("POST response:\n\n%s\n", ctx->curl_buf);
+    json_free_serialized_string(json_result);
+    json_value_free(post_val);
+
+    /* POST obj to vendors */
+
+    vendor_array = json_object_get_array(obj, "vendor");
+    if (!vendor_array) {
+        AMVP_LOG_ERR("Unable to resolve the 'vendor' array");
+        return AMVP_JSON_ERR;
+    }
+
+    raw_val = json_array_get_value(vendor_array, 0);
+    json_result = json_serialize_to_string_pretty(raw_val, &len);
+    post_val = json_parse_string(json_result);
+
+    AMVP_LOG_INFO("\nPOST Data: %s, %s\n\n", "/amv/v1/vendors", json_result);
+    rv = amvp_transport_post(ctx, "/amv/v1/vendors", json_result, len);
+    AMVP_LOG_STATUS("POST response:\n\n%s\n", ctx->curl_buf);
+    json_free_serialized_string(json_result);
+    json_value_free(post_val);
+
+    /* POST obj to modules */
+
+    vendor_array = json_object_get_array(obj, "module");
+    if (!vendor_array) {
+        AMVP_LOG_ERR("Unable to resolve the 'module' array");
+        return AMVP_JSON_ERR;
+    }
+
+    raw_val = json_array_get_value(vendor_array, 0);
+    json_result = json_serialize_to_string_pretty(raw_val, &len);
+    post_val = json_parse_string(json_result);
+
+
+    AMVP_LOG_INFO("\nPOST Data: %s, %s\n\n", "/amv/v1/modules", json_result);
+    rv = amvp_transport_post(ctx, "/amv/v1/modules", json_result, len);
+    AMVP_LOG_STATUS("POST response:\n\n%s\n", ctx->curl_buf);
+    json_free_serialized_string(json_result);
+    json_value_free(post_val);
+
+    json_value_free(val);
+
+    /* Success */
+
+    return rv;
+}
+
+
+
 #define TEST_SESSION "testSessions/"
 
 /**
@@ -4090,8 +4178,11 @@ end:
 
 AMVP_RESULT amvp_run(AMVP_CTX *ctx, int fips_validation) {
     AMVP_RESULT rv = AMVP_SUCCESS;
+    JSON_Object *obj = NULL;
     JSON_Value *val = NULL;
-
+    JSON_Array *doc_array = NULL;
+    FILE *fp = NULL;
+    const char *sp = NULL, *dc = NULL;
     if (ctx == NULL) return AMVP_NO_CTX;
 
     rv = amvp_login(ctx, 0);
@@ -4130,6 +4221,11 @@ AMVP_RESULT amvp_run(AMVP_CTX *ctx, int fips_validation) {
 
     if (ctx->post) { 
         rv = amvp_post_data(ctx, ctx->post_filename);
+        goto end;
+    }
+
+    if (ctx->post_resources) { 
+        rv = amvp_post_resources(ctx, ctx->post_resources_filename);
         goto end;
     }
 
@@ -4205,11 +4301,12 @@ AMVP_RESULT amvp_run(AMVP_CTX *ctx, int fips_validation) {
         AMVP_LOG_ERR("Failed to process vectors");
         goto end;
     }
+check:
     if (ctx->vector_req) {
-        AMVP_LOG_STATUS("Successfully downloaded vector sets and saved to specified file.");
+        AMVP_LOG_STATUS("Successfully downloaded evidence and saved to specified file.");
         return AMVP_SUCCESS;
     }
-check:
+
     /*
      * Check the test results.
      */
@@ -4219,6 +4316,58 @@ check:
         AMVP_LOG_ERR("Unable to retrieve test results");
         goto end;
     }
+
+    /*
+     * Retrieve the SP and DC and write to file
+     */
+    AMVP_LOG_STATUS("Tests complete, request SP and DC...");
+    rv = amvp_retrieve_docs(ctx, ctx->session_url);
+    if (rv != AMVP_SUCCESS) {
+        AMVP_LOG_ERR("Unable to retrieve docs");
+        goto end;
+    }
+    val = json_parse_string(ctx->curl_buf);
+    if (!val) {
+        AMVP_LOG_ERR("JSON parse error");
+        rv = AMVP_JSON_ERR;
+        goto end;
+    }
+    if (!val) {
+        AMVP_LOG_ERR("JSON val parse error");
+        return AMVP_MALFORMED_JSON;
+    }
+    doc_array = json_value_get_array(val);
+    obj = json_array_get_object(doc_array, 0);
+    if (!obj) {
+        AMVP_LOG_ERR("JSON obj parse error");
+        rv = AMVP_MALFORMED_JSON;
+        goto end;
+    }
+
+    sp = json_object_get_string(obj, "secPolicy");
+    fp = fopen("SP.pdf", "w");
+    if (fp == NULL) {
+        goto end;
+    }
+    if (fputs(sp, fp) == EOF) {
+        goto end;
+    }
+    if (fclose(fp) == EOF) {
+        goto end;
+    }
+
+    dc = json_object_get_string(obj, "draftCert");
+    fp = fopen("DC.pdf", "w");
+    if (fp == NULL) {
+        goto end;
+    }
+    if (fputs(dc, fp) == EOF) {
+        goto end;
+    }
+    if (fclose(fp) == EOF) {
+        goto end;
+    }
+
 
     if (ctx->mod_cert_req) {
         static char validation[] = "[{ \"implementationUrls\": [\"/acvp/v1/1234\", \"/esv/v1/5678\", \"amv/v1/13780\" ] }]";

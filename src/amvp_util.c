@@ -834,8 +834,6 @@ AMVP_DRBG_CAP_GROUP *amvp_create_drbg_group(AMVP_DRBG_MODE_LIST *mode, int group
 AMVP_RESULT amvp_create_array(JSON_Object **obj, JSON_Value **val, JSON_Array **arry) {
     JSON_Value *reg_arry_val = NULL;
     JSON_Object *reg_obj = NULL;
-    JSON_Value *ver_val = NULL;
-    JSON_Object *ver_obj = NULL;
     JSON_Array *reg_arry = NULL;
 
     reg_arry_val = json_value_init_array();
@@ -848,17 +846,6 @@ AMVP_RESULT amvp_create_array(JSON_Object **obj, JSON_Value **val, JSON_Array **
     if (!reg_arry) {
         return AMVP_JSON_ERR;
     }
-
-    //ver_val = json_value_init_object();
-    //ver_obj = json_value_get_object(ver_val);
-    //if (!ver_obj) {
-        //return AMVP_JSON_ERR;
-    //}
-
-    //json_object_set_string(ver_obj, "amvVersion", AMVP_VERSION);
-    //if (json_array_append_value(reg_arry, ver_val) != JSONSuccess) {
-      //  return AMVP_JSON_ERR;
-    //}
 
     *obj = reg_obj;
     *val = reg_arry_val;
@@ -1026,37 +1013,15 @@ AMVP_RESULT amvp_setup_json_ev_group(AMVP_CTX **ctx,
     return AMVP_SUCCESS;
 }
 
-static const char *amvp_get_version_from_rsp(JSON_Value *arry_val) {
-    const char *version = NULL;
-    JSON_Object *ver_obj = NULL;
-
-    JSON_Array *reg_array;
-
-    reg_array = json_value_get_array(arry_val);
-    ver_obj = json_array_get_object(reg_array, 0);
-    //version = json_object_get_string(ver_obj, "amvVersion");
-    //if (version == NULL) {
-        //return NULL;
-    //}
-
-    return "1.0";
-}
-
 JSON_Object *amvp_get_obj_from_rsp(AMVP_CTX *ctx, JSON_Value *arry_val) {
     JSON_Object *obj = NULL;
     JSON_Array *reg_array;
-    const char *ver = NULL;
 
     if (!ctx || !arry_val) {
         AMVP_LOG_ERR("Missing arguments");
         return NULL;
     }
     reg_array = json_value_get_array(arry_val);
-    ver = amvp_get_version_from_rsp(arry_val);
-    if (ver == NULL) {
-        return NULL;
-    }
-
 
     obj = json_array_get_object(reg_array, 0);
     return obj;
