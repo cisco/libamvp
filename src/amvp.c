@@ -25,6 +25,7 @@
 
 static AMVP_RESULT amvp_process_teid(AMVP_CTX *ctx, char *vsid_url, int count);
 
+static AMVP_RESULT amvp_cert_req(AMVP_CTX *ctx);
 /*
  * Forward prototypes for local functions
  */
@@ -1321,6 +1322,12 @@ AMVP_RESULT amvp_upload_vectors_from_file(AMVP_CTX *ctx, const char *rsp_filenam
         AMVP_LOG_ERR("Unable to retrieve test results");
     }
 
+    rv = amvp_cert_req(ctx);
+    if (AMVP_SUCCESS != rv) {
+        AMVP_LOG_ERR("cert req failed");
+        goto end;
+    }
+    
     if (fips_validation) {
         /*
          * Tell the server to provision a FIPS certificate for this testSession.
@@ -4174,15 +4181,92 @@ end:
     return rv;
 }
 
-
-
-AMVP_RESULT amvp_run(AMVP_CTX *ctx, int fips_validation) {
+static AMVP_RESULT amvp_cert_req(AMVP_CTX *ctx)
+{
     AMVP_RESULT rv = AMVP_SUCCESS;
     JSON_Object *obj = NULL;
     JSON_Value *val = NULL;
     JSON_Array *doc_array = NULL;
     FILE *fp = NULL;
     const char *sp = NULL, *dc = NULL;
+    
+    /*
+     * Retrieve the SP and DC and write to file
+     */
+    AMVP_LOG_STATUS("Tests complete, request SP and DC...");
+    rv = amvp_retrieve_docs(ctx, ctx->session_url);
+    if (rv != AMVP_SUCCESS) {
+        AMVP_LOG_ERR("Unable to retrieve docs");
+        goto end;
+    }
+    val = json_parse_string(ctx->curl_buf);
+    if (!val) {
+        AMVP_LOG_ERR("JSON parse error");
+        rv = AMVP_JSON_ERR;
+        goto end;
+    }
+    if (!val) {
+        AMVP_LOG_ERR("JSON val parse error");
+        return AMVP_MALFORMED_JSON;
+    }
+    doc_array = json_value_get_array(val);
+    obj = json_array_get_object(doc_array, 0);
+    if (!obj) {
+        AMVP_LOG_ERR("JSON obj parse error");
+        rv = AMVP_MALFORMED_JSON;
+        goto end;
+    }
+
+    sp = json_object_get_string(obj, "secPolicy");
+    fp = fopen("SP.pdf", "w");
+    if (fp == NULL) {
+        goto end;
+    }
+    if (fputs(sp, fp) == EOF) {
+        goto end;
+    }
+    if (fclose(fp) == EOF) {
+        goto end;
+    }
+
+    dc = json_object_get_string(obj, "draftCert");
+    fp = fopen("DC.pdf", "w");
+    if (fp == NULL) {
+        goto end;
+    }
+    if (fputs(dc, fp) == EOF) {
+        goto end;
+    }
+    if (fclose(fp) == EOF) {
+        goto end;
+    }
+
+
+    if (ctx->mod_cert_req) {
+        static char validation[] = "[{ \"implementationUrls\": [\"/acvp/v1/1234\", \"/esv/v1/5678\", \"amv/v1/13780\" ] }]";
+        int validation_len = sizeof(validation);
+        /*
+         * PUT the validation with the AMVP server and get the response,
+         */
+        rv = amvp_transport_put_validation(ctx, validation, validation_len);
+        if (rv != AMVP_SUCCESS) {
+            AMVP_LOG_STATUS("Validation send failed");
+            goto end;
+        }
+
+        rv = amvp_parse_validation(ctx);
+        if (rv != AMVP_SUCCESS) {
+            AMVP_LOG_STATUS("Failed to parse Validation response");
+        }
+    }
+end:
+    if (val) json_value_free(val);
+    return rv;
+}
+
+AMVP_RESULT amvp_run(AMVP_CTX *ctx, int fips_validation) {
+    AMVP_RESULT rv = AMVP_SUCCESS;
+    JSON_Value *val = NULL;
     if (ctx == NULL) return AMVP_NO_CTX;
 
     rv = amvp_login(ctx, 0);
@@ -4316,76 +4400,11 @@ check:
         AMVP_LOG_ERR("Unable to retrieve test results");
         goto end;
     }
-
-    /*
-     * Retrieve the SP and DC and write to file
-     */
-    AMVP_LOG_STATUS("Tests complete, request SP and DC...");
-    rv = amvp_retrieve_docs(ctx, ctx->session_url);
-    if (rv != AMVP_SUCCESS) {
-        AMVP_LOG_ERR("Unable to retrieve docs");
-        goto end;
-    }
-    val = json_parse_string(ctx->curl_buf);
-    if (!val) {
-        AMVP_LOG_ERR("JSON parse error");
-        rv = AMVP_JSON_ERR;
-        goto end;
-    }
-    if (!val) {
-        AMVP_LOG_ERR("JSON val parse error");
-        return AMVP_MALFORMED_JSON;
-    }
-    doc_array = json_value_get_array(val);
-    obj = json_array_get_object(doc_array, 0);
-    if (!obj) {
-        AMVP_LOG_ERR("JSON obj parse error");
-        rv = AMVP_MALFORMED_JSON;
-        goto end;
-    }
-
-    sp = json_object_get_string(obj, "secPolicy");
-    fp = fopen("SP.pdf", "w");
-    if (fp == NULL) {
-        goto end;
-    }
-    if (fputs(sp, fp) == EOF) {
-        goto end;
-    }
-    if (fclose(fp) == EOF) {
-        goto end;
-    }
-
-    dc = json_object_get_string(obj, "draftCert");
-    fp = fopen("DC.pdf", "w");
-    if (fp == NULL) {
-        goto end;
-    }
-    if (fputs(dc, fp) == EOF) {
-        goto end;
-    }
-    if (fclose(fp) == EOF) {
-        goto end;
-    }
-
-
     if (ctx->mod_cert_req) {
-        static char validation[] = "[{ \"implementationUrls\": [\"/acvp/v1/1234\", \"/esv/v1/5678\", \"amv/v1/13780\" ] }]";
-        int validation_len = sizeof(validation);
-        /*
-         * PUT the validation with the AMVP server and get the response,
-         */
-        rv = amvp_transport_put_validation(ctx, validation, validation_len);
-        if (rv != AMVP_SUCCESS) {
-            AMVP_LOG_STATUS("Validation send failed");
-            goto end;
-        }
-
-        rv = amvp_parse_validation(ctx);
-        if (rv != AMVP_SUCCESS) {
-            AMVP_LOG_STATUS("Failed to parse Validation response");
-        }
+        rv = amvp_cert_req(ctx);
+        goto end;
     }
+    
     if (fips_validation) {
         /*
          * Tell the server to provision a FIPS certificate for this testSession.
