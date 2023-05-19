@@ -4187,7 +4187,6 @@ static AMVP_RESULT amvp_cert_req(AMVP_CTX *ctx)
     JSON_Object *obj = NULL;
     JSON_Value *val = NULL;
     JSON_Array *doc_array = NULL;
-    FILE *fp = NULL;
     const char *sp = NULL, *dc = NULL;
     
     /*
@@ -4217,29 +4216,11 @@ static AMVP_RESULT amvp_cert_req(AMVP_CTX *ctx)
         goto end;
     }
 
-    sp = json_object_get_string(obj, "secPolicy");
-    fp = fopen("SP.pdf", "w");
-    if (fp == NULL) {
-        goto end;
-    }
-    if (fputs(sp, fp) == EOF) {
-        goto end;
-    }
-    if (fclose(fp) == EOF) {
-        goto end;
-    }
+    sp = json_object_get_string(obj, "secPolicyUrl");
+    AMVP_LOG_STATUS("Security Policy url: %s", sp);
 
-    dc = json_object_get_string(obj, "draftCert");
-    fp = fopen("DC.pdf", "w");
-    if (fp == NULL) {
-        goto end;
-    }
-    if (fputs(dc, fp) == EOF) {
-        goto end;
-    }
-    if (fclose(fp) == EOF) {
-        goto end;
-    }
+    dc = json_object_get_string(obj, "draftCertUrl");
+    AMVP_LOG_STATUS("Draft Certificate url: %s", dc);
 
 
     if (ctx->mod_cert_req) {
