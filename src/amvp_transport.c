@@ -241,11 +241,15 @@ static long amvp_curl_http_get(AMVP_CTX *ctx, const char *url) {
         memzero_s(ctx->curl_buf, AMVP_CURL_BUF_MAX);
     }
 
+    //crv = curl_easy_setopt(hnd, CURLOPT_VERBOSE, 1L);
     /*
      * Send the HTTP GET request
      */
     curl_easy_perform(hnd);
 
+    if (ctx->log_lvl == AMVP_LOG_LVL_VERBOSE) {
+        printf("\nHTTP GET RSP:\n\n%s\n", ctx->curl_buf);
+    }
     /*
      * Get the HTTP reponse status code from the server
      */
@@ -346,13 +350,17 @@ static long amvp_curl_http_post(AMVP_CTX *ctx, const char *url, const char *data
         /* Clear the HTTP buffer for next server response */
         memzero_s(ctx->curl_buf, AMVP_CURL_BUF_MAX);
     }
-
+    //crv = curl_easy_setopt(hnd, CURLOPT_VERBOSE, 1L);
+    
     /*
      * Send the HTTP POST request
      */
     crv = curl_easy_perform(hnd);
     if (crv != CURLE_OK) {
         AMVP_LOG_ERR("Curl failed with code %d (%s)", crv, curl_easy_strerror(crv));
+    }
+    if (ctx->log_lvl == AMVP_LOG_LVL_VERBOSE) {
+        printf("\nHTTP POST RSP:\n\n%s\n", ctx->curl_buf);
     }
 
     /*
@@ -455,13 +463,18 @@ static long amvp_curl_http_put(AMVP_CTX *ctx, const char *url, const char *data,
     if (ctx->log_lvl == AMVP_LOG_LVL_VERBOSE) {
         printf("\nHTTP PUT:\n\n%s\n", data);
     }
-
+    //crv = curl_easy_setopt(hnd, CURLOPT_VERBOSE, 1L);
+    
     /*
      * Send the HTTP PUT request
      */
     crv = curl_easy_perform(hnd);
     if (crv != CURLE_OK) {
         AMVP_LOG_ERR("Curl failed with code %d (%s)", crv, curl_easy_strerror(crv));
+    }
+
+    if (ctx->log_lvl == AMVP_LOG_LVL_VERBOSE) {
+        printf("\nHTTP PUT RSP:\n\n%s\n", ctx->curl_buf);
     }
 
     /*
@@ -740,6 +753,8 @@ AMVP_RESULT amvp_retrieve_vector_set(AMVP_CTX *ctx, char *vsid_url) {
     snprintf(url, AMVP_ATTR_URL_MAX - 1,
             "https://%s:%d%s",
             ctx->server_name, ctx->server_port, vsid_url);
+
+   AMVP_LOG_STATUS("GET %s", vsid_url);
 
     return amvp_network_action(ctx, AMVP_NET_GET_VS, url, NULL, 0);
 #endif
@@ -1228,15 +1243,15 @@ static void log_network_status(AMVP_CTX *ctx,
                       curl_code, url, ctx->curl_buf);
         break;
     case AMVP_NET_GET_VS:
-        AMVP_LOG_VERBOSE("GET Vector Set...\n\tStatus: %d\n\tUrl: %s\n\tResp:\n%s\n",
+        AMVP_LOG_STATUS("GET Vector Set...\n\tStatus: %d\n\tUrl: %s\n\tResp:\n%s\n",
                          curl_code, url, ctx->curl_buf);
         break;
     case AMVP_NET_GET_DOCS:
-        AMVP_LOG_VERBOSE("GET SP and DC...\n\tStatus: %d\n\tUrl: %s\n\tResp:\n%s\n",
+        AMVP_LOG_STATUS("GET SP and DC...\n\tStatus: %d\n\tUrl: %s\n\tResp:\n%s\n",
                          curl_code, url, ctx->curl_buf);
         break;
     case AMVP_NET_GET_VS_RESULT:
-        AMVP_LOG_VERBOSE("GET Vector Set Result...\n\tStatus: %d\n\tUrl: %s\n\tResp:\n%s\n",
+        AMVP_LOG_STATUS("GET Vector Set Result...\n\tStatus: %d\n\tUrl: %s\n\tResp:\n%s\n",
                         curl_code, url, ctx->curl_buf);
         break;
     case AMVP_NET_GET_VS_SAMPLE:
@@ -1244,27 +1259,35 @@ static void log_network_status(AMVP_CTX *ctx,
                         curl_code, url, ctx->curl_buf);
         break;
     case AMVP_NET_POST:
-        AMVP_LOG_VERBOSE("POST...\n\tStatus: %d\n\tUrl: %s\n\tResp: %s\n",
+        AMVP_LOG_STATUS("POST...\n\tStatus: %d\n\tUrl: %s\n\tResp: %s\n",
                         curl_code, url, ctx->curl_buf);
         break;
     case AMVP_NET_POST_LOGIN:
         AMVP_LOG_VERBOSE("POST Login...\n\tStatus: %d\n\tUrl: %s\n\tResp: Recieved\n",
                       curl_code, url);
+        AMVP_LOG_STATUS("POST Login...\n\tStatus: %d\n\tUrl: %s\n\tResp: %s\n",
+                      curl_code, url, ctx->curl_buf);
         break;
     case AMVP_NET_POST_REG:
         AMVP_LOG_VERBOSE("POST Registration...\n\tStatus: %d\n\tUrl: %s\n\tResp: Recieved\n",
                         curl_code, url);
+        AMVP_LOG_STATUS("POST Cert Req...\n\tStatus: %d\n\tUrl: %s",
+                      curl_code, url);
         break;
     case AMVP_NET_POST_VS_RESP:
         AMVP_LOG_VERBOSE("POST Response Submission...\n\tStatus: %d\n\tUrl: %s\n\tResp:\n%s\n",
                       curl_code, url, ctx->curl_buf);
+        AMVP_LOG_STATUS("POST Response Submission...\n\tStatus: %d\n\tUrl: %s",
+                      curl_code, url);
         break;
     case AMVP_NET_PUT:
         AMVP_LOG_VERBOSE("PUT...\n\tStatus: %d\n\tUrl: %s\n\tResp: %s\n",
                         curl_code, url, ctx->curl_buf);
+        AMVP_LOG_STATUS("PUT Response Submission...\n\tStatus: %d\n\tUrl: %s",
+                      curl_code, url);
         break;
     case AMVP_NET_PUT_VALIDATION:
-        AMVP_LOG_VERBOSE("PUT testSession Validation...\n\tStatus: %d\n\tUrl: %s\n\tResp: %s\n",
+        AMVP_LOG_STATUS("PUT testSession Validation...\n\tStatus: %d\n\tUrl: %s\n\tResp: %s\n",
                         curl_code, url, ctx->curl_buf);
         break;
     case AMVP_NET_DELETE:

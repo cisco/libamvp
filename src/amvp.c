@@ -2509,7 +2509,7 @@ static AMVP_RESULT amvp_process_teid(AMVP_CTX *ctx, char *vsid_url, int count) {
     /*
      * Send the responses to the AMVP server
      */
-    AMVP_LOG_STATUS("Posting ie set responses for vsId %d...", ctx->vs_id);
+    AMVP_LOG_STATUS("Posting ie set responses for vsId %d to URL: %s...", ctx->vs_id, vsid_url);
     rv = amvp_submit_vector_responses(ctx, vsid_url);
 
 end:
@@ -2603,7 +2603,8 @@ AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx) {
     reg = json_serialize_to_string(tmp_json, &reg_len);
     
     AMVP_LOG_STATUS("Sending module cert request...");
-    AMVP_LOG_INFO("%s", reg);
+    //AMVP_LOG_STATUS("    request: %s", reg);
+    //AMVP_LOG_STATUS("    POST...Url: %s","/amv/v1/certRequest");
     rv = amvp_transport_post(ctx, "/amv/v1/certRequest", reg, reg_len);
     
     if (rv == AMVP_SUCCESS) {
@@ -2613,7 +2614,6 @@ AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx) {
             goto end;
         }
         AMVP_LOG_STATUS("Successfully sent mod cert req and received list of TE URLs");
-        AMVP_LOG_STATUS("Module CR session URL: %s", ctx->session_url);
     } else {
         AMVP_LOG_ERR("Failed to send registration");
         goto end;
@@ -3193,6 +3193,7 @@ static AMVP_RESULT amvp_login(AMVP_CTX *ctx, int refresh) {
         AMVP_LOG_ERR("Unable to build login message");
         goto end;
     }
+    AMVP_LOG_STATUS("    Login info: %s", login);
 
     /*
      * Send the login to the AMVP server and get the response,
@@ -3208,6 +3209,7 @@ static AMVP_RESULT amvp_login(AMVP_CTX *ctx, int refresh) {
         AMVP_LOG_STATUS("Login Response Failed, %d", rv);
     } else {
         AMVP_LOG_STATUS("Login successful");
+        //AMVP_LOG_STATUS("    Login Response: %s", ctx->curl_buf);
     }
 end:
     if (login) free(login);
@@ -3951,7 +3953,7 @@ AMVP_RESULT amvp_post_data(AMVP_CTX *ctx, char *filename) {
     json_array_append_value(reg_arry, post_val);
 
     json_result = json_serialize_to_string_pretty(reg_arry_val, &len);
-    AMVP_LOG_INFO("\nPOST Data: %s, %s\n\n", path, json_result);
+    AMVP_LOG_STATUS("\nPOST Data: %s, %s\n\n", path, json_result);
     json_value_free(reg_arry_val);
 
     rv = amvp_transport_post(ctx, path, json_result, len);
@@ -4250,12 +4252,15 @@ AMVP_RESULT amvp_run(AMVP_CTX *ctx, int fips_validation) {
     JSON_Value *val = NULL;
     if (ctx == NULL) return AMVP_NO_CTX;
 
-    rv = amvp_login(ctx, 0);
-    if (rv != AMVP_SUCCESS) {
-        AMVP_LOG_ERR("Failed to login with AMVP server");
-        goto end;
-    }
 
+
+    if (!getenv("AMVP_NO_LOGIN")) {
+        rv = amvp_login(ctx, 0);
+        if (rv != AMVP_SUCCESS) {
+            AMVP_LOG_ERR("Failed to login with AMVP server");
+            goto end;
+        }
+    }
 
     if (ctx->get) { 
         rv = amvp_transport_get(ctx, ctx->get_string, NULL);
