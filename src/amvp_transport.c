@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include "amvp.h"
 #include "amvp_lcl.h"
+#include "amvp_error.h"
 #include "safe_lib.h"
 
 #ifdef _WIN32
@@ -1002,6 +1003,8 @@ static AMVP_RESULT inspect_http_code(AMVP_CTX *ctx, int code) {
     if (code == HTTP_OK) {
         /* 200 */
         return AMVP_SUCCESS;
+    } else if (amvp_is_protocol_error_message(ctx->curl_buf)) {
+        return AMVP_PROTOCOL_RSP_ERR; /* Let the caller parse the error */
     }
 
     if (code == HTTP_BAD_REQ) {
@@ -1140,6 +1143,9 @@ static AMVP_RESULT execute_network_action(AMVP_CTX *ctx,
 
     /* Peek at the HTTP code */
     result = inspect_http_code(ctx, rc);
+    if (result == AMVP_PROTOCOL_RSP_ERR) {
+        goto end;
+    }
 
     if (result != AMVP_SUCCESS) {
         if (result == AMVP_JWT_EXPIRED &&

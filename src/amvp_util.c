@@ -15,6 +15,7 @@
 #include <ctype.h>
 #include "amvp.h"
 #include "amvp_lcl.h"
+#include "amvp_error.h"
 #include "safe_lib.h"
 
 #ifdef USE_MURL
@@ -1375,4 +1376,3 @@ end:
     json_free_serialized_string(serialized_string);
     return return_code;
 }
-

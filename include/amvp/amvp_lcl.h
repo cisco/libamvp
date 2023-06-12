@@ -872,6 +872,8 @@
 #define AMVP_PATH_SEGMENT_DEFAULT ""
 #define AMVP_JSON_FILENAME_MAX 128
 
+#define AMVP_PROTOCOL_VERSION_STR "amvVersion"
+
 /* 
  * This should NOT be made longer than AMVP_JSON_FILENAME_MAX - 15
  * (accounting for _ character, ".json", and 9 digits for testSession ID)
