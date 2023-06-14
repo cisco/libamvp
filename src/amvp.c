@@ -20,6 +20,7 @@
 #include <math.h>
 #include "amvp.h"
 #include "amvp_lcl.h"
+#include "amvp_error.h"
 #include "parson.h"
 #include "safe_lib.h"
 
@@ -64,6 +65,9 @@ static AMVP_RESULT amvp_get_result_test_session(AMVP_CTX *ctx, char *session_url
 static AMVP_RESULT amvp_put_data_from_ctx(AMVP_CTX *ctx);
 
 static AMVP_RESULT amvp_retry_handler(AMVP_CTX *ctx, int *retry_period, unsigned int *waited_so_far, int modifier, AMVP_WAITING_STATUS situation);
+
+static AMVP_RESULT amvp_handle_protocol_error(AMVP_CTX *ctx, AMVP_PROTOCOL_ERR *err);
+
 /*
  * This table maps AMVP operations to handlers within libamvp.
  * Each AMVP operation may have unique parameters.  For instance,
@@ -2566,6 +2570,7 @@ AMVP_RESULT amvp_process_amvp_tes(AMVP_CTX *ctx) {
  */
 AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx) {
     AMVP_RESULT rv = AMVP_SUCCESS;
+    AMVP_PROTOCOL_ERR *err = NULL;
     char *reg = NULL;
     int reg_len = 0, count = 0;
 
@@ -2631,6 +2636,7 @@ AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx) {
 
 end:
     if (reg) json_free_serialized_string(reg);
+    if (err) amvp_free_protocol_err(err);
     return rv;
 }
 
@@ -3184,6 +3190,7 @@ AMVP_RESULT amvp_check_test_results(AMVP_CTX *ctx) {
 
 static AMVP_RESULT amvp_login(AMVP_CTX *ctx, int refresh) {
     AMVP_RESULT rv = AMVP_SUCCESS;
+    AMVP_PROTOCOL_ERR *err = NULL;
     char *login = NULL;
     int login_len = 0;
 
@@ -3213,6 +3220,7 @@ static AMVP_RESULT amvp_login(AMVP_CTX *ctx, int refresh) {
     }
 end:
     if (login) free(login);
+    if (err) amvp_free_protocol_err(err);
     return rv;
 }
 
@@ -4704,4 +4712,76 @@ AMVP_SUB_KAS amvp_get_kas_alg(AMVP_CIPHER cipher)
         return 0;
     }
     return (alg_tbl[cipher-1].alg.kas);
+}
+
+static void amvp_generic_error_log(AMVP_CTX *ctx, AMVP_PROTOCOL_ERR *err) {
+    AMVP_PROTOCOL_ERR_LIST *list = NULL;
+    int i = 0;
+
+    AMVP_LOG_ERR("Error(s) reported by server while attempting task.");
+    AMVP_LOG_ERR("Category: %s", err->category_desc);
+    AMVP_LOG_ERR("Error(s):");
+
+    list = err->errors;
+    while (list) {
+        AMVP_LOG_ERR("    Code: %d");
+        AMVP_LOG_ERR("    Messages:");
+        for (i = 0; i < list->desc_count; i++) {
+            AMVP_LOG_ERR("        %s", list->desc[i]);
+        }
+    }
+}
+
+/* Return AMVP_RETRY_OPERATION if we want the caller to try whatever task again */
+static AMVP_RESULT amvp_handle_protocol_error(AMVP_CTX *ctx, AMVP_PROTOCOL_ERR *err) {
+    AMVP_PROTOCOL_ERR_LIST *list = NULL;
+    AMVP_RESULT rv = AMVP_INTERNAL_ERR;
+
+    if (!err) {
+        return AMVP_MISSING_ARG;
+    }
+    list = err->errors;
+    switch (err->category) {
+    case AMVP_PROTOCOL_ERR_AUTH:
+        while (list) {
+            AMVP_LOG_ERR("Code: %d", list->code);
+            switch(list->code) {
+            case AMVP_ERR_CODE_AUTH_MISSING_PW:
+                AMVP_LOG_ERR("TOTP was expected but not provided");
+                rv = AMVP_MISSING_ARG;
+                break;
+            case AMVP_ERR_CODE_AUTH_INVALID_JWT:
+                AMVP_LOG_ERR("Provided JWT is invalid");
+                rv = AMVP_INVALID_ARG;
+                break;
+            case AMVP_ERR_CODE_AUTH_EXPIRED_JWT:
+                if (amvp_refresh(ctx) == AMVP_SUCCESS) {
+                    rv = AMVP_RETRY_OPERATION;
+                } else {
+                    AMVP_LOG_ERR("Attempted to refresh JWT but failed");
+                    rv = AMVP_TRANSPORT_FAIL;
+                }
+                break;
+            case AMVP_ERR_CODE_AUTH_INVALID_PW:
+                AMVP_LOG_ERR("Provided TOTP invalid; check generator, seed, and system clock");
+                rv = AMVP_INVALID_ARG;
+                break;
+            default:
+                break;
+            }
+            list = list->next;
+        }
+        break;
+    case AMVP_PROTOCOL_ERR_GENERAL:
+    case AMVP_PROTOCOL_ERR_MALFORMED_PAYLOAD:
+    case AMVP_PROTOCOL_ERR_INVALID_REQUEST:
+    case AMVP_PROTOCOL_ERR_ON_SERVER:
+        amvp_generic_error_log(ctx, err);
+        break;
+    case AMVP_PROTOCOL_ERR_CAT_MAX:
+    default:
+        return AMVP_INVALID_ARG;
+    }
+
+    return rv;
 }

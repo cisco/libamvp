@@ -15,6 +15,7 @@ libamvp_la_SOURCES =  amvp.c \
                     amvp_drbg.c \
                     amvp_transport.c \
                     amvp_util.c \
+                    amvp_error.c \
                     parson.c \
                     amvp_hmac.c \
                     amvp_cmac.c \
@@ -46,5 +47,6 @@ libamvp_la_LIBADD = $(SAFEC_LDFLAGS) $(LIBCURL_LDFLAGS)
 libamvp_includedir=$(includedir)/amvp
 libamvp_include_HEADERS = $(top_srcdir)/include/amvp/amvp.h
 noinst_HEADERS = $(top_srcdir)/include/amvp/amvp_lcl.h \
+                 $(top_srcdir)/include/amvp/amvp_error.h \
 				 $(top_srcdir)/include/amvp/parson.h
 

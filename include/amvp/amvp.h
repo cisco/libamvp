@@ -83,7 +83,8 @@ typedef enum amvp_result {
     AMVP_SUCCESS = 0,
     AMVP_MALLOC_FAIL,        /**< Error allocating memory */
     AMVP_NO_CTX,             /**< An initalized context was expected but not present */
-    AMVP_TRANSPORT_FAIL,     /**< Error exchanging data with server */
+    AMVP_TRANSPORT_FAIL,     /**< Error exchanging data with server outside the bounds of the protocol */
+    AMVP_PROTOCOL_RSP_ERR,   /**< Error exchanging data with server that came with a protocol-formatted response */
     AMVP_NO_DATA,            /**< Required data for operation is missing */
     AMVP_UNSUPPORTED_OP,     /**< An operation has been requested that is not supported. This can
                                   either be because parameters are not valid or because the library
@@ -91,6 +92,7 @@ typedef enum amvp_result {
     AMVP_CLEANUP_FAIL,       /**< Failure when cleaning up (e.g. freeing memory) after operations */
     AMVP_KAT_DOWNLOAD_RETRY, /**< Does not neccessarily indicate an error, but that data requested
                                   from server is not yet ready to be accessed */
+    AMVP_RETRY_OPERATION,    /**< Indiciate to a caller to attempt to retry an operation */
     AMVP_INVALID_ARG,        /**< A provided argument or parameter is not valid for the given operation */
     AMVP_MISSING_ARG,        /**< A required argument or parameter is not provided/null/0 */
     AMVP_CRYPTO_MODULE_FAIL, /**< A non-zero return code was provided by the application callback 
