@@ -138,14 +138,15 @@ libamvp_la_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_libamvp_la_OBJECTS = amvp.lo amvp_build_register.lo \
 	amvp_capabilities.lo amvp_operating_env.lo amvp_aes.lo \
 	amvp_des.lo amvp_hash.lo amvp_drbg.lo amvp_transport.lo \
-	amvp_util.lo parson.lo amvp_hmac.lo amvp_cmac.lo amvp_kmac.lo \
-	amvp_rsa_keygen.lo amvp_rsa_sig.lo amvp_rsa_prim.lo \
-	amvp_dsa.lo amvp_kdf135_snmp.lo amvp_kdf135_ssh.lo \
-	amvp_kdf135_srtp.lo amvp_kdf135_ikev2.lo amvp_kdf135_ikev1.lo \
-	amvp_kdf135_x942.lo amvp_kdf135_x963.lo amvp_kdf108.lo \
-	amvp_pbkdf.lo amvp_kdf_tls12.lo amvp_kdf_tls13.lo \
-	amvp_kas_ecc.lo amvp_kas_ffc.lo amvp_kas_ifc.lo amvp_kda.lo \
-	amvp_kts_ifc.lo amvp_safe_primes.lo amvp_ecdsa.lo
+	amvp_util.lo amvp_error.lo parson.lo amvp_hmac.lo amvp_cmac.lo \
+	amvp_kmac.lo amvp_rsa_keygen.lo amvp_rsa_sig.lo \
+	amvp_rsa_prim.lo amvp_dsa.lo amvp_kdf135_snmp.lo \
+	amvp_kdf135_ssh.lo amvp_kdf135_srtp.lo amvp_kdf135_ikev2.lo \
+	amvp_kdf135_ikev1.lo amvp_kdf135_x942.lo amvp_kdf135_x963.lo \
+	amvp_kdf108.lo amvp_pbkdf.lo amvp_kdf_tls12.lo \
+	amvp_kdf_tls13.lo amvp_kas_ecc.lo amvp_kas_ffc.lo \
+	amvp_kas_ifc.lo amvp_kda.lo amvp_kts_ifc.lo \
+	amvp_safe_primes.lo amvp_ecdsa.lo
 libamvp_la_OBJECTS = $(am_libamvp_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -171,10 +172,11 @@ am__depfiles_remade = ./$(DEPDIR)/amvp.Plo ./$(DEPDIR)/amvp_aes.Plo \
 	./$(DEPDIR)/amvp_capabilities.Plo ./$(DEPDIR)/amvp_cmac.Plo \
 	./$(DEPDIR)/amvp_des.Plo ./$(DEPDIR)/amvp_drbg.Plo \
 	./$(DEPDIR)/amvp_dsa.Plo ./$(DEPDIR)/amvp_ecdsa.Plo \
-	./$(DEPDIR)/amvp_hash.Plo ./$(DEPDIR)/amvp_hmac.Plo \
-	./$(DEPDIR)/amvp_kas_ecc.Plo ./$(DEPDIR)/amvp_kas_ffc.Plo \
-	./$(DEPDIR)/amvp_kas_ifc.Plo ./$(DEPDIR)/amvp_kda.Plo \
-	./$(DEPDIR)/amvp_kdf108.Plo ./$(DEPDIR)/amvp_kdf135_ikev1.Plo \
+	./$(DEPDIR)/amvp_error.Plo ./$(DEPDIR)/amvp_hash.Plo \
+	./$(DEPDIR)/amvp_hmac.Plo ./$(DEPDIR)/amvp_kas_ecc.Plo \
+	./$(DEPDIR)/amvp_kas_ffc.Plo ./$(DEPDIR)/amvp_kas_ifc.Plo \
+	./$(DEPDIR)/amvp_kda.Plo ./$(DEPDIR)/amvp_kdf108.Plo \
+	./$(DEPDIR)/amvp_kdf135_ikev1.Plo \
 	./$(DEPDIR)/amvp_kdf135_ikev2.Plo \
 	./$(DEPDIR)/amvp_kdf135_snmp.Plo \
 	./$(DEPDIR)/amvp_kdf135_srtp.Plo \
@@ -381,6 +383,7 @@ libamvp_la_SOURCES = amvp.c \
                     amvp_drbg.c \
                     amvp_transport.c \
                     amvp_util.c \
+                    amvp_error.c \
                     parson.c \
                     amvp_hmac.c \
                     amvp_cmac.c \
@@ -412,6 +415,7 @@ libamvp_la_LIBADD = $(SAFEC_LDFLAGS) $(LIBCURL_LDFLAGS)
 libamvp_includedir = $(includedir)/amvp
 libamvp_include_HEADERS = $(top_srcdir)/include/amvp/amvp.h
 noinst_HEADERS = $(top_srcdir)/include/amvp/amvp_lcl.h \
+                 $(top_srcdir)/include/amvp/amvp_error.h \
 				 $(top_srcdir)/include/amvp/parson.h
 
 all: all-am
@@ -501,6 +505,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_drbg.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_dsa.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_ecdsa.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_error.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_hash.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_hmac.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_kas_ecc.Plo@am__quote@ # am--include-marker
@@ -724,6 +729,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/amvp_drbg.Plo
 	-rm -f ./$(DEPDIR)/amvp_dsa.Plo
 	-rm -f ./$(DEPDIR)/amvp_ecdsa.Plo
+	-rm -f ./$(DEPDIR)/amvp_error.Plo
 	-rm -f ./$(DEPDIR)/amvp_hash.Plo
 	-rm -f ./$(DEPDIR)/amvp_hmac.Plo
 	-rm -f ./$(DEPDIR)/amvp_kas_ecc.Plo
@@ -805,6 +811,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/amvp_drbg.Plo
 	-rm -f ./$(DEPDIR)/amvp_dsa.Plo
 	-rm -f ./$(DEPDIR)/amvp_ecdsa.Plo
+	-rm -f ./$(DEPDIR)/amvp_error.Plo
 	-rm -f ./$(DEPDIR)/amvp_hash.Plo
 	-rm -f ./$(DEPDIR)/amvp_hmac.Plo
 	-rm -f ./$(DEPDIR)/amvp_kas_ecc.Plo

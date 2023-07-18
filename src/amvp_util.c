@@ -15,6 +15,7 @@
 #include <ctype.h>
 #include "amvp.h"
 #include "amvp_lcl.h"
+#include "amvp_error.h"
 #include "safe_lib.h"
 
 #ifdef USE_MURL
@@ -834,8 +835,6 @@ AMVP_DRBG_CAP_GROUP *amvp_create_drbg_group(AMVP_DRBG_MODE_LIST *mode, int group
 AMVP_RESULT amvp_create_array(JSON_Object **obj, JSON_Value **val, JSON_Array **arry) {
     JSON_Value *reg_arry_val = NULL;
     JSON_Object *reg_obj = NULL;
-    JSON_Value *ver_val = NULL;
-    JSON_Object *ver_obj = NULL;
     JSON_Array *reg_arry = NULL;
 
     reg_arry_val = json_value_init_array();
@@ -846,17 +845,6 @@ AMVP_RESULT amvp_create_array(JSON_Object **obj, JSON_Value **val, JSON_Array **
     reg_obj = json_value_get_object(reg_arry_val);
     reg_arry = json_array((const JSON_Value *)reg_arry_val);
     if (!reg_arry) {
-        return AMVP_JSON_ERR;
-    }
-
-    ver_val = json_value_init_object();
-    ver_obj = json_value_get_object(ver_val);
-    if (!ver_obj) {
-        return AMVP_JSON_ERR;
-    }
-
-    json_object_set_string(ver_obj, "amvVersion", AMVP_VERSION);
-    if (json_array_append_value(reg_arry, ver_val) != JSONSuccess) {
         return AMVP_JSON_ERR;
     }
 
@@ -995,39 +983,48 @@ AMVP_RESULT amvp_setup_json_rsp_group(AMVP_CTX **ctx,
     return AMVP_SUCCESS;
 }
 
-static const char *amvp_get_version_from_rsp(JSON_Value *arry_val) {
-    const char *version = NULL;
-    JSON_Object *ver_obj = NULL;
 
-    JSON_Array *reg_array;
+AMVP_RESULT amvp_setup_json_ev_group(AMVP_CTX **ctx,
+                                      JSON_Value **outer_arr_val,
+                                      JSON_Value **r_vs_val,
+                                      JSON_Object **r_vs,
+                                      JSON_Array **groups_arr) {
+    if ((*ctx)->kat_resp) {
+        json_value_free((*ctx)->kat_resp);
+    }
+    (*ctx)->kat_resp = *outer_arr_val;
 
-    reg_array = json_value_get_array(arry_val);
-    ver_obj = json_array_get_object(reg_array, 0);
-    version = json_object_get_string(ver_obj, "amvVersion");
-    if (version == NULL) {
-        return NULL;
+    *r_vs_val = json_value_init_object();
+    *r_vs = json_value_get_object(*r_vs_val);
+    if (!*r_vs) {
+        return AMVP_JSON_ERR;
+    } 
+
+    if (json_object_set_number(*r_vs, "ieId", (*ctx)->vs_id) != JSONSuccess) {
+        return AMVP_JSON_ERR;
     }
 
-    return version;
+    /* create an array of response test groups */
+    json_object_set_value(*r_vs, "teGroups", json_value_init_array());
+    (*groups_arr) = json_object_get_array(*r_vs, "teGroups");
+    if (!*groups_arr) {
+        return AMVP_JSON_ERR;
+    }
+
+    return AMVP_SUCCESS;
 }
 
 JSON_Object *amvp_get_obj_from_rsp(AMVP_CTX *ctx, JSON_Value *arry_val) {
     JSON_Object *obj = NULL;
     JSON_Array *reg_array;
-    const char *ver = NULL;
 
     if (!ctx || !arry_val) {
         AMVP_LOG_ERR("Missing arguments");
         return NULL;
     }
     reg_array = json_value_get_array(arry_val);
-    ver = amvp_get_version_from_rsp(arry_val);
-    if (ver == NULL) {
-        return NULL;
-    }
 
-
-    obj = json_array_get_object(reg_array, 1);
+    obj = json_array_get_object(reg_array, 0);
     return obj;
 }
 
@@ -1379,4 +1376,3 @@ end:
     json_free_serialized_string(serialized_string);
     return return_code;
 }
-

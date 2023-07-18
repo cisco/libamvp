@@ -83,7 +83,8 @@ typedef enum amvp_result {
     AMVP_SUCCESS = 0,
     AMVP_MALLOC_FAIL,        /**< Error allocating memory */
     AMVP_NO_CTX,             /**< An initalized context was expected but not present */
-    AMVP_TRANSPORT_FAIL,     /**< Error exchanging data with server */
+    AMVP_TRANSPORT_FAIL,     /**< Error exchanging data with server outside the bounds of the protocol */
+    AMVP_PROTOCOL_RSP_ERR,   /**< Error exchanging data with server that came with a protocol-formatted response */
     AMVP_NO_DATA,            /**< Required data for operation is missing */
     AMVP_UNSUPPORTED_OP,     /**< An operation has been requested that is not supported. This can
                                   either be because parameters are not valid or because the library
@@ -91,6 +92,7 @@ typedef enum amvp_result {
     AMVP_CLEANUP_FAIL,       /**< Failure when cleaning up (e.g. freeing memory) after operations */
     AMVP_KAT_DOWNLOAD_RETRY, /**< Does not neccessarily indicate an error, but that data requested
                                   from server is not yet ready to be accessed */
+    AMVP_RETRY_OPERATION,    /**< Indiciate to a caller to attempt to retry an operation */
     AMVP_INVALID_ARG,        /**< A provided argument or parameter is not valid for the given operation */
     AMVP_MISSING_ARG,        /**< A required argument or parameter is not provided/null/0 */
     AMVP_CRYPTO_MODULE_FAIL, /**< A non-zero return code was provided by the application callback 
@@ -4410,6 +4412,11 @@ AMVP_SUB_DSA amvp_get_dsa_alg(AMVP_CIPHER cipher);
 AMVP_SUB_KDF amvp_get_kdf_alg(AMVP_CIPHER cipher);
 AMVP_SUB_DRBG amvp_get_drbg_alg(AMVP_CIPHER cipher);
 AMVP_SUB_KAS amvp_get_kas_alg(AMVP_CIPHER cipher);
+AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx);
+AMVP_RESULT amvp_mark_as_cert_req(AMVP_CTX *ctx, char *filename);
+AMVP_RESULT amvp_retrieve_docs(AMVP_CTX *ctx, char *vsid_url);
+AMVP_RESULT amvp_mark_as_post_resources(AMVP_CTX *ctx, char *filename);
+AMVP_RESULT amvp_post_resources(AMVP_CTX *ctx, const char *resource_file);
 
 /** @} */
 /** @internal ALL APIS SHOULD BE ADDED ABOVE THESE BLOCKS */

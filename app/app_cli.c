@@ -100,19 +100,19 @@ static void print_usage(int code) {
     printf("To retreive and output the JSON form of the currently registered capabilities:\n");
     printf("      --get_registration\n");
     printf("\n");
-    printf("To register and save the vectors to file:\n");
-    printf("      --vector_req <file>\n");
+    printf("To register and save the vector/evidence to file:\n");
+    printf("      --request <file>\n");
     printf("      -r <file>\n");
     printf("\n");
-    printf("To process saved vectors and write results/responses to file:\n");
-    printf("      --vector_req <file>\n");
-    printf("      --vector_rsp <file>\n");
+    printf("To process saved vectors/evidence and write results/responses to file:\n");
+    printf("      --request <file>\n");
+    printf("      --response <file>\n");
     printf("      OR\n");
     printf("      -r <file>\n");
     printf("      -p <file>\n");
     printf("\n");
-    printf("To upload vector responses from file:\n");
-    printf("      --vector_upload <file>\n");
+    printf("To upload responses from file:\n");
+    printf("      --upload <file>\n");
     printf("      -u <file>\n");
     printf("\n");
     printf("To process kat vectors from a JSON file use:\n");
@@ -123,7 +123,7 @@ static void print_usage(int code) {
     printf("To resume a previous test session that was interupted:\n");
     printf("      --resume_session <session_file>\n");
     printf("            Note: this does not save your arguments from your initial run and you MUST include them\n");
-    printf("            again (e.x. --aes,  --vector_req and --fips_validation)\n");
+    printf("            again (e.x. --aes,  --request and --fips_validation)\n");
     printf("\n");
     printf("To cancel a test session that was previously initiated:\n");
     printf("      --cancel_session <session_file>\n");
@@ -153,6 +153,12 @@ static void print_usage(int code) {
     printf("Some other options may support outputting to log OR saving to a file. To save to a file:\n");
     printf("      --save_to <file>\n");
     printf("      -s <file>\n");
+    printf("\n");
+    printf("To request module certificate using a predefined request file:\n");
+    printf("      --module_cert_req <request_file>\n");
+    printf("\n");
+    printf("To post all resources a predefined resource json file:\n");
+    printf("      --post_resources <resource_file>\n");
     printf("\n");
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
     printf("To disable FIPS mode for this run (Note, a warning will be issued):\n");
@@ -238,9 +244,9 @@ static ko_longopt_t longopts[] = {
     { "manual_registration", ko_required_argument, 400 },
     { "kat", ko_required_argument, 401 },
     { "fips_validation", ko_required_argument, 402 },
-    { "vector_req", ko_required_argument, 403 },
-    { "vector_rsp", ko_required_argument, 404 },
-    { "vector_upload", ko_required_argument, 405 },
+    { "request", ko_required_argument, 403 },
+    { "response", ko_required_argument, 404 },
+    { "upload", ko_required_argument, 405 },
     { "get", ko_required_argument, 406 },
     { "post", ko_required_argument, 407 },
     { "put", ko_required_argument, 408 },
@@ -254,6 +260,8 @@ static ko_longopt_t longopts[] = {
     { "cost", ko_no_argument, 416 },
     { "debug", ko_no_argument, 417 },
     { "get_registration", ko_no_argument, 418 },
+    { "module_cert_req", ko_required_argument, 419 },
+    { "post_resources", ko_required_argument, 420 },
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
     { "disable_fips", ko_no_argument, 500 },
 #endif
@@ -584,6 +592,22 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
             cfg->get_reg = 1;
             break;
 
+        case 419:
+            cfg->mod_cert_req = 1;
+            if (!check_option_length(opt.arg, c, JSON_FILENAME_LENGTH)) {
+                return 1;
+            }
+            strcpy_s(cfg->mod_cert_req_file, JSON_FILENAME_LENGTH + 1, opt.arg);
+            break;
+
+        case 420:
+            cfg->post_resources = 1;
+            if (!check_option_length(opt.arg, c, JSON_FILENAME_LENGTH)) {
+                return 1;
+            }
+            strcpy_s(cfg->post_resources_filename, JSON_FILENAME_LENGTH + 1, opt.arg);
+            break;
+
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
         case 500:
             cfg->disable_fips = 1;
@@ -615,8 +639,8 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
     }
 
     //Many args do not need an alg specified. Todo: make cleaner
-    if (cfg->empty_alg && !cfg->post && !cfg->get && !cfg->put && !cfg->get_results
-            && !cfg->get_expected && !cfg->manual_reg && !cfg->vector_upload
+    if (cfg->empty_alg && !cfg->post && !cfg->get && !cfg->put && !cfg->get_results && !cfg->post_resources
+            && !cfg->get_expected && !cfg->manual_reg && !cfg->vector_upload && !cfg->mod_cert_req
             && !cfg->delete && !cfg->cancel_session && !(cfg->resume_session && 
             cfg->vector_req)) {
         /* The user needs to select at least 1 algorithm */

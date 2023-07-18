@@ -872,6 +872,8 @@
 #define AMVP_PATH_SEGMENT_DEFAULT ""
 #define AMVP_JSON_FILENAME_MAX 128
 
+#define AMVP_PROTOCOL_VERSION_STR "amvVersion"
+
 /* 
  * This should NOT be made longer than AMVP_JSON_FILENAME_MAX - 15
  * (accounting for _ character, ".json", and 9 digits for testSession ID)
@@ -1740,6 +1742,10 @@ struct amvp_ctx_t {
     int delete;             /* flag to indicate we are only requesting deleting a resource */
     char *delete_string;    /* string used for delete request */
     char *save_filename;    /* string used for file to save certain HTTP requests to */
+    int mod_cert_req;
+    char *mod_cert_req_file;    /* string used for file to save certain HTTP requests to */
+    int post_resources;
+    char *post_resources_filename;    /* string used for file to save certain HTTP requests to */
 
     AMVP_FIPS fips; /* Information related to a FIPS validation */
 
@@ -1949,6 +1955,12 @@ const char *amvp_lookup_ec_curve_name(AMVP_CIPHER cipher, AMVP_EC_CURVE id);
 AMVP_RESULT amvp_refresh(AMVP_CTX *ctx);
 
 void amvp_http_user_agent_handler(AMVP_CTX *ctx);
+
+AMVP_RESULT amvp_setup_json_ev_group(AMVP_CTX **ctx,
+                                      JSON_Value **outer_arr_val,
+                                      JSON_Value **r_vs_val,
+                                      JSON_Object **r_vs,
+                                      JSON_Array **groups_arr);
 
 AMVP_RESULT amvp_setup_json_rsp_group(AMVP_CTX **ctx,
                                       JSON_Value **outer_arr_val,

@@ -20,9 +20,13 @@
 #include <math.h>
 #include "amvp.h"
 #include "amvp_lcl.h"
+#include "amvp_error.h"
 #include "parson.h"
 #include "safe_lib.h"
 
+static AMVP_RESULT amvp_process_teid(AMVP_CTX *ctx, char *vsid_url, int count);
+
+static AMVP_RESULT amvp_cert_req(AMVP_CTX *ctx);
 /*
  * Forward prototypes for local functions
  */
@@ -42,6 +46,8 @@ static AMVP_RESULT amvp_process_vsid(AMVP_CTX *ctx, char *vsid_url, int count);
 
 static AMVP_RESULT amvp_process_vector_set(AMVP_CTX *ctx, JSON_Object *obj);
 
+static AMVP_RESULT amvp_process_ie_set(AMVP_CTX *ctx, JSON_Object *obj);
+
 static AMVP_RESULT amvp_dispatch_vector_set(AMVP_CTX *ctx, JSON_Object *obj);
 
 static void amvp_cap_free_sl(AMVP_SL_LIST *list);
@@ -57,6 +63,10 @@ static void amvp_cap_free_hash_pairs(AMVP_RSA_HASH_PAIR_LIST *list);
 static AMVP_RESULT amvp_get_result_test_session(AMVP_CTX *ctx, char *session_url);
 
 static AMVP_RESULT amvp_put_data_from_ctx(AMVP_CTX *ctx);
+
+static AMVP_RESULT amvp_retry_handler(AMVP_CTX *ctx, int *retry_period, unsigned int *waited_so_far, int modifier, AMVP_WAITING_STATUS situation);
+
+static AMVP_RESULT amvp_handle_protocol_error(AMVP_CTX *ctx, AMVP_PROTOCOL_ERR *err);
 
 /*
  * This table maps AMVP operations to handlers within libamvp.
@@ -613,7 +623,9 @@ AMVP_RESULT amvp_free_test_session(AMVP_CTX *ctx) {
     if (ctx->delete_string) { free(ctx->delete_string); }
     if (ctx->save_filename) { free(ctx->save_filename); }
     if (ctx->post_filename) { free(ctx->post_filename); }
+    if (ctx->post_resources_filename) { free(ctx->post_resources_filename); }
     if (ctx->put_filename) { free(ctx->put_filename); }
+    if (ctx->mod_cert_req_file) { free(ctx->mod_cert_req_file); }
     if (ctx->jwt_token) { free(ctx->jwt_token); }
     if (ctx->tmp_jwt) { free(ctx->tmp_jwt); }
     if (ctx->vs_list) {
@@ -1150,10 +1162,8 @@ end:
 AMVP_RESULT amvp_upload_vectors_from_file(AMVP_CTX *ctx, const char *rsp_filename, int fips_validation) {
     JSON_Object *obj = NULL;
     JSON_Object *rsp_obj = NULL;
-    JSON_Object *ver_obj = NULL;
     JSON_Value *vs_val = NULL;
     JSON_Value *new_val = NULL;
-    JSON_Value *ver_val = NULL;
     JSON_Value *val = NULL;
     AMVP_RESULT rv = AMVP_SUCCESS;
     JSON_Array *reg_array;
@@ -1233,7 +1243,7 @@ AMVP_RESULT amvp_upload_vectors_from_file(AMVP_CTX *ctx, const char *rsp_filenam
 
     strcpy_s(ctx->jwt_token, AMVP_JWT_TOKEN_MAX + 1, jwt);
 
-    vect_sets = json_object_get_array(obj, "vectorSetUrls");
+    vect_sets = json_object_get_array(obj, "ieSetsId");
     vs_cnt = json_array_get_count(vect_sets);
     for (i = 0; i < vs_cnt; i++) {
         const char *vsid_url = json_array_get_string(vect_sets, i);
@@ -1279,12 +1289,6 @@ AMVP_RESULT amvp_upload_vectors_from_file(AMVP_CTX *ctx, const char *rsp_filenam
         vec_array_val = json_value_init_array();
         vec_array = json_array((const JSON_Value *)vec_array_val);
 
-        ver_val = json_value_init_object();
-        ver_obj = json_value_get_object(ver_val);
-
-        json_object_set_string(ver_obj, "amvVersion", AMVP_VERSION);
-        json_array_append_value(vec_array, ver_val);
-
         json_result = json_serialize_to_string_pretty(vs_val, NULL);
         new_val = json_parse_string(json_result);
         json_free_serialized_string(json_result);
@@ -1322,6 +1326,12 @@ AMVP_RESULT amvp_upload_vectors_from_file(AMVP_CTX *ctx, const char *rsp_filenam
         AMVP_LOG_ERR("Unable to retrieve test results");
     }
 
+    rv = amvp_cert_req(ctx);
+    if (AMVP_SUCCESS != rv) {
+        AMVP_LOG_ERR("cert req failed");
+        goto end;
+    }
+    
     if (fips_validation) {
         /*
          * Tell the server to provision a FIPS certificate for this testSession.
@@ -2079,6 +2089,28 @@ AMVP_RESULT amvp_mark_as_put_after_test(AMVP_CTX *ctx, char *filename) {
     return AMVP_SUCCESS;
 }
 
+AMVP_RESULT amvp_mark_as_cert_req(AMVP_CTX *ctx, char *filename) {
+    if (!ctx) {
+        return AMVP_NO_CTX;
+    } 
+    if (!filename) {
+        return AMVP_MISSING_ARG;
+    }
+    if (strnlen_s(filename, AMVP_SESSION_PARAMS_STR_LEN_MAX + 1) > AMVP_SESSION_PARAMS_STR_LEN_MAX) {
+         AMVP_LOG_ERR("Vector filename is suspiciously long...");
+        return AMVP_INVALID_ARG;
+    }
+
+    if (ctx->mod_cert_req_file) { free(ctx->mod_cert_req_file); }
+    ctx->mod_cert_req_file = calloc(AMVP_SESSION_PARAMS_STR_LEN_MAX + 1, sizeof(char));
+    if (!ctx->mod_cert_req_file) {
+        return AMVP_MALLOC_FAIL;
+    }
+    strcpy_s(ctx->mod_cert_req_file, AMVP_SESSION_PARAMS_STR_LEN_MAX + 1, filename);
+    ctx->mod_cert_req = 1;
+    return AMVP_SUCCESS;
+}
+
 AMVP_RESULT amvp_mark_as_post_only(AMVP_CTX *ctx, char *filename) {
 
     if (!ctx) {
@@ -2100,6 +2132,30 @@ AMVP_RESULT amvp_mark_as_post_only(AMVP_CTX *ctx, char *filename) {
 
     strcpy_s(ctx->post_filename, AMVP_SESSION_PARAMS_STR_LEN_MAX + 1, filename);
     ctx->post = 1;
+    return AMVP_SUCCESS;
+}
+
+AMVP_RESULT amvp_mark_as_post_resources(AMVP_CTX *ctx, char *filename) {
+
+    if (!ctx) {
+        return AMVP_NO_CTX;
+    } 
+    if (!filename) {
+        return AMVP_MISSING_ARG;
+    }
+    if (strnlen_s(filename, AMVP_SESSION_PARAMS_STR_LEN_MAX + 1) > AMVP_SESSION_PARAMS_STR_LEN_MAX) {
+         AMVP_LOG_ERR("Request filename is suspiciously long...");
+        return AMVP_INVALID_ARG;
+    }
+
+    if (ctx->post_resources_filename) { free(ctx->post_resources_filename); }
+    ctx->post_resources_filename = calloc(AMVP_SESSION_PARAMS_STR_LEN_MAX + 1, sizeof(char));
+    if (!ctx->post_resources_filename) {
+        return AMVP_MALLOC_FAIL;
+    }
+
+    strcpy_s(ctx->post_resources_filename, AMVP_SESSION_PARAMS_STR_LEN_MAX + 1, filename);
+    ctx->post_resources = 1;
     return AMVP_SUCCESS;
 }
 
@@ -2142,8 +2198,6 @@ int amvp_get_vector_set_count(AMVP_CTX *ctx) {
 static AMVP_RESULT amvp_build_login(AMVP_CTX *ctx, char **login, int *login_len, int refresh) {
     AMVP_RESULT rv = AMVP_SUCCESS;
     JSON_Value *reg_arry_val = NULL;
-    JSON_Value *ver_val = NULL;
-    JSON_Object *ver_obj = NULL;
     JSON_Value *pw_val = NULL;
     JSON_Object *pw_obj = NULL;
     JSON_Array *reg_arry = NULL;
@@ -2156,12 +2210,6 @@ static AMVP_RESULT amvp_build_login(AMVP_CTX *ctx, char **login, int *login_len,
      */
     reg_arry_val = json_value_init_array();
     reg_arry = json_array((const JSON_Value *)reg_arry_val);
-
-    ver_val = json_value_init_object();
-    ver_obj = json_value_get_object(ver_val);
-
-    json_object_set_string(ver_obj, "amvVersion", AMVP_VERSION);
-    json_array_append_value(reg_arry, ver_val);
 
     if (ctx->totp_cb || refresh) {
         pw_val = json_value_init_object();
@@ -2276,6 +2324,319 @@ static AMVP_RESULT amvp_register(AMVP_CTX *ctx) {
 
 end:
     if (reg) json_free_serialized_string(reg);
+    return rv;
+}
+
+/*
+ * This routine performs the JSON parsing of the mod cert rq
+ * from the server. It should contain a list of URLs for vector sets that
+ * can be queried to get the test parameters.
+ */
+static AMVP_RESULT amvp_parse_mod_cert_req(AMVP_CTX *ctx) {
+    JSON_Value *val = NULL;
+    JSON_Object *obj = NULL;
+    JSON_Array *te_sets = NULL;
+    const char *test_session_url = NULL, *access_token = NULL;
+    int i = 0, te_cnt = 0;
+    AMVP_RESULT rv = 0;
+
+    /*
+     * Parse the JSON
+     */
+    val = json_parse_string(ctx->curl_buf);
+    if (!val) {
+        AMVP_LOG_ERR("JSON parse error");
+        return AMVP_JSON_ERR;
+    }
+    obj = amvp_get_obj_from_rsp(ctx, val);
+
+    /*
+     * This is the identifiers provided by the server
+     * for this specific test session!
+     */
+    test_session_url = json_object_get_string(obj, "url");
+    if (!test_session_url) {
+        AMVP_LOG_ERR("JSON parse error");
+        return AMVP_JSON_ERR;
+    }
+
+    ctx->session_url = calloc(AMVP_ATTR_URL_MAX + 1, sizeof(char));
+    strcpy_s(ctx->session_url, AMVP_ATTR_URL_MAX + 1, test_session_url);
+
+    /*
+     * The accessToken needed for this specific test session.
+     */
+    access_token = json_object_get_string(obj, "accessToken");
+    if (!access_token) {
+        AMVP_LOG_ERR("JSON parse error");
+        return AMVP_JSON_ERR;
+    }
+    if (strnlen_s(access_token, AMVP_JWT_TOKEN_MAX + 1) > AMVP_JWT_TOKEN_MAX) {
+        AMVP_LOG_ERR("access_token too large");
+        return AMVP_JWT_INVALID;
+    }
+    memzero_s(ctx->jwt_token, AMVP_JWT_TOKEN_MAX + 1);
+    strcpy_s(ctx->jwt_token, AMVP_JWT_TOKEN_MAX + 1, access_token);
+
+    /*
+     * Identify the TE identifiers provided by the server, save them for
+     * processing later.
+     */
+    te_sets = json_object_get_array(obj, "crUrls");
+    te_cnt = json_array_get_count(te_sets);
+    for (i = 0; i < te_cnt; i++) {
+        const char *teid_url = json_array_get_string(te_sets, i);
+
+        if (!teid_url) {
+            AMVP_LOG_ERR("No teid_url");
+            goto end;
+        }
+
+        rv = amvp_append_vsid_url(ctx, teid_url);
+        if (rv != AMVP_SUCCESS) goto end;
+        AMVP_LOG_INFO("Received teid_url=%s", teid_url);
+    }
+
+end:
+    if (val) json_value_free(val);
+    return rv;
+}
+
+/*
+ * This function will process a single KAT vector set.  Each KAT
+ * vector set has an identifier associated with it, called
+ * the vs_id.  During registration, libamvp will receive the
+ * list of vs_id's that need to be processed during the test
+ * session.  This routine will execute the test flow for a single
+ * vs_id.  The flow is:
+ *    a) Download the KAT vector set from the server using the vs_id
+ *    b) Parse the KAT vectors
+ *    c) Process each test case in the KAT vector set
+ *    d) Generate the response data
+ *    e) Send the response data back to the AMVP server
+ */
+static AMVP_RESULT amvp_process_teid(AMVP_CTX *ctx, char *vsid_url, int count) {
+    AMVP_RESULT rv = AMVP_SUCCESS;
+    JSON_Value *val = NULL;
+    JSON_Value *ts_val = NULL;
+    JSON_Object *ts_obj = NULL;
+    JSON_Object *obj = NULL;
+    JSON_Value *set_val = NULL;
+    JSON_Array *set_array = NULL;
+    JSON_Array *url_arr = NULL;
+    AMVP_STRING_LIST *vs_entry = NULL;
+    int retry_period = 0;
+    int retry = 1;
+    unsigned int time_waited_so_far = 0;
+    while (retry) {
+        /*
+         * Get the KAT vector set
+         */
+        rv = amvp_retrieve_vector_set(ctx, vsid_url);
+        if (rv != AMVP_SUCCESS) goto end;
+
+        val = json_parse_string(ctx->curl_buf);
+        if (!val) {
+            AMVP_LOG_ERR("JSON parse error");
+            rv = AMVP_JSON_ERR;
+            goto end;
+        }
+        obj = amvp_get_obj_from_rsp(ctx, val);
+
+        /*
+         * Check if we received a retry response
+         */
+        retry_period = json_object_get_number(obj, "retry");
+        if (retry_period) {
+            /*
+             * Wait and try again to retrieve the evSet
+             */
+            if (amvp_retry_handler(ctx, &retry_period, &time_waited_so_far, 1, AMVP_WAITING_FOR_TESTS) != AMVP_KAT_DOWNLOAD_RETRY) {
+                AMVP_LOG_STATUS("Maximum wait time with server reached! (Max: %d seconds)", AMVP_MAX_WAIT_TIME);
+                rv = AMVP_TRANSPORT_FAIL;
+                goto end;
+            };
+            retry = 1;
+        } else {
+            /*
+             * Save the Evidence Template to file
+             */
+            if (ctx->vector_req) {
+                
+                set_array = json_value_get_array(val);
+                set_val = json_array_get_value(set_array, 0);
+                
+                AMVP_LOG_STATUS("Saving vector set %s to file...", vsid_url);
+                /* track first vector set with file count */
+                if (count == 0) {
+                    ts_val = json_value_init_object();
+                    ts_obj = json_value_get_object(ts_val);
+
+                    json_object_set_string(ts_obj, "jwt", ctx->jwt_token);
+                    json_object_set_string(ts_obj, "url", ctx->session_url);
+                    json_object_set_boolean(ts_obj, "isSample", ctx->is_sample);
+
+                    json_object_set_value(ts_obj, "ieSetsId", json_value_init_array());
+                    url_arr = json_object_get_array(ts_obj, "ieSetsId");
+
+                    vs_entry = ctx->vsid_url_list;
+                    while (vs_entry) {
+                        json_array_append_string(url_arr, vs_entry->string);
+                        vs_entry = vs_entry->next;
+                    }
+                    /* Start with identifiers */
+                    rv = amvp_json_serialize_to_file_pretty_w(ts_val, ctx->vector_req_file);
+                    if (rv != AMVP_SUCCESS) {
+                        AMVP_LOG_ERR("File write error");
+                        json_value_free(ts_val);
+                        goto end;
+                    }
+                } 
+                /* append the TE groups */
+                rv = amvp_json_serialize_to_file_pretty_a(set_val, ctx->vector_req_file);
+                json_value_free(ts_val);
+                goto end;
+            }
+            /*
+             * Process the KAT VectorSet
+             */
+            rv = amvp_process_ie_set(ctx, obj);
+            json_value_free(ts_val);
+            retry = 0;
+        }
+
+        if (rv != AMVP_SUCCESS) goto end;
+        json_value_free(val);
+        val = NULL;
+    }
+
+    /*
+     * Send the responses to the AMVP server
+     */
+    AMVP_LOG_STATUS("Posting ie set responses for vsId %d to URL: %s...", ctx->vs_id, vsid_url);
+    rv = amvp_submit_vector_responses(ctx, vsid_url);
+
+end:
+    if (val) json_value_free(val);
+    return rv;
+}
+
+/*
+ * This function is used by the application after registration
+ * to commence the testing.  All the testing will be handled
+ * by libamvp.  This function will block the caller.  Therefore,
+ * it should be run on a separate thread if needed.
+ */
+static
+AMVP_RESULT amvp_process_amvp_tes(AMVP_CTX *ctx) {
+    AMVP_RESULT rv = AMVP_SUCCESS;
+    AMVP_STRING_LIST *vs_entry = NULL;
+    int count = 0;
+
+    if (!ctx) {
+        return AMVP_NO_CTX;
+    }
+
+    /*
+     * Iterate through the TE identifiers the server sent to us
+     * in the test session register response.  Process each vector set and
+     * return the results to the server.
+     */
+    vs_entry = ctx->vsid_url_list;
+    if (!vs_entry) {
+        return AMVP_MISSING_ARG;
+    }
+    while (vs_entry) {
+        rv = amvp_process_teid(ctx, vs_entry->string, count);
+        if (rv != AMVP_SUCCESS) {
+            AMVP_LOG_ERR("Unable to process vector set! Error: %d", rv);
+            return rv;
+        }
+        vs_entry = vs_entry->next;
+        count++;
+    }
+    /* Need to add the ending ']' here */
+    if (ctx->vector_req) {
+        rv = amvp_json_serialize_to_file_pretty_a(NULL, ctx->vector_req_file);
+    }
+    return rv;
+}
+
+/*
+ * This function is used to register the DUT with the server.
+ * Registration allows the DUT to advertise it's capabilities to
+ * the server.  The server will respond with a set of vector set
+ * identifiers that the client will need to process.
+ */
+AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx) {
+    AMVP_RESULT rv = AMVP_SUCCESS;
+    AMVP_PROTOCOL_ERR *err = NULL;
+    char *reg = NULL;
+    int reg_len = 0, count = 0;
+
+    JSON_Value *tmp_json = NULL;
+    JSON_Array *tmp_arr = NULL;
+    if (!ctx) {
+        return AMVP_NO_CTX;
+    }
+
+    /*
+     * Send the capabilities to the AMVP server and get the response,
+     * which should be a list of vector set ID urls
+     */
+    AMVP_LOG_STATUS("Reading module cert request file...");
+    tmp_json = json_parse_file(ctx->mod_cert_req_file);
+    if (!tmp_json) {
+        AMVP_LOG_ERR("Error reading capabilities file");
+        rv = AMVP_JSON_ERR;
+        goto end;
+    }
+    /* Quickly sanity check format */
+    tmp_arr = json_value_get_array(tmp_json);
+    if (!tmp_arr) {
+        AMVP_LOG_ERR("Provided capabilities file in invalid format");
+        rv = AMVP_JSON_ERR;
+        goto end;
+    }
+    count = json_array_get_count(tmp_arr);
+    if (count < 1 || count > AMVP_CAP_MAX) {
+        AMVP_LOG_ERR("Invalid number of capability objects in provided file! Min: 1, Max: %d", AMVP_CAP_MAX);
+        rv = AMVP_JSON_ERR;
+        goto end;
+    }
+    ctx->registration = tmp_json;
+    reg = json_serialize_to_string(tmp_json, &reg_len);
+    
+    AMVP_LOG_STATUS("Sending module cert request...");
+    //AMVP_LOG_STATUS("    request: %s", reg);
+    //AMVP_LOG_STATUS("    POST...Url: %s","/amv/v1/certRequest");
+    rv = amvp_transport_post(ctx, "/amv/v1/certRequest", reg, reg_len);
+    
+    if (rv == AMVP_SUCCESS) {
+        rv = amvp_parse_mod_cert_req(ctx);
+        if (rv != AMVP_SUCCESS) {
+            AMVP_LOG_ERR("Failed to parse test session response");
+            goto end;
+        }
+        AMVP_LOG_STATUS("Successfully sent mod cert req and received list of TE URLs");
+    } else {
+        AMVP_LOG_ERR("Failed to send registration");
+        goto end;
+    }
+
+    /*
+     * Now we process the test cases given to us during
+     * registration earlier.
+     */
+    rv = amvp_process_amvp_tes(ctx);
+    if (rv != AMVP_SUCCESS) {
+        AMVP_LOG_ERR("Failed to process TEs");
+        goto end;
+    }
+
+end:
+    if (reg) json_free_serialized_string(reg);
+    if (err) amvp_free_protocol_err(err);
     return rv;
 }
 
@@ -2459,8 +2820,8 @@ AMVP_RESULT amvp_notify_large(AMVP_CTX *ctx,
                               unsigned int data_len) {
     AMVP_RESULT rv = AMVP_SUCCESS;
     JSON_Value *arr_val = NULL, *val = NULL,
-               *ver_val = NULL, *server_val = NULL;
-    JSON_Object *obj = NULL, *ver_obj = NULL, *server_obj = NULL;
+               *server_val = NULL;
+    JSON_Object *obj = NULL, *server_obj = NULL;
     JSON_Array *arr = NULL;
     char *substr = NULL;
     char snipped_url[AMVP_ATTR_URL_MAX + 1] = {0} ;
@@ -2476,12 +2837,6 @@ AMVP_RESULT amvp_notify_large(AMVP_CTX *ctx,
     arr_val = json_value_init_array();
     arr = json_array((const JSON_Value *)arr_val);
 
-    ver_val = json_value_init_object();
-    ver_obj = json_value_get_object(ver_val);
-
-    json_object_set_string(ver_obj, "amvVersion", AMVP_VERSION);
-    json_array_append_value(arr, ver_val);
-
     /*
      * Start the large/ array
      */
@@ -2491,7 +2846,7 @@ AMVP_RESULT amvp_notify_large(AMVP_CTX *ctx,
     /* 
      * Cut off the https://name:port/ prefix and /results suffix
      */
-    strstr_s((char *)url, AMVP_ATTR_URL_MAX, "/amvp/v1", 8, &substr);
+    strstr_s((char *)url, AMVP_ATTR_URL_MAX, "/amv/v1", 8, &substr);
     strcpy_s(snipped_url, AMVP_ATTR_URL_MAX, substr);
     strstr_s(snipped_url, AMVP_ATTR_URL_MAX, "/results", 8, &substr);
     if (!substr) {
@@ -2642,6 +2997,7 @@ end:
     return rv;
 }
 
+
 /**
  * Loads all of the data we need to process or view test session information
  * from the given file. used for non-continuous sessions.
@@ -2759,6 +3115,8 @@ AMVP_RESULT amvp_process_tests(AMVP_CTX *ctx) {
     return rv;
 }
 
+
+
 /*
  * This is a retry handler, which pauses for a specific time.
  * This allows the server time to generate the vectors on behalf of
@@ -2832,6 +3190,7 @@ AMVP_RESULT amvp_check_test_results(AMVP_CTX *ctx) {
 
 static AMVP_RESULT amvp_login(AMVP_CTX *ctx, int refresh) {
     AMVP_RESULT rv = AMVP_SUCCESS;
+    AMVP_PROTOCOL_ERR *err = NULL;
     char *login = NULL;
     int login_len = 0;
 
@@ -2841,6 +3200,7 @@ static AMVP_RESULT amvp_login(AMVP_CTX *ctx, int refresh) {
         AMVP_LOG_ERR("Unable to build login message");
         goto end;
     }
+    AMVP_LOG_STATUS("    Login info: %s", login);
 
     /*
      * Send the login to the AMVP server and get the response,
@@ -2856,9 +3216,11 @@ static AMVP_RESULT amvp_login(AMVP_CTX *ctx, int refresh) {
         AMVP_LOG_STATUS("Login Response Failed, %d", rv);
     } else {
         AMVP_LOG_STATUS("Login successful");
+        //AMVP_LOG_STATUS("    Login Response: %s", ctx->curl_buf);
     }
 end:
     if (login) free(login);
+    if (err) amvp_free_protocol_err(err);
     return rv;
 }
 
@@ -2990,6 +3352,7 @@ end:
     return rv;
 }
 
+
 /*
  * This function is used to invoke the appropriate handler function
  * for a given ACV operation.  The operation is specified in the
@@ -3040,6 +3403,186 @@ static AMVP_RESULT amvp_dispatch_vector_set(AMVP_CTX *ctx, JSON_Object *obj) {
     return AMVP_UNSUPPORTED_OP;
 }
 
+typedef struct amvp_evidence_t AMVP_EVIDENCE;
+struct amvp_evidence_t {
+    const char *evidence_name;
+    const char *evidence;
+};
+
+AMVP_EVIDENCE amvp_evidence_tbl[9] = {
+       {"TE02.20.01", "/acvp/v1/validations/41763"},
+       {"TE02.20.02", "none"},
+       {"TE11.16.01", "Version X.Y.Z of the module meets the assertion" },
+       {"TE04.11.01", "<BASE64(table of services.pdf) compliant with SP800-140Br>" },
+       {"TE04.11.02", "/wwwin.cisco.com/cryptomod/log_te041102_04172023.txt" },
+       {"TE10.10.01", "Degraded mode not supported, no algorithms can be used...goes directly into SP." },
+       {"TE10.10.02", "/wwwin.cisco.com/cryptomod/log_te041102_04172023.txt" },
+       {"TE11.08.01", "/wwwin.cisco.com/cryptomod/FSM.pdf" },
+       {"TE11.08.02", "See TE11.08.01"}
+};
+
+
+static const char *amvp_locate_auto_entry(AMVP_CTX *ctx, const char *evidence)
+{
+    int i;
+    int diff;
+    
+    for (i=0; i<9; i++) {
+        strcmp_s(evidence, strlen(amvp_evidence_tbl[i].evidence_name), amvp_evidence_tbl[i].evidence_name, &diff);
+        if (!diff) {
+            return (amvp_evidence_tbl[i].evidence);
+        }
+    }
+    return NULL;
+}
+
+
+/*
+ * This function is used to invoke the appropriate handler function
+ * for a given ACV operation.  The operation is specified in the
+ * KAT vector set that was previously downloaded.  The handler function
+ * is looked up in the alg_tbl[] and invoked here.
+ */
+static AMVP_RESULT amvp_dispatch_ie_set(AMVP_CTX *ctx, JSON_Object *obj) {
+    int ie_id = json_object_get_number(obj, "ievSetsId");
+    JSON_Value *groupval;
+    JSON_Object *groupobj = NULL;
+    JSON_Array *groups;
+    JSON_Array *tests;
+
+    JSON_Value *reg_arry_val = NULL;
+    JSON_Object *reg_obj = NULL;
+    JSON_Array *reg_arry = NULL;
+
+    int i, g_cnt, ieset_len;
+    int j, t_cnt;
+
+    JSON_Value *r_vs_val = NULL;
+    JSON_Object *r_vs = NULL;
+    JSON_Array *r_tarr = NULL, *r_garr = NULL;  /* Response testarray, grouparray */
+    JSON_Value *r_tval = NULL, *r_gval = NULL;  /* Response testval, groupval */
+    JSON_Object *r_tobj = NULL, *r_gobj = NULL; /* Response testobj, groupobj */
+    const char *evidence;
+    const char *ev_str;
+    char *json_result;
+
+    ctx->vs_id = ie_id;
+    AMVP_RESULT rv;
+
+    AMVP_LOG_STATUS("Processing ie set: %d", ie_id);
+    /*
+     * Create AMVP array for response
+     */
+    rv = amvp_create_array(&reg_obj, &reg_arry_val, &reg_arry);
+    if (rv != AMVP_SUCCESS) {
+        AMVP_LOG_ERR("Failed to create JSON response struct. ");
+        return rv;
+    }
+    
+    /*
+     * Start to build the JSON response
+     */
+    rv = amvp_setup_json_ev_group(&ctx, &reg_arry_val, &r_vs_val, &r_vs, &r_garr);
+    if (rv != AMVP_SUCCESS) {
+        AMVP_LOG_ERR("Failed to setup json response");
+        return rv;
+    }
+
+    groups = json_object_get_array(obj, "teGroups");
+    if (!groups) {
+        AMVP_LOG_ERR("Failed to include testGroups. ");
+        rv = AMVP_MISSING_ARG;
+        goto err;
+    }
+
+    g_cnt = json_array_get_count(groups);
+    for (i = 0; i < g_cnt; i++) {
+        int teId = 0;
+        groupval = json_array_get_value(groups, i);
+        groupobj = json_value_get_object(groupval);
+
+        /*
+         * Create a new group in the response with the teid
+         * and an array of tests
+         */
+        r_gval = json_value_init_object();
+        r_gobj = json_value_get_object(r_gval);
+        
+        teId = json_object_get_number(groupobj, "teId");
+        if (!teId) {
+            AMVP_LOG_ERR("Missing teId from server JSON groub obj");
+            rv = AMVP_MALFORMED_JSON;
+            goto err;
+        }
+        json_object_set_number(r_gobj, "teId", teId);
+        json_object_set_value(r_gobj, "evidence", json_value_init_array());
+        r_tarr = json_object_get_array(r_gobj, "evidence");
+
+        AMVP_LOG_VERBOSE("    Test group: %d", i);
+
+        tests = json_object_get_array(groupobj, "autoTE");
+        if (!tests) {
+            AMVP_LOG_ERR("Failed to include tests. ");
+            rv = AMVP_MISSING_ARG;
+            goto err;
+        }
+
+        t_cnt = json_array_get_count(tests);
+        if (!t_cnt) {
+            AMVP_LOG_ERR("Failed to include tests in array. ");
+            rv = AMVP_MISSING_ARG;
+            goto err;
+        }
+
+        for (j = 0; j < t_cnt; j++) {
+            AMVP_LOG_VERBOSE("Found new TE ...");
+            evidence = json_array_get_string(tests, j);
+
+            if (!evidence) {
+                AMVP_LOG_ERR("Failed to include evidence");
+                rv = AMVP_MISSING_ARG;
+                goto err;
+            }
+
+            AMVP_LOG_VERBOSE("        Test case: %d", j);
+            AMVP_LOG_VERBOSE("         evidence: %s", evidence);
+
+            /*
+             * Create a new test case in the response
+             */
+            r_tval = json_value_init_object();
+            r_tobj = json_value_get_object(r_tval);
+
+            /* Determine if automated, if so gather the evidence information */
+            ev_str = amvp_locate_auto_entry(ctx, evidence);
+            if (!ev_str) {
+                AMVP_LOG_INFO("AMVP skipping TE that is not automated");
+                continue;
+            }
+
+            json_object_set_string(r_tobj, evidence, ev_str);
+
+            /* Append the test response value to array */
+            json_array_append_value(r_tarr, r_tval);
+        }
+        json_array_append_value(r_garr, r_gval);
+    }
+
+    json_array_append_value(reg_arry, r_vs_val);
+
+    json_result = json_serialize_to_string_pretty(ctx->kat_resp, &ieset_len);
+    AMVP_LOG_VERBOSE("\n\n%s\n\n", json_result);
+    json_free_serialized_string(json_result);
+    rv = AMVP_SUCCESS;
+
+err:
+    if (rv != AMVP_SUCCESS) {
+        amvp_release_json(r_vs_val, r_gval);
+    }
+
+    return rv;
+}
+
 /*
  * This function is used to process the test cases for
  * a given KAT vector set.  This is invoked after the
@@ -3058,6 +3601,32 @@ static AMVP_RESULT amvp_process_vector_set(AMVP_CTX *ctx, JSON_Object *obj) {
     AMVP_RESULT rv;
 
     rv = amvp_dispatch_vector_set(ctx, obj);
+    if (rv != AMVP_SUCCESS) {
+        return rv;
+    }
+
+    AMVP_LOG_STATUS("Successfully processed vector set");
+    return AMVP_SUCCESS;
+}
+
+/*
+ * This function is used to process the test cases for
+ * a given KAT vector set.  This is invoked after the
+ * KAT vector set has been downloaded from the server.  The
+ * vectors are stored on the AMVP_CTX in one of the
+ * transitory fields.  Therefore, the vs_id isn't needed
+ * here to know which vectors need to be processed.
+ *
+ * The processing logic is:
+ *    a) JSON parse the data
+ *    b) Identify the AMVP operation to be performed (e.g. AES encrypt)
+ *    c) Dispatch the vectors to the handler for the
+ *       specified AMVP operation.
+ */
+static AMVP_RESULT amvp_process_ie_set(AMVP_CTX *ctx, JSON_Object *obj) {
+    AMVP_RESULT rv;
+
+    rv = amvp_dispatch_ie_set(ctx, obj);
     if (rv != AMVP_SUCCESS) {
         return rv;
     }
@@ -3392,7 +3961,7 @@ AMVP_RESULT amvp_post_data(AMVP_CTX *ctx, char *filename) {
     json_array_append_value(reg_arry, post_val);
 
     json_result = json_serialize_to_string_pretty(reg_arry_val, &len);
-    AMVP_LOG_INFO("\nPOST Data: %s\n\n", json_result);
+    AMVP_LOG_STATUS("\nPOST Data: %s, %s\n\n", path, json_result);
     json_value_free(reg_arry_val);
 
     rv = amvp_transport_post(ctx, path, json_result, len);
@@ -3404,6 +3973,104 @@ end:
     return rv;
 
 }
+
+AMVP_RESULT amvp_post_resources(AMVP_CTX *ctx, const char *resource_file) {
+    AMVP_RESULT rv = AMVP_SUCCESS;
+    JSON_Array *vendor_array = NULL;
+    JSON_Object *obj = NULL;
+    JSON_Value *val = NULL;
+    JSON_Value *post_val = NULL;
+    JSON_Value *raw_val = NULL;
+    char *json_result = NULL;
+    int len;
+
+
+    if (!ctx) return AMVP_NO_CTX;
+    if (!resource_file) {
+        AMVP_LOG_ERR("Must provide string value for 'resource_file'");
+        return AMVP_MISSING_ARG;
+    }
+
+    if (strnlen_s(resource_file, AMVP_JSON_FILENAME_MAX + 1) > AMVP_JSON_FILENAME_MAX) {
+        AMVP_LOG_ERR("Provided 'resource_file' string length > max(%d)", AMVP_JSON_FILENAME_MAX);
+        return AMVP_INVALID_ARG;
+    }
+
+    val = json_parse_file(resource_file);
+    if (!val) {
+        AMVP_LOG_ERR("Failed to parse JSON in metadata file");
+        return AMVP_JSON_ERR;
+    }
+    obj = json_value_get_object(val);
+    if (!obj) {
+        AMVP_LOG_ERR("Failed to parse JSON object in metadata file");
+        return AMVP_JSON_ERR;
+    }
+
+    /* POST obj to labs */
+
+    vendor_array = json_object_get_array(obj, "lab");
+    if (!vendor_array) {
+        AMVP_LOG_ERR("Unable to resolve the 'lab' array");
+        return AMVP_JSON_ERR;
+    }
+
+    raw_val = json_array_get_value(vendor_array, 0);
+    json_result = json_serialize_to_string_pretty(raw_val, &len);
+    post_val = json_parse_string(json_result);
+
+
+    AMVP_LOG_INFO("\nPOST Data: %s, %s\n\n", "/amv/v1/labs", json_result);
+    rv = amvp_transport_post(ctx, "/amv/v1/labs", json_result, len);
+    AMVP_LOG_STATUS("POST response:\n\n%s\n", ctx->curl_buf);
+    json_free_serialized_string(json_result);
+    json_value_free(post_val);
+
+    /* POST obj to vendors */
+
+    vendor_array = json_object_get_array(obj, "vendor");
+    if (!vendor_array) {
+        AMVP_LOG_ERR("Unable to resolve the 'vendor' array");
+        return AMVP_JSON_ERR;
+    }
+
+    raw_val = json_array_get_value(vendor_array, 0);
+    json_result = json_serialize_to_string_pretty(raw_val, &len);
+    post_val = json_parse_string(json_result);
+
+    AMVP_LOG_INFO("\nPOST Data: %s, %s\n\n", "/amv/v1/vendors", json_result);
+    rv = amvp_transport_post(ctx, "/amv/v1/vendors", json_result, len);
+    AMVP_LOG_STATUS("POST response:\n\n%s\n", ctx->curl_buf);
+    json_free_serialized_string(json_result);
+    json_value_free(post_val);
+
+    /* POST obj to modules */
+
+    vendor_array = json_object_get_array(obj, "module");
+    if (!vendor_array) {
+        AMVP_LOG_ERR("Unable to resolve the 'module' array");
+        return AMVP_JSON_ERR;
+    }
+
+    raw_val = json_array_get_value(vendor_array, 0);
+    json_result = json_serialize_to_string_pretty(raw_val, &len);
+    post_val = json_parse_string(json_result);
+
+
+    AMVP_LOG_INFO("\nPOST Data: %s, %s\n\n", "/amv/v1/modules", json_result);
+    rv = amvp_transport_post(ctx, "/amv/v1/modules", json_result, len);
+    AMVP_LOG_STATUS("POST response:\n\n%s\n", ctx->curl_buf);
+    json_free_serialized_string(json_result);
+    json_value_free(post_val);
+
+    json_value_free(val);
+
+    /* Success */
+
+    return rv;
+}
+
+
 
 #define TEST_SESSION "testSessions/"
 
@@ -3524,20 +4191,84 @@ end:
     return rv;
 }
 
+static AMVP_RESULT amvp_cert_req(AMVP_CTX *ctx)
+{
+    AMVP_RESULT rv = AMVP_SUCCESS;
+    JSON_Object *obj = NULL;
+    JSON_Value *val = NULL;
+    JSON_Array *doc_array = NULL;
+    const char *sp = NULL, *dc = NULL;
+    
+    /*
+     * Retrieve the SP and DC and write to file
+     */
+    AMVP_LOG_STATUS("Tests complete, request SP and DC...");
+    rv = amvp_retrieve_docs(ctx, ctx->session_url);
+    if (rv != AMVP_SUCCESS) {
+        AMVP_LOG_ERR("Unable to retrieve docs");
+        goto end;
+    }
+    val = json_parse_string(ctx->curl_buf);
+    if (!val) {
+        AMVP_LOG_ERR("JSON parse error");
+        rv = AMVP_JSON_ERR;
+        goto end;
+    }
+    if (!val) {
+        AMVP_LOG_ERR("JSON val parse error");
+        return AMVP_MALFORMED_JSON;
+    }
+    doc_array = json_value_get_array(val);
+    obj = json_array_get_object(doc_array, 0);
+    if (!obj) {
+        AMVP_LOG_ERR("JSON obj parse error");
+        rv = AMVP_MALFORMED_JSON;
+        goto end;
+    }
 
+    sp = json_object_get_string(obj, "secPolicyUrl");
+    AMVP_LOG_STATUS("Security Policy url: %s", sp);
+
+    dc = json_object_get_string(obj, "draftCertUrl");
+    AMVP_LOG_STATUS("Draft Certificate url: %s", dc);
+
+
+    if (ctx->mod_cert_req) {
+        static char validation[] = "[{ \"implementationUrls\": [\"/acvp/v1/1234\", \"/esv/v1/5678\", \"amv/v1/13780\" ] }]";
+        int validation_len = sizeof(validation);
+        /*
+         * PUT the validation with the AMVP server and get the response,
+         */
+        rv = amvp_transport_put_validation(ctx, validation, validation_len);
+        if (rv != AMVP_SUCCESS) {
+            AMVP_LOG_STATUS("Validation send failed");
+            goto end;
+        }
+
+        rv = amvp_parse_validation(ctx);
+        if (rv != AMVP_SUCCESS) {
+            AMVP_LOG_STATUS("Failed to parse Validation response");
+        }
+    }
+end:
+    if (val) json_value_free(val);
+    return rv;
+}
 
 AMVP_RESULT amvp_run(AMVP_CTX *ctx, int fips_validation) {
     AMVP_RESULT rv = AMVP_SUCCESS;
     JSON_Value *val = NULL;
-
     if (ctx == NULL) return AMVP_NO_CTX;
 
-    rv = amvp_login(ctx, 0);
-    if (rv != AMVP_SUCCESS) {
-        AMVP_LOG_ERR("Failed to login with AMVP server");
-        goto end;
-    }
 
+
+    if (!getenv("AMVP_NO_LOGIN")) {
+        rv = amvp_login(ctx, 0);
+        if (rv != AMVP_SUCCESS) {
+            AMVP_LOG_ERR("Failed to login with AMVP server");
+            goto end;
+        }
+    }
 
     if (ctx->get) { 
         rv = amvp_transport_get(ctx, ctx->get_string, NULL);
@@ -3569,6 +4300,16 @@ AMVP_RESULT amvp_run(AMVP_CTX *ctx, int fips_validation) {
     if (ctx->post) { 
         rv = amvp_post_data(ctx, ctx->post_filename);
         goto end;
+    }
+
+    if (ctx->post_resources) { 
+        rv = amvp_post_resources(ctx, ctx->post_resources_filename);
+        goto end;
+    }
+
+    if (ctx->mod_cert_req) { 
+        rv = amvp_mod_cert_req(ctx);
+        goto check;
     }
 
     if (ctx->delete) {
@@ -3638,8 +4379,9 @@ AMVP_RESULT amvp_run(AMVP_CTX *ctx, int fips_validation) {
         AMVP_LOG_ERR("Failed to process vectors");
         goto end;
     }
+check:
     if (ctx->vector_req) {
-        AMVP_LOG_STATUS("Successfully downloaded vector sets and saved to specified file.");
+        AMVP_LOG_STATUS("Successfully downloaded evidence and saved to specified file.");
         return AMVP_SUCCESS;
     }
 
@@ -3652,7 +4394,11 @@ AMVP_RESULT amvp_run(AMVP_CTX *ctx, int fips_validation) {
         AMVP_LOG_ERR("Unable to retrieve test results");
         goto end;
     }
-
+    if (ctx->mod_cert_req) {
+        rv = amvp_cert_req(ctx);
+        goto end;
+    }
+    
     if (fips_validation) {
         /*
          * Tell the server to provision a FIPS certificate for this testSession.
@@ -3966,4 +4712,76 @@ AMVP_SUB_KAS amvp_get_kas_alg(AMVP_CIPHER cipher)
         return 0;
     }
     return (alg_tbl[cipher-1].alg.kas);
+}
+
+static void amvp_generic_error_log(AMVP_CTX *ctx, AMVP_PROTOCOL_ERR *err) {
+    AMVP_PROTOCOL_ERR_LIST *list = NULL;
+    int i = 0;
+
+    AMVP_LOG_ERR("Error(s) reported by server while attempting task.");
+    AMVP_LOG_ERR("Category: %s", err->category_desc);
+    AMVP_LOG_ERR("Error(s):");
+
+    list = err->errors;
+    while (list) {
+        AMVP_LOG_ERR("    Code: %d");
+        AMVP_LOG_ERR("    Messages:");
+        for (i = 0; i < list->desc_count; i++) {
+            AMVP_LOG_ERR("        %s", list->desc[i]);
+        }
+    }
+}
+
+/* Return AMVP_RETRY_OPERATION if we want the caller to try whatever task again */
+static AMVP_RESULT amvp_handle_protocol_error(AMVP_CTX *ctx, AMVP_PROTOCOL_ERR *err) {
+    AMVP_PROTOCOL_ERR_LIST *list = NULL;
+    AMVP_RESULT rv = AMVP_INTERNAL_ERR;
+
+    if (!err) {
+        return AMVP_MISSING_ARG;
+    }
+    list = err->errors;
+    switch (err->category) {
+    case AMVP_PROTOCOL_ERR_AUTH:
+        while (list) {
+            AMVP_LOG_ERR("Code: %d", list->code);
+            switch(list->code) {
+            case AMVP_ERR_CODE_AUTH_MISSING_PW:
+                AMVP_LOG_ERR("TOTP was expected but not provided");
+                rv = AMVP_MISSING_ARG;
+                break;
+            case AMVP_ERR_CODE_AUTH_INVALID_JWT:
+                AMVP_LOG_ERR("Provided JWT is invalid");
+                rv = AMVP_INVALID_ARG;
+                break;
+            case AMVP_ERR_CODE_AUTH_EXPIRED_JWT:
+                if (amvp_refresh(ctx) == AMVP_SUCCESS) {
+                    rv = AMVP_RETRY_OPERATION;
+                } else {
+                    AMVP_LOG_ERR("Attempted to refresh JWT but failed");
+                    rv = AMVP_TRANSPORT_FAIL;
+                }
+                break;
+            case AMVP_ERR_CODE_AUTH_INVALID_PW:
+                AMVP_LOG_ERR("Provided TOTP invalid; check generator, seed, and system clock");
+                rv = AMVP_INVALID_ARG;
+                break;
+            default:
+                break;
+            }
+            list = list->next;
+        }
+        break;
+    case AMVP_PROTOCOL_ERR_GENERAL:
+    case AMVP_PROTOCOL_ERR_MALFORMED_PAYLOAD:
+    case AMVP_PROTOCOL_ERR_INVALID_REQUEST:
+    case AMVP_PROTOCOL_ERR_ON_SERVER:
+        amvp_generic_error_log(ctx, err);
+        break;
+    case AMVP_PROTOCOL_ERR_CAT_MAX:
+    default:
+        return AMVP_INVALID_ARG;
+    }
+
+    return rv;
 }
