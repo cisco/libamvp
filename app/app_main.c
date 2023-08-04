@@ -33,7 +33,7 @@
 #include "safe_mem_lib.h"
 #include "safe_str_lib.h"
 
-static int enable_hash(AMVP_CTX *ctx);
+//static int enable_hash(AMVP_CTX *ctx);
 
 const char *server;
 int port;
@@ -130,36 +130,6 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L
-    if (!cfg.disable_fips) {
-        /* sets the property "fips=yes" to be included implicitly in cipher fetches */
-        EVP_default_properties_enable_fips(NULL, 1);
-        if (!EVP_default_properties_is_fips_enabled(NULL)) {
-            printf("Error setting FIPS property at startup\n\n");
-            return 1;
-        }
-        /* Run a quick sanity check to determine that the FIPS provider is functioning properly */
-        rv = fips_sanity_check();
-        if (rv != AMVP_SUCCESS) {
-            printf("Error occured when testing FIPS at startup (rv = %d). Please verify the FIPS provider is\n", rv);
-            printf("properly installed and configured. Exiting...\n\n");
-            return 1;
-        }
-    } else {
-        printf("***********************************************************************************\n");
-        printf("* WARNING: You have chosen to not fetch the FIPS provider for this run. Any tests *\n");
-        printf("* created or performed during this run MUST NOT have any validation requested     *\n");
-        printf("* on it unless the FIPS provider is exclusively loaded or enabled by default in   *\n");
-        printf("* your configuration. Proceed at your own risk. Continuing in 5 seconds...        *\n");
-        printf("***********************************************************************************\n");
-        printf("\n");
-        #ifdef _WIN32
-            Sleep(5 * 1000);
-        #else
-            sleep(5);
-        #endif
-    }
-#endif
 
      setup_session_parameters();
 
@@ -271,9 +241,9 @@ int main(int argc, char **argv) {
             printf("Failed to set json file within AMVP ctx (rv=%d)\n", rv);
             goto end;
         }
-    } else {
-        if (cfg.hash) { if (enable_hash(ctx)) goto end; }
-    }
+    } //else {
+       // if (cfg.hash) { if (enable_hash(ctx)) goto end; }
+  //  }
 
     if (cfg.get_cost) {
         diff = amvp_get_vector_set_count(ctx);
@@ -409,7 +379,7 @@ end:
 
     return rv;
 }
-
+#if 0
 static int enable_hash(AMVP_CTX *ctx) {
     AMVP_RESULT rv = AMVP_SUCCESS;
 
@@ -422,3 +392,4 @@ static int enable_hash(AMVP_CTX *ctx) {
 end:
     return rv;
 }
+#endif

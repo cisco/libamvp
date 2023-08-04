@@ -1,7 +1,6 @@
 tmp_sources = app_main.c \
               app_cli.c \
               app_utils.c \
-              app_sha.c \
               app_lcl.h \
               ketopt.h
 

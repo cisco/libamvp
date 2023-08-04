@@ -140,7 +140,6 @@ static int hmac_totp(const char *key,
                      unsigned int key_len) {
     int len = 0;
     unsigned char buff[MAX_LEN];
-
     EVP_Q_mac(NULL, "HMAC", NULL, md_name, NULL, key, key_len, msg, T_LEN, buff, MAX_LEN, (long unsigned int *)&len);
     memcpy_s(hash, hash_max, buff, len);
     return len;
@@ -157,7 +156,7 @@ static AMVP_RESULT totp(char **token, int token_max) {
     char *seed = NULL;
     int seed_len = 0;
 
-    seed = getenv("ACV_TOTP_SEED");
+    seed = getenv("AMV_TOTP_SEED");
     if (!seed) {
         /* Not required to use 2-factor auth */
         return AMVP_SUCCESS;
@@ -221,7 +220,7 @@ static AMVP_RESULT totp(char **token, int token_max) {
 int app_setup_two_factor_auth(AMVP_CTX *ctx) {
     AMVP_RESULT rv = 0;
 
-    if (getenv("ACV_TOTP_SEED")) {
+    if (getenv("AMV_TOTP_SEED")) {
         /*
          * Specify the callback to be used for 2-FA to perform
          * TOTP calculation
@@ -231,6 +230,8 @@ int app_setup_two_factor_auth(AMVP_CTX *ctx) {
             printf("Failed to set Two-factor authentication callback\n");
             return 1;
         }
+    } else {
+        return 1;
     }
 
     return 0;

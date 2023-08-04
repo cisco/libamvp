@@ -99,8 +99,6 @@ const EVP_MD *get_md_for_hash_alg(AMVP_HASH_ALG alg);
 const char *get_md_string_for_hash_alg(AMVP_HASH_ALG alg, int *md_size);
 char *ec_point_to_pub_key(unsigned char *x, int x_len, unsigned char *y, int y_len, int *key_len);
 
-int app_sha_handler(AMVP_TEST_CASE *test_case);
-
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
 AMVP_RESULT fips_sanity_check(void);
 const char *get_string_from_oid(unsigned char *oid, int oid_len);
