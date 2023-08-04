@@ -211,8 +211,10 @@ static long amvp_curl_http_get(AMVP_CTX *ctx, const char *url) {
         if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_HTTPHEADER, stopping"); goto end; }
     }
     //Always verify the server
-    crv = curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYPEER, 1L);
+    crv = curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYPEER, 0);
     if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_SSL_VERIFYPEER, stopping"); goto end; }
+    crv = curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYHOST, 0);
+    if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_SSL_VERIFYHOST, stopping"); goto end; }
     if (ctx->cacerts_file) {
         crv = curl_easy_setopt(hnd, CURLOPT_CAINFO, ctx->cacerts_file);
         if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_CAINFO, stopping"); goto end; }
@@ -322,14 +324,18 @@ static long amvp_curl_http_post(AMVP_CTX *ctx, const char *url, const char *data
     crv = curl_easy_setopt(hnd, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_2);
     if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_SSL_VERSION, stopping"); goto end; }
     //Always verify the server
-    crv = curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYPEER, 1L);
+    crv = curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYPEER, 0);
     if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_SSL_VERIFYPEER, stopping"); goto end; }
+    crv = curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYHOST, 0);
+    if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_SSL_VERIFYHOST, stopping"); goto end; }
+
     if (ctx->cacerts_file) {
         crv = curl_easy_setopt(hnd, CURLOPT_CAINFO, ctx->cacerts_file);
         if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_CAINFO, stopping"); goto end; }
         crv = curl_easy_setopt(hnd, CURLOPT_CERTINFO, 1L);
         if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_CERTINFO, stopping"); goto end; }
     }
+
     //Mutual-auth
     if (ctx->tls_cert && ctx->tls_key) {
         crv = curl_easy_setopt(hnd, CURLOPT_SSLCERTTYPE, "PEM");
@@ -431,8 +437,10 @@ static long amvp_curl_http_put(AMVP_CTX *ctx, const char *url, const char *data,
     crv = curl_easy_setopt(hnd, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_2);
     if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_SSLVERSION, stopping"); goto end; }
     //Always verify the server
-    crv = curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYPEER, 1L);
+    crv = curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYPEER, 0);
     if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_SSL_VERIFYPEER, stopping"); goto end; }
+    crv = curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYHOST, 0);
+    if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_SSL_VERIFYHOST, stopping"); goto end; }
     if (ctx->cacerts_file) {
         crv = curl_easy_setopt(hnd, CURLOPT_CAINFO, ctx->cacerts_file);
         if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_CAINFO, stopping"); goto end; }
@@ -541,8 +549,10 @@ static long amvp_curl_http_delete(AMVP_CTX *ctx, const char *url) {
     crv = curl_easy_setopt(hnd, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_2);
     if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_SSLVERSION, stopping"); goto end; }
     //Always verify the server
-    crv = curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYPEER, 1L);
+    crv = curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYPEER, 0);
     if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_SSL_VERIFYPEER, stopping"); goto end; }
+    crv = curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYHOST, 0);
+    if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_SSL_VERIFYHOST, stopping"); goto end; }
     if (ctx->cacerts_file) {
         crv = curl_easy_setopt(hnd, CURLOPT_CAINFO, ctx->cacerts_file);
         if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_CAINFO, stopping"); goto end; }

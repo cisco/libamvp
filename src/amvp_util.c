@@ -1024,7 +1024,7 @@ JSON_Object *amvp_get_obj_from_rsp(AMVP_CTX *ctx, JSON_Value *arry_val) {
     }
     reg_array = json_value_get_array(arry_val);
 
-    obj = json_array_get_object(reg_array, 0);
+    obj = json_array_get_object(reg_array, 1);
     return obj;
 }
 
