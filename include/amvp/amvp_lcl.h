@@ -1565,8 +1565,6 @@ typedef struct amvp_caps_list_t {
         AMVP_SAFE_PRIMES_CAP *safe_primes_keyver_cap;
     } cap;
 
-    int (*crypto_handler)(AMVP_TEST_CASE *test_case);
-
     struct amvp_caps_list_t *next;
 } AMVP_CAPS_LIST;
 

@@ -147,14 +147,12 @@ static AMVP_SAFE_PRIMES_CAP *allocate_safe_primes_cap(void) {
  * @param[in] ctx Pointer to AMVP_CTX whose cap_list will be appended to.
  * @param[in] type AMVP_CAP_TYPE enum value.
  * @param[in] cipher AMVP_CIPHER enum value.
- * @param[in] crypto_handler The function pointer for crypto module callback.
  *
  * @return AMVP_RESULT
  */
 static AMVP_RESULT amvp_cap_list_append(AMVP_CTX *ctx,
                                         AMVP_CAP_TYPE type,
-                                        AMVP_CIPHER cipher,
-                                        int (*crypto_handler)(AMVP_TEST_CASE *test_case)) {
+                                        AMVP_CIPHER cipher) {
     AMVP_CAPS_LIST *cap_entry, *cap_e2;
     AMVP_RESULT rv = AMVP_SUCCESS;
 
@@ -622,7 +620,6 @@ static AMVP_RESULT amvp_cap_list_append(AMVP_CTX *ctx,
 
     // Set the other necessary fields
     cap_entry->cipher = cipher;
-    cap_entry->crypto_handler = crypto_handler;
     cap_entry->cap_type = type;
 
     // Append to list
@@ -2694,16 +2691,11 @@ AMVP_RESULT amvp_cap_sym_cipher_set_parm(AMVP_CTX *ctx,
  *
  */
 AMVP_RESULT amvp_cap_sym_cipher_enable(AMVP_CTX *ctx,
-                                       AMVP_CIPHER cipher,
-                                       int (*crypto_handler)(AMVP_TEST_CASE *test_case)) {
+                                       AMVP_CIPHER cipher) {
     AMVP_RESULT result = AMVP_SUCCESS;
 
     if (!ctx) {
         return AMVP_NO_CTX;
-    }
-    if (!crypto_handler) {
-        AMVP_LOG_ERR("NULL parameter 'crypto_handler'");
-        return AMVP_INVALID_ARG;
     }
 
     switch (cipher) {
@@ -2815,7 +2807,7 @@ AMVP_RESULT amvp_cap_sym_cipher_enable(AMVP_CTX *ctx,
         return AMVP_INVALID_ARG;
     }
 
-    result = amvp_cap_list_append(ctx, AMVP_SYM_TYPE, cipher, crypto_handler);
+    result = amvp_cap_list_append(ctx, AMVP_SYM_TYPE, cipher);
 
     if (result == AMVP_DUP_CIPHER) {
         AMVP_LOG_ERR("Capability previously enabled. Duplicate not allowed.");
@@ -2827,17 +2819,12 @@ AMVP_RESULT amvp_cap_sym_cipher_enable(AMVP_CTX *ctx,
 }
 
 AMVP_RESULT amvp_cap_hash_enable(AMVP_CTX *ctx,
-                                 AMVP_CIPHER cipher,
-                                 int (*crypto_handler)(AMVP_TEST_CASE *test_case)) {
+                                 AMVP_CIPHER cipher) {
     AMVP_RESULT result = AMVP_SUCCESS;
     AMVP_SUB_HASH alg;
 
     if (!ctx) {
         return AMVP_NO_CTX;
-    }
-    if (!crypto_handler) {
-        AMVP_LOG_ERR("NULL parameter 'crypto_handler'");
-        return AMVP_INVALID_ARG;
     }
 
     alg = amvp_get_hash_alg(cipher);
@@ -2866,7 +2853,7 @@ AMVP_RESULT amvp_cap_hash_enable(AMVP_CTX *ctx,
         return AMVP_INVALID_ARG;
     }
 
-    result = amvp_cap_list_append(ctx, AMVP_HASH_TYPE, cipher, crypto_handler);
+    result = amvp_cap_list_append(ctx, AMVP_HASH_TYPE, cipher);
 
     if (result == AMVP_DUP_CIPHER) {
         AMVP_LOG_ERR("Capability previously enabled. Duplicate not allowed.");
@@ -3157,18 +3144,12 @@ static AMVP_RESULT amvp_validate_hmac_parm_value(AMVP_CIPHER cipher,
 }
 
 AMVP_RESULT amvp_cap_hmac_enable(AMVP_CTX *ctx,
-                                 AMVP_CIPHER cipher,
-                                 int (*crypto_handler)(AMVP_TEST_CASE *test_case)) {
+                                 AMVP_CIPHER cipher) {
     AMVP_RESULT result = AMVP_SUCCESS;
     AMVP_SUB_HMAC alg;
 
     if (!ctx) {
         return AMVP_NO_CTX;
-    }
-
-    if (!crypto_handler) {
-        AMVP_LOG_ERR("NULL parameter 'crypto_handler'");
-        return AMVP_INVALID_ARG;
     }
 
     alg = amvp_get_hmac_alg(cipher);
@@ -3193,7 +3174,7 @@ AMVP_RESULT amvp_cap_hmac_enable(AMVP_CTX *ctx,
         return AMVP_INVALID_ARG;
     }
 
-    result = amvp_cap_list_append(ctx, AMVP_HMAC_TYPE, cipher, crypto_handler);
+    result = amvp_cap_list_append(ctx, AMVP_HMAC_TYPE, cipher);
 
     if (result == AMVP_DUP_CIPHER) {
         AMVP_LOG_ERR("Capability previously enabled. Duplicate not allowed.");
@@ -3344,17 +3325,12 @@ static AMVP_RESULT amvp_validate_cmac_parm_value(AMVP_CMAC_PARM parm, int value)
 }
 
 AMVP_RESULT amvp_cap_cmac_enable(AMVP_CTX *ctx,
-                                 AMVP_CIPHER cipher,
-                                 int (*crypto_handler)(AMVP_TEST_CASE *test_case)) {
+                                 AMVP_CIPHER cipher) {
     AMVP_RESULT result = AMVP_SUCCESS;
     AMVP_SUB_CMAC alg;
 
     if (!ctx) {
         return AMVP_NO_CTX;
-    }
-    if (!crypto_handler) {
-        AMVP_LOG_ERR("NULL parameter 'crypto_handler'");
-        return AMVP_INVALID_ARG;
     }
 
     alg = amvp_get_cmac_alg(cipher);
@@ -3370,7 +3346,7 @@ AMVP_RESULT amvp_cap_cmac_enable(AMVP_CTX *ctx,
         return AMVP_INVALID_ARG;
     }
 
-    result = amvp_cap_list_append(ctx, AMVP_CMAC_TYPE, cipher, crypto_handler);
+    result = amvp_cap_list_append(ctx, AMVP_CMAC_TYPE, cipher);
 
     if (result == AMVP_DUP_CIPHER) {
         AMVP_LOG_ERR("Capability previously enabled. Duplicate not allowed.");
@@ -3496,17 +3472,12 @@ AMVP_RESULT amvp_cap_cmac_set_parm(AMVP_CTX *ctx,
 }
 
 AMVP_RESULT amvp_cap_kmac_enable(AMVP_CTX *ctx,
-                                 AMVP_CIPHER cipher,
-                                 int (*crypto_handler)(AMVP_TEST_CASE *test_case)) {
+                                 AMVP_CIPHER cipher) {
     AMVP_RESULT result = AMVP_SUCCESS;
     AMVP_SUB_KMAC alg;
 
     if (!ctx) {
         return AMVP_NO_CTX;
-    }
-    if (!crypto_handler) {
-        AMVP_LOG_ERR("NULL parameter 'crypto_handler'");
-        return AMVP_INVALID_ARG;
     }
 
     alg = amvp_get_kmac_alg(cipher);
@@ -3522,7 +3493,7 @@ AMVP_RESULT amvp_cap_kmac_enable(AMVP_CTX *ctx,
         return AMVP_INVALID_ARG;
     }
 
-    result = amvp_cap_list_append(ctx, AMVP_KMAC_TYPE, cipher, crypto_handler);
+    result = amvp_cap_list_append(ctx, AMVP_KMAC_TYPE, cipher);
 
     if (result == AMVP_DUP_CIPHER) {
         AMVP_LOG_ERR("Capability previously enabled. Duplicate not allowed.");
@@ -3939,19 +3910,14 @@ AMVP_RESULT amvp_cap_drbg_set_parm(AMVP_CTX *ctx,
 }
 
 AMVP_RESULT amvp_cap_drbg_enable(AMVP_CTX *ctx,
-                                 AMVP_CIPHER cipher,
-                                 int (*crypto_handler)(AMVP_TEST_CASE *test_case)) {
+                                 AMVP_CIPHER cipher) {
     AMVP_RESULT result = AMVP_SUCCESS;
 
     if (!ctx) {
         return AMVP_NO_CTX;
     }
-    if (!crypto_handler) {
-        AMVP_LOG_ERR("NULL parameter 'crypto_handler'");
-        return AMVP_INVALID_ARG;
-    }
 
-    result = amvp_cap_list_append(ctx, AMVP_DRBG_TYPE, cipher, crypto_handler);
+    result = amvp_cap_list_append(ctx, AMVP_DRBG_TYPE, cipher);
 
     if (result == AMVP_DUP_CIPHER) {
         AMVP_LOG_ERR("Capability previously enabled. Duplicate not allowed.");
@@ -4071,17 +4037,11 @@ AMVP_RESULT amvp_cap_rsa_keygen_set_parm(AMVP_CTX *ctx,
 }
 
 AMVP_RESULT amvp_cap_rsa_keygen_enable(AMVP_CTX *ctx,
-                                       AMVP_CIPHER cipher,
-                                       int (*crypto_handler)(AMVP_TEST_CASE *test_case)) {
+                                       AMVP_CIPHER cipher) {
     AMVP_RESULT result;
 
     if (!ctx) {
         return AMVP_NO_CTX;
-    }
-
-    if (!crypto_handler) {
-        AMVP_LOG_ERR("NULL parameter 'crypto_handler'");
-        return AMVP_INVALID_ARG;
     }
 
     if (cipher != AMVP_RSA_KEYGEN) {
@@ -4089,7 +4049,7 @@ AMVP_RESULT amvp_cap_rsa_keygen_enable(AMVP_CTX *ctx,
         return AMVP_INVALID_ARG;
     }
 
-    result = amvp_cap_list_append(ctx, AMVP_RSA_KEYGEN_TYPE, cipher, crypto_handler);
+    result = amvp_cap_list_append(ctx, AMVP_RSA_KEYGEN_TYPE, cipher);
 
     if (result == AMVP_DUP_CIPHER) {
         AMVP_LOG_ERR("Capability previously enabled. Duplicate not allowed.");
@@ -4658,18 +4618,13 @@ AMVP_RESULT amvp_cap_rsa_siggen_set_mod_parm(AMVP_CTX *ctx,
 }
 
 static AMVP_RESULT internal_cap_rsa_sig_enable(AMVP_CTX *ctx,
-                                               AMVP_CIPHER cipher,
-                                               int (*crypto_handler)(AMVP_TEST_CASE *test_case)) {
+                                               AMVP_CIPHER cipher) {
     AMVP_CAP_TYPE type = 0;
     AMVP_RESULT result = AMVP_SUCCESS;
     AMVP_SUB_RSA alg;
 
     if (!ctx) {
         return AMVP_NO_CTX;
-    }
-
-    if (!crypto_handler) {
-        return AMVP_INVALID_ARG;
     }
 
     alg = amvp_get_rsa_alg(cipher);
@@ -4693,25 +4648,19 @@ static AMVP_RESULT internal_cap_rsa_sig_enable(AMVP_CTX *ctx,
         return AMVP_INVALID_ARG;
     }
 
-    result = amvp_cap_list_append(ctx, type, cipher, crypto_handler);
+    result = amvp_cap_list_append(ctx, type, cipher);
 
     return result;
 }
 
 AMVP_RESULT amvp_cap_rsa_sig_enable(AMVP_CTX *ctx,
-                                    AMVP_CIPHER cipher,
-                                    int (*crypto_handler)(AMVP_TEST_CASE *test_case)) {
+                                    AMVP_CIPHER cipher) {
     AMVP_RESULT result = AMVP_SUCCESS;
     const char *cap_message_str = NULL;
     AMVP_SUB_RSA alg;
 
     if (!ctx) {
         return AMVP_NO_CTX;
-    }
-
-    if (!crypto_handler) {
-        AMVP_LOG_ERR("NULL parameter 'crypto_handler'");
-        return AMVP_INVALID_ARG;
     }
 
     alg = amvp_get_rsa_alg(cipher);
@@ -4734,7 +4683,7 @@ AMVP_RESULT amvp_cap_rsa_sig_enable(AMVP_CTX *ctx,
         return AMVP_INVALID_ARG;
     }
 
-    result = internal_cap_rsa_sig_enable(ctx, cipher, crypto_handler);
+    result = internal_cap_rsa_sig_enable(ctx, cipher);
 
     if (result == AMVP_DUP_CIPHER) {
         AMVP_LOG_ERR("Capability (%s) previously enabled. Duplicate not allowed.",
@@ -4747,17 +4696,11 @@ AMVP_RESULT amvp_cap_rsa_sig_enable(AMVP_CTX *ctx,
     return result;
 }
 AMVP_RESULT amvp_cap_rsa_prim_enable(AMVP_CTX *ctx,
-                                     AMVP_CIPHER cipher,
-                                     int (*crypto_handler)(AMVP_TEST_CASE *test_case)) {
+                                     AMVP_CIPHER cipher) {
     AMVP_RESULT result;
 
     if (!ctx) {
         return AMVP_NO_CTX;
-    }
-
-    if (!crypto_handler) {
-        AMVP_LOG_ERR("NULL parameter 'crypto_handler'");
-        return AMVP_INVALID_ARG;
     }
 
     if ((cipher != AMVP_RSA_SIGPRIM) && (cipher != AMVP_RSA_DECPRIM)) {
@@ -4765,7 +4708,7 @@ AMVP_RESULT amvp_cap_rsa_prim_enable(AMVP_CTX *ctx,
         return AMVP_INVALID_ARG;
     }
 
-    result = amvp_cap_list_append(ctx, AMVP_RSA_PRIM_TYPE, cipher, crypto_handler);
+    result = amvp_cap_list_append(ctx, AMVP_RSA_PRIM_TYPE, cipher);
 
     if (result == AMVP_DUP_CIPHER) {
         AMVP_LOG_ERR("Capability previously enabled. Duplicate not allowed.");
@@ -5035,19 +4978,13 @@ AMVP_RESULT amvp_cap_ecdsa_set_curve_hash_alg(AMVP_CTX *ctx, AMVP_CIPHER cipher,
 }
 
 AMVP_RESULT amvp_cap_ecdsa_enable(AMVP_CTX *ctx,
-                                  AMVP_CIPHER cipher,
-                                  int (*crypto_handler)(AMVP_TEST_CASE *test_case)) {
+                                  AMVP_CIPHER cipher) {
     AMVP_CAP_TYPE type = 0;
     AMVP_RESULT result = AMVP_SUCCESS;
     AMVP_SUB_ECDSA alg;
 
     if (!ctx) {
         return AMVP_NO_CTX;
-    }
-
-    if (!crypto_handler) {
-        AMVP_LOG_ERR("NULL parameter 'crypto_handler'");
-        return AMVP_INVALID_ARG;
     }
 
     alg = amvp_get_ecdsa_alg(cipher);
@@ -5073,7 +5010,7 @@ AMVP_RESULT amvp_cap_ecdsa_enable(AMVP_CTX *ctx,
         return AMVP_INVALID_ARG;
     }
 
-    result = amvp_cap_list_append(ctx, type, cipher, crypto_handler);
+    result = amvp_cap_list_append(ctx, type, cipher);
 
     if (result == AMVP_DUP_CIPHER) {
         AMVP_LOG_ERR("Capability previously enabled. Duplicate not allowed.");
@@ -5227,19 +5164,14 @@ AMVP_RESULT amvp_cap_kdf135_snmp_set_engid(AMVP_CTX *ctx,
     return result;
 }
 
-AMVP_RESULT amvp_cap_kdf135_srtp_enable(AMVP_CTX *ctx,
-                                        int (*crypto_handler)(AMVP_TEST_CASE *test_case)) {
+AMVP_RESULT amvp_cap_kdf135_srtp_enable(AMVP_CTX *ctx) {
     AMVP_RESULT result = AMVP_SUCCESS;
 
     if (!ctx) {
         return AMVP_NO_CTX;
     }
-    if (!crypto_handler) {
-        AMVP_LOG_ERR("NULL parameter 'crypto_handler'");
-        return AMVP_INVALID_ARG;
-    }
 
-    result = amvp_cap_list_append(ctx, AMVP_KDF135_SRTP_TYPE, AMVP_KDF135_SRTP, crypto_handler);
+    result = amvp_cap_list_append(ctx, AMVP_KDF135_SRTP_TYPE, AMVP_KDF135_SRTP);
 
     if (result == AMVP_DUP_CIPHER) {
         AMVP_LOG_ERR("Capability previously enabled. Duplicate not allowed.");
@@ -5250,19 +5182,14 @@ AMVP_RESULT amvp_cap_kdf135_srtp_enable(AMVP_CTX *ctx,
     return result;
 }
 
-AMVP_RESULT amvp_cap_kdf135_ikev2_enable(AMVP_CTX *ctx,
-                                         int (*crypto_handler)(AMVP_TEST_CASE *test_case)) {
+AMVP_RESULT amvp_cap_kdf135_ikev2_enable(AMVP_CTX *ctx) {
     AMVP_RESULT result = AMVP_SUCCESS;
 
     if (!ctx) {
         return AMVP_NO_CTX;
     }
-    if (!crypto_handler) {
-        AMVP_LOG_ERR("NULL parameter 'crypto_handler'");
-        return AMVP_INVALID_ARG;
-    }
 
-    result = amvp_cap_list_append(ctx, AMVP_KDF135_IKEV2_TYPE, AMVP_KDF135_IKEV2, crypto_handler);
+    result = amvp_cap_list_append(ctx, AMVP_KDF135_IKEV2_TYPE, AMVP_KDF135_IKEV2);
 
     if (result == AMVP_DUP_CIPHER) {
         AMVP_LOG_ERR("Capability previously enabled. Duplicate not allowed.");
@@ -5274,19 +5201,14 @@ AMVP_RESULT amvp_cap_kdf135_ikev2_enable(AMVP_CTX *ctx,
 }
 
 
-AMVP_RESULT amvp_cap_kdf135_x942_enable(AMVP_CTX *ctx,
-                                        int (*crypto_handler)(AMVP_TEST_CASE *test_case)) {
+AMVP_RESULT amvp_cap_kdf135_x942_enable(AMVP_CTX *ctx) {
     AMVP_RESULT result = AMVP_SUCCESS;
 
     if (!ctx) {
         return AMVP_NO_CTX;
     }
-    if (!crypto_handler) {
-        AMVP_LOG_ERR("NULL parameter 'crypto_handler'");
-        return AMVP_INVALID_ARG;
-    }
 
-    result = amvp_cap_list_append(ctx, AMVP_KDF135_X942_TYPE, AMVP_KDF135_X942, crypto_handler);
+    result = amvp_cap_list_append(ctx, AMVP_KDF135_X942_TYPE, AMVP_KDF135_X942);
 
     if (result == AMVP_DUP_CIPHER) {
         AMVP_LOG_ERR("Capability previously enabled. Duplicate not allowed.");
@@ -5298,19 +5220,14 @@ AMVP_RESULT amvp_cap_kdf135_x942_enable(AMVP_CTX *ctx,
 }
 
 
-AMVP_RESULT amvp_cap_kdf135_x963_enable(AMVP_CTX *ctx,
-                                        int (*crypto_handler)(AMVP_TEST_CASE *test_case)) {
+AMVP_RESULT amvp_cap_kdf135_x963_enable(AMVP_CTX *ctx) {
     AMVP_RESULT result = AMVP_SUCCESS;
 
     if (!ctx) {
         return AMVP_NO_CTX;
     }
-    if (!crypto_handler) {
-        AMVP_LOG_ERR("NULL parameter 'crypto_handler'");
-        return AMVP_INVALID_ARG;
-    }
 
-    result = amvp_cap_list_append(ctx, AMVP_KDF135_X963_TYPE, AMVP_KDF135_X963, crypto_handler);
+    result = amvp_cap_list_append(ctx, AMVP_KDF135_X963_TYPE, AMVP_KDF135_X963);
 
     if (result == AMVP_DUP_CIPHER) {
         AMVP_LOG_ERR("Capability previously enabled. Duplicate not allowed.");
@@ -5321,19 +5238,14 @@ AMVP_RESULT amvp_cap_kdf135_x963_enable(AMVP_CTX *ctx,
     return result;
 }
 
-AMVP_RESULT amvp_cap_kdf135_ikev1_enable(AMVP_CTX *ctx,
-                                         int (*crypto_handler)(AMVP_TEST_CASE *test_case)) {
+AMVP_RESULT amvp_cap_kdf135_ikev1_enable(AMVP_CTX *ctx) {
     AMVP_RESULT result = AMVP_SUCCESS;
 
     if (!ctx) {
         return AMVP_NO_CTX;
     }
-    if (!crypto_handler) {
-        AMVP_LOG_ERR("NULL parameter 'crypto_handler'");
-        return AMVP_INVALID_ARG;
-    }
 
-    result = amvp_cap_list_append(ctx, AMVP_KDF135_IKEV1_TYPE, AMVP_KDF135_IKEV1, crypto_handler);
+    result = amvp_cap_list_append(ctx, AMVP_KDF135_IKEV1_TYPE, AMVP_KDF135_IKEV1);
 
     if (result == AMVP_DUP_CIPHER) {
         AMVP_LOG_ERR("Capability previously enabled. Duplicate not allowed.");
@@ -5344,19 +5256,14 @@ AMVP_RESULT amvp_cap_kdf135_ikev1_enable(AMVP_CTX *ctx,
     return result;
 }
 
-AMVP_RESULT amvp_cap_kdf108_enable(AMVP_CTX *ctx,
-                                   int (*crypto_handler)(AMVP_TEST_CASE *test_case)) {
+AMVP_RESULT amvp_cap_kdf108_enable(AMVP_CTX *ctx) {
     AMVP_RESULT result = AMVP_SUCCESS;
 
     if (!ctx) {
         return AMVP_NO_CTX;
     }
-    if (!crypto_handler) {
-        AMVP_LOG_ERR("NULL parameter 'crypto_handler'");
-        return AMVP_INVALID_ARG;
-    }
 
-    result = amvp_cap_list_append(ctx, AMVP_KDF108_TYPE, AMVP_KDF108, crypto_handler);
+    result = amvp_cap_list_append(ctx, AMVP_KDF108_TYPE, AMVP_KDF108);
 
     if (result == AMVP_DUP_CIPHER) {
         AMVP_LOG_ERR("Capability previously enabled. Duplicate not allowed.");
@@ -5367,20 +5274,14 @@ AMVP_RESULT amvp_cap_kdf108_enable(AMVP_CTX *ctx,
     return result;
 }
 
-AMVP_RESULT amvp_cap_kdf135_snmp_enable(AMVP_CTX *ctx,
-                                        int (*crypto_handler)(AMVP_TEST_CASE *test_case)) {
+AMVP_RESULT amvp_cap_kdf135_snmp_enable(AMVP_CTX *ctx) {
     AMVP_RESULT result = AMVP_SUCCESS;
 
     if (!ctx) {
         return AMVP_NO_CTX;
     }
 
-    if (!crypto_handler) {
-        AMVP_LOG_ERR("NULL parameter 'crypto_handler'");
-        return AMVP_INVALID_ARG;
-    }
-
-    result = amvp_cap_list_append(ctx, AMVP_KDF135_SNMP_TYPE, AMVP_KDF135_SNMP, crypto_handler);
+    result = amvp_cap_list_append(ctx, AMVP_KDF135_SNMP_TYPE, AMVP_KDF135_SNMP);
 
     if (result == AMVP_DUP_CIPHER) {
         AMVP_LOG_ERR("Capability previously enabled. Duplicate not allowed.");
@@ -5391,20 +5292,14 @@ AMVP_RESULT amvp_cap_kdf135_snmp_enable(AMVP_CTX *ctx,
     return result;
 }
 
-AMVP_RESULT amvp_cap_kdf135_ssh_enable(AMVP_CTX *ctx,
-                                       int (*crypto_handler)(AMVP_TEST_CASE *test_case)) {
+AMVP_RESULT amvp_cap_kdf135_ssh_enable(AMVP_CTX *ctx) {
     AMVP_RESULT result = AMVP_SUCCESS;
 
     if (!ctx) {
         return AMVP_NO_CTX;
     }
 
-    if (!crypto_handler) {
-        AMVP_LOG_ERR("NULL parameter 'crypto_handler'");
-        return AMVP_INVALID_ARG;
-    }
-
-    result = amvp_cap_list_append(ctx, AMVP_KDF135_SSH_TYPE, AMVP_KDF135_SSH, crypto_handler);
+    result = amvp_cap_list_append(ctx, AMVP_KDF135_SSH_TYPE, AMVP_KDF135_SSH);
 
     if (result == AMVP_DUP_CIPHER) {
         AMVP_LOG_ERR("Capability previously enabled. Duplicate not allowed.");
@@ -5415,20 +5310,14 @@ AMVP_RESULT amvp_cap_kdf135_ssh_enable(AMVP_CTX *ctx,
     return result;
 }
 
-AMVP_RESULT amvp_cap_pbkdf_enable(AMVP_CTX *ctx,
-                                  int (*crypto_handler) (AMVP_TEST_CASE *test_case)) {
+AMVP_RESULT amvp_cap_pbkdf_enable(AMVP_CTX *ctx) {
     AMVP_RESULT result = AMVP_SUCCESS;
 
     if (!ctx) {
         return AMVP_NO_CTX;
     }
 
-    if (!crypto_handler) {
-        AMVP_LOG_ERR("NULL parameter 'crypto_handler'");
-        return AMVP_INVALID_ARG;
-    }
-
-    result = amvp_cap_list_append(ctx, AMVP_PBKDF_TYPE, AMVP_PBKDF, crypto_handler);
+    result = amvp_cap_list_append(ctx, AMVP_PBKDF_TYPE, AMVP_PBKDF);
 
     if (result == AMVP_DUP_CIPHER) {
         AMVP_LOG_ERR("Capability previously enabled. Duplicate not allowed.");
@@ -5799,19 +5688,14 @@ AMVP_RESULT amvp_cap_kdf135_srtp_set_parm(AMVP_CTX *ctx,
 }
 
 AMVP_RESULT amvp_cap_dsa_enable(AMVP_CTX *ctx,
-                                AMVP_CIPHER cipher,
-                                int (*crypto_handler)(AMVP_TEST_CASE *test_case)) {
+                                AMVP_CIPHER cipher) {
     AMVP_RESULT result = AMVP_SUCCESS;
 
     if (!ctx) {
         return AMVP_NO_CTX;
     }
-    if (!crypto_handler) {
-        AMVP_LOG_ERR("NULL parameter 'crypto_handler'");
-        return AMVP_INVALID_ARG;
-    }
 
-    result = amvp_cap_list_append(ctx, AMVP_DSA_TYPE, cipher, crypto_handler);
+    result = amvp_cap_list_append(ctx, AMVP_DSA_TYPE, cipher);
 
     if (result == AMVP_DUP_CIPHER) {
         AMVP_LOG_ERR("Capability previously enabled. Duplicate not allowed.");
@@ -6345,20 +6229,14 @@ AMVP_RESULT amvp_cap_kdf108_set_domain(AMVP_CTX *ctx,
     return AMVP_SUCCESS;
 }
 
-AMVP_RESULT amvp_cap_kdf_tls12_enable(AMVP_CTX *ctx,
-                                       int (*crypto_handler)(AMVP_TEST_CASE *test_case)) {
+AMVP_RESULT amvp_cap_kdf_tls12_enable(AMVP_CTX *ctx) {
     AMVP_RESULT result = AMVP_SUCCESS;
 
     if (!ctx) {
         return AMVP_NO_CTX;
     }
 
-    if (!crypto_handler) {
-        return AMVP_INVALID_ARG;
-        AMVP_LOG_ERR("NULL parameter 'crypto_handler'");
-    }
-
-    result = amvp_cap_list_append(ctx, AMVP_KDF_TLS12_TYPE, AMVP_KDF_TLS12, crypto_handler);
+    result = amvp_cap_list_append(ctx, AMVP_KDF_TLS12_TYPE, AMVP_KDF_TLS12);
 
     if (result == AMVP_DUP_CIPHER) {
         AMVP_LOG_ERR("Capability previously enabled. Duplicate not allowed.");
@@ -6420,20 +6298,14 @@ AMVP_RESULT amvp_cap_kdf_tls12_set_parm(AMVP_CTX *ctx,
 
 
 
-AMVP_RESULT amvp_cap_kdf_tls13_enable(AMVP_CTX *ctx,
-                                      int (*crypto_handler) (AMVP_TEST_CASE *test_case)) {
+AMVP_RESULT amvp_cap_kdf_tls13_enable(AMVP_CTX *ctx) {
     AMVP_RESULT result = AMVP_SUCCESS;
 
     if (!ctx) {
         return AMVP_NO_CTX;
     }
 
-    if (!crypto_handler) {
-        AMVP_LOG_ERR("NULL parameter 'crypto_handler'");
-        return AMVP_INVALID_ARG;
-    }
-
-    result = amvp_cap_list_append(ctx, AMVP_KDF_TLS13_TYPE, AMVP_KDF_TLS13, crypto_handler);
+    result = amvp_cap_list_append(ctx, AMVP_KDF_TLS13_TYPE, AMVP_KDF_TLS13);
 
     if (result == AMVP_DUP_CIPHER) {
         AMVP_LOG_ERR("Capability previously enabled. Duplicate not allowed.");
@@ -6579,18 +6451,13 @@ AMVP_RESULT amvp_cap_kas_ecc_set_prereq(AMVP_CTX *ctx,
 }
 
 AMVP_RESULT amvp_cap_kas_ecc_enable(AMVP_CTX *ctx,
-                                    AMVP_CIPHER cipher,
-                                    int (*crypto_handler)(AMVP_TEST_CASE *test_case)) {
+                                    AMVP_CIPHER cipher) {
     AMVP_CAP_TYPE type = 0;
     AMVP_RESULT result = AMVP_SUCCESS;
     AMVP_SUB_KAS alg;
 
     if (!ctx) {
         return AMVP_NO_CTX;
-    }
-    if (!crypto_handler) {
-        AMVP_LOG_ERR("NULL parameter 'crypto_handler'");
-        return AMVP_INVALID_ARG;
     }
 
     alg = amvp_get_kas_alg(cipher);
@@ -6626,7 +6493,7 @@ AMVP_RESULT amvp_cap_kas_ecc_enable(AMVP_CTX *ctx,
         return AMVP_INVALID_ARG;
     }
 
-    result = amvp_cap_list_append(ctx, type, cipher, crypto_handler);
+    result = amvp_cap_list_append(ctx, type, cipher);
 
     if (result == AMVP_DUP_CIPHER) {
         AMVP_LOG_ERR("Capability previously enabled. Duplicate not allowed.");
@@ -7016,18 +6883,13 @@ AMVP_RESULT amvp_cap_kas_ffc_set_prereq(AMVP_CTX *ctx,
 }
 
 AMVP_RESULT amvp_cap_kas_ffc_enable(AMVP_CTX *ctx,
-                                    AMVP_CIPHER cipher,
-                                    int (*crypto_handler)(AMVP_TEST_CASE *test_case)) {
+                                    AMVP_CIPHER cipher) {
     AMVP_CAP_TYPE type = 0;
     AMVP_RESULT result = AMVP_SUCCESS;
     AMVP_SUB_KAS alg;
 
     if (!ctx) {
         return AMVP_NO_CTX;
-    }
-    if (!crypto_handler) {
-        AMVP_LOG_ERR("NULL parameter 'crypto_handler'");
-        return AMVP_INVALID_ARG;
     }
 
     alg = amvp_get_kas_alg(cipher);
@@ -7061,7 +6923,7 @@ AMVP_RESULT amvp_cap_kas_ffc_enable(AMVP_CTX *ctx,
         return AMVP_INVALID_ARG;
     }
 
-    result = amvp_cap_list_append(ctx, type, cipher, crypto_handler);
+    result = amvp_cap_list_append(ctx, type, cipher);
 
     if (result == AMVP_DUP_CIPHER) {
         AMVP_LOG_ERR("Capability previously enabled. Duplicate not allowed.");
@@ -7322,20 +7184,16 @@ AMVP_RESULT amvp_cap_kas_ffc_set_scheme(AMVP_CTX *ctx,
 }
 
 AMVP_RESULT amvp_cap_kas_ifc_enable(AMVP_CTX *ctx,
-                                    AMVP_CIPHER cipher,
-                                    int (*crypto_handler)(AMVP_TEST_CASE *test_case)) {
+                                    AMVP_CIPHER cipher) {
     AMVP_CAP_TYPE type = 0;
     AMVP_RESULT result = AMVP_SUCCESS;
 
     if (!ctx) {
         return AMVP_NO_CTX;
     }
-    if (!crypto_handler) {
-        AMVP_LOG_ERR("NULL parameter 'crypto_handler'");
-        return AMVP_INVALID_ARG;
-    }
+
     type = AMVP_KAS_IFC_TYPE;
-    result = amvp_cap_list_append(ctx, type, cipher, crypto_handler);
+    result = amvp_cap_list_append(ctx, type, cipher);
 
     if (result == AMVP_DUP_CIPHER) {
         AMVP_LOG_ERR("Capability previously enabled. Duplicate not allowed.");
@@ -7437,18 +7295,13 @@ AMVP_RESULT amvp_cap_kas_ifc_set_exponent(AMVP_CTX *ctx,
 }
 
 AMVP_RESULT amvp_cap_kda_enable(AMVP_CTX *ctx,
-                                    AMVP_CIPHER cipher,
-                                    int (*crypto_handler)(AMVP_TEST_CASE *test_case)) {
+                                    AMVP_CIPHER cipher) {
     AMVP_CAP_TYPE type = 0;
     AMVP_RESULT result = AMVP_SUCCESS;
     AMVP_SUB_KAS alg;
 
     if (!ctx) {
         return AMVP_NO_CTX;
-    }
-    if (!crypto_handler) {
-        AMVP_LOG_ERR("NULL parameter 'crypto_handler'");
-        return AMVP_INVALID_ARG;
     }
 
     alg = amvp_get_kas_alg(cipher);
@@ -7482,7 +7335,7 @@ AMVP_RESULT amvp_cap_kda_enable(AMVP_CTX *ctx,
         return AMVP_INVALID_ARG;
     }
 
-    result = amvp_cap_list_append(ctx, type, cipher, crypto_handler);
+    result = amvp_cap_list_append(ctx, type, cipher);
 
     if (result == AMVP_DUP_CIPHER) {
         AMVP_LOG_ERR("Capability previously enabled. Duplicate not allowed.");
@@ -8266,22 +8119,17 @@ AMVP_RESULT amvp_cap_kda_set_domain(AMVP_CTX *ctx, AMVP_CIPHER cipher, AMVP_KDA_
 }
 
 AMVP_RESULT amvp_cap_kts_ifc_enable(AMVP_CTX *ctx,
-                                    AMVP_CIPHER cipher,
-                                    int (*crypto_handler)(AMVP_TEST_CASE *test_case)) {
+                                    AMVP_CIPHER cipher) {
     AMVP_CAP_TYPE type = 0;
     AMVP_RESULT result = AMVP_SUCCESS;
 
     if (!ctx) {
         return AMVP_NO_CTX;
     }
-    if (!crypto_handler) {
-        AMVP_LOG_ERR("NULL parameter 'crypto_handler'");
-        return AMVP_INVALID_ARG;
-    }
 
     type = AMVP_KTS_IFC_TYPE;
 
-    result = amvp_cap_list_append(ctx, type, cipher, crypto_handler);
+    result = amvp_cap_list_append(ctx, type, cipher);
 
     if (result == AMVP_DUP_CIPHER) {
         AMVP_LOG_ERR("Capability previously enabled. Duplicate not allowed.");
@@ -8541,22 +8389,17 @@ AMVP_RESULT amvp_cap_kts_ifc_set_scheme_string(AMVP_CTX *ctx,
 }
 
 AMVP_RESULT amvp_cap_safe_primes_enable(AMVP_CTX *ctx,
-                                        AMVP_CIPHER cipher,
-                                        int (*crypto_handler)(AMVP_TEST_CASE *test_case)) {
+                                        AMVP_CIPHER cipher) {
     AMVP_RESULT result = AMVP_NO_CAP;
 
     if (!ctx) {
         return AMVP_NO_CTX;
     }
-    if (!crypto_handler) {
-        AMVP_LOG_ERR("NULL parameter 'crypto_handler'");
-        return AMVP_INVALID_ARG;
-    }
 
     if (cipher == AMVP_SAFE_PRIMES_KEYGEN) {
-        result = amvp_cap_list_append(ctx, AMVP_SAFE_PRIMES_KEYGEN_TYPE, cipher, crypto_handler);
+        result = amvp_cap_list_append(ctx, AMVP_SAFE_PRIMES_KEYGEN_TYPE, cipher);
     } else if (cipher == AMVP_SAFE_PRIMES_KEYVER) {
-        result = amvp_cap_list_append(ctx, AMVP_SAFE_PRIMES_KEYVER_TYPE, cipher, crypto_handler);
+        result = amvp_cap_list_append(ctx, AMVP_SAFE_PRIMES_KEYVER_TYPE, cipher);
     } 
     if (result == AMVP_DUP_CIPHER) {
         AMVP_LOG_ERR("Capability previously enabled. Duplicate not allowed.");
