@@ -24,12 +24,6 @@ extern "C"
 #define AMVP_TOTP_LENGTH 8
 #define AMVP_TOTP_TOKEN_MAX 128
 
-#define AMVP_HASH_MCT_INNER     1000
-#define AMVP_HASH_MCT_OUTER     100
-#define AMVP_AES_MCT_INNER      1000
-#define AMVP_AES_MCT_OUTER      100
-#define AMVP_DES_MCT_INNER      10000
-#define AMVP_DES_MCT_OUTER      400
 
 /**
  * @enum AMVP_LOG_LVL
@@ -825,13 +819,6 @@ typedef enum amvp_kdf_tls13_param {
     AMVP_KDF_TLS13_RUNNING_MODE
 } AMVP_KDF_TLS13_PARM;
 
-/** @enum AMVP_RSA_TESTTYPE */
-typedef enum amvp_rsa_test_type {
-    AMVP_RSA_TESTTYPE_KAT = 1, /**< Known Answer Test */
-    AMVP_RSA_TESTTYPE_AFT,     /**< Algorithm Functional Test */
-    AMVP_RSA_TESTTYPE_GDT      /**< Generated Data Test */
-} AMVP_RSA_TESTTYPE;
-
 /** @enum AMVP_RSA_KEY_FORMAT */
 typedef enum amvp_rsa_key_format {
     AMVP_RSA_KEY_FORMAT_STANDARD = 1, /**< Standard */
@@ -871,54 +858,6 @@ typedef enum amvp_rsa_prim_keyformat {
     AMVP_RSA_PRIM_KEYFORMAT_STANDARD = 1,
     AMVP_RSA_PRIM_KEYFORMAT_CRT
 } AMVP_RSA_PRIM_KEYFORMAT;
-
-/**
- * @struct AMVP_RSA_PRIM_TC
- * @brief This struct holds data that represents a single test case for a RSA primitive cipher.
- *        This data is passed between libamvp and the crypto module. libamvp will parse the test
- *        case parameters from the JSON encoded test vector, fill in this structure, and pass the
- *        struct to the crypto module via the handler that was registered with libamvp. The crypto
- *        module will then need to perform the crypto operation and fill in the remaining tems in
- *        the struct for the given test case. The struct is then passed back to libamvp, where it
- *        is then used to build the JSON encoded vector response.
-
- */
-typedef struct amvp_rsa_prim_tc_t {
-    unsigned int tc_id;    /**< Test case id */
-    unsigned char *cipher;
-    int cipher_len;
-    unsigned char *msg;
-    int msg_len;
-    unsigned char *signature;
-    int sig_len;
-    char *plaintext;
-    int deferred;
-    int modulo;
-    unsigned int fail;
-    unsigned int pass;
-    int key_format;
-    unsigned char *n;
-    unsigned char *e;
-    unsigned char *d;
-    unsigned char *p;
-    unsigned char *q;
-    unsigned char *dmp1;
-    unsigned char *dmq1;
-    unsigned char *iqmp;
-    unsigned char *pt;
-
-    int n_len;
-    int e_len;
-    int d_len;
-    int p_len;
-    int q_len;
-    int dmp1_len;
-    int dmq1_len;
-    int iqmp_len;
-    int pt_len;
-    int disposition;
-} AMVP_RSA_PRIM_TC;
-
 
 /** @enum AMVP_SYM_CIPH_PARM */
 typedef enum amvp_sym_cipher_parameter {
@@ -964,47 +903,6 @@ typedef enum amvp_sym_kw_mode {
     AMVP_SYM_KW_INVERSE,
     AMVP_SYM_KW_MAX
 } AMVP_SYM_KW_MODE;
-
-/** @enum AMVP_SYM_CIPH_TESTTYPE */
-typedef enum amvp_sym_cipher_testtype {
-    AMVP_SYM_TEST_TYPE_NONE = 0,
-    AMVP_SYM_TEST_TYPE_AFT,
-    AMVP_SYM_TEST_TYPE_CTR,
-    AMVP_SYM_TEST_TYPE_MCT
-} AMVP_SYM_CIPH_TESTTYPE;
-
-/** @enum AMVP_HASH_TESTTYPE */
-typedef enum amvp_hash_testtype {
-    AMVP_HASH_TEST_TYPE_NONE = 0,
-    AMVP_HASH_TEST_TYPE_AFT,
-    AMVP_HASH_TEST_TYPE_MCT,
-    AMVP_HASH_TEST_TYPE_VOT
-} AMVP_HASH_TESTTYPE;
-
-/** @enum AMVP_CMAC_TESTTYPE */
-typedef enum amvp_cmac_testtype {
-    AMVP_CMAC_TEST_TYPE_NONE = 0,
-    AMVP_CMAC_TEST_TYPE_AFT
-} AMVP_CMAC_TESTTYPE;
-
-/** @enum AMVP_KMAC_TESTTYPE */
-typedef enum amvp_kmac_testtype {
-    AMVP_KMAC_TEST_TYPE_NONE = 0,
-    AMVP_KMAC_TEST_TYPE_AFT,
-    AMVP_KMAC_TEST_TYPE_MVT
-} AMVP_KMAC_TESTTYPE;
-
-/** @enum AMVP_PBKDF_TESTTYPE */
-typedef enum amvp_pbkdf_testtype {
-    AMVP_PBKDF_TEST_TYPE_NONE = 0,
-    AMVP_PBKDF_TEST_TYPE_AFT
-} AMVP_PBKDF_TESTTYPE;
-
-/** @enum AMVP_KDF_TLS13_TESTTYPE */
-typedef enum amvp_kdf_tls13_testtype {
-    AMVP_KDF_TLS13_TEST_TYPE_NONE = 0,
-    AMVP_KDF_TLS13_TEST_TYPE_AFT
-} AMVP_KDF_TLS13_TESTTYPE;
 
 /** @enum AMVP_HMAC_PARM */
 typedef enum amvp_hmac_parameter {
@@ -1066,572 +964,6 @@ typedef enum amvp_xof_support_option {
     AMVP_XOF_SUPPORT_BOTH
 } AMVP_XOF_SUPPORT_OPTION;
 
-/**
- * @struct AMVP_SYM_CIPHER_TC
- * @brief This struct holds data that represents a single test case for a symmetric cipher, such as
- *        AES or DES. This data is passed between libamvp and the crypto module. libamvp will
- *        parse the test case parameters from the JSON encoded test vector, fill in this structure,
- *        and pass the struct to the crypto module via the handler that was registered with
- *        libamvp. The crypto module will then need to perform the crypto operation and fill in
- *        the remaining items in the struct for the given test case. The struct is then passed back
- *        to libamvp, where it is then used to build the JSON encoded vector response.
- */
-typedef struct amvp_sym_cipher_tc_t {
-    AMVP_CIPHER cipher;
-    AMVP_CONFORMANCE conformance;
-    AMVP_SYM_CIPH_TESTTYPE test_type; /**< KAT or MCT */
-    AMVP_SYM_CIPH_DIR direction;      /**< encrypt or decrypt */
-    AMVP_SYM_CIPH_IVGEN_SRC ivgen_source;
-    AMVP_SYM_CIPH_IVGEN_MODE ivgen_mode;
-    AMVP_SYM_CIPH_SALT_SRC salt_source; /**< for AES-XPN */
-    unsigned int tc_id;          /**< Test case id */
-    unsigned char *key;          /**< Aes symmetric key */
-    unsigned char *pt;           /**< Plaintext */
-    unsigned char *aad;          /**< Additional Authenticated Data */
-    unsigned char *iv;           /**< Initialization Vector */
-    unsigned char *ct;           /**< Ciphertext */
-    unsigned char *tag;          /**< Aead tag */
-    unsigned char *iv_ret;       /**< updated IV used for TDES MCT */
-    unsigned char *iv_ret_after; /**< updated IV used for TDES MCT */
-    unsigned char *salt;         /**< For use with AES-XPN */
-    AMVP_SYM_KW_MODE kwcipher;
-    AMVP_SYM_CIPH_TWEAK_MODE tw_mode;
-    unsigned int seq_num;
-    unsigned int key_len;
-    unsigned int pt_len;
-    unsigned int data_len;
-    unsigned int aad_len;
-    unsigned int iv_len;
-    unsigned int ct_len;
-    unsigned int tag_len;
-    unsigned int salt_len;
-    unsigned int mct_index;  /**< used to identify init vs. update */
-    unsigned int incr_ctr;
-    unsigned int ovrflw_ctr;
-    unsigned int keyingOption; /**< For some TDES, indicates keyingOption. 
-                                 * 1 is 3 key TDES. 2 is 2-key TDES, supported
-                                 * for decrypt only. 0 indicates is not applicable */
-    unsigned int data_unit_len; /**< for AES-XTS rev 2.0, the amount of data that can be
-                                 * processed at once may be lower than the total payload
-                                 * size. By default it will = payloadLen. */
-} AMVP_SYM_CIPHER_TC;
-
-/**
- * @struct AMVP_HASH_TC
- * @brief This struct holds data that represents a single test case for hash testing. This data is
- *        passed between libamvp and the crypto module.
- */
-typedef struct amvp_hash_tc_t {
-    AMVP_CIPHER cipher;
-    unsigned int tc_id;           /**< Test case id */
-    AMVP_HASH_TESTTYPE test_type; /**< KAT or MCT or VOT */
-    unsigned char *msg; /**< Message input */
-    unsigned char *m1; /**< Mesage input #1
-                            Provided when \ref AMVP_HASH_TC.test_type is MCT */
-    unsigned char *m2; /**< Mesage input #2
-                            Provided when \ref AMVP_HASH_TC.test_type is MCT */
-    unsigned char *m3; /**< Mesage input #3
-                            Provided when \ref AMVP_HASH_TC.test_type is MCT */
-    unsigned int msg_len; /**< Length (in bytes) of...
-                               \ref AMVP_HASH_TC.msg , \ref AMVP_HASH_TC.m1 ,
-                               \ref AMVP_HASH_TC.m2 , \ref AMVP_HASH_TC.m3 */
-    unsigned int xof_len; /**< XOF (extendable output format) length
-                               The expected length (in bytes) of \ref AMVP_HASH_TC.md
-                               Only provided when \ref AMVP_HASH_TC.test_type is VOT */
-    unsigned int xof_bit_len; /**< XOF (extendable output format) length
-                                   The expected length (in bits) of \ref AMVP_HASH_TC.md
-                                   Only provided when \ref AMVP_HASH_TC.test_type is VOT */
-    unsigned char *md; /**< The resulting digest calculated for the test case.
-                            SUPPLIED BY USER */
-    unsigned int md_len; /**< The length (in bytes) of \ref AMVP_HASH_TC.md
-                              SUPPLIED BY USER */
-} AMVP_HASH_TC;
-
-/**
- * @struct AMVP_KDF135_IKEV2_TC
- * @brief This struct holds data that represents a single test case for kdf135 IKEV2 testing. This
- *        data is passed between libamvp and the crypto module.
- */
-typedef struct amvp_kdf135_ikev2_tc_t {
-    AMVP_CIPHER cipher;
-    unsigned int tc_id;    /**< Test case id */
-    AMVP_HASH_ALG hash_alg;
-    int init_nonce_len;
-    int resp_nonce_len;
-    int gir_len;
-    int gir_new_len;
-    int init_spi_len;
-    int resp_spi_len;
-    int dh_secret_len;
-    int keying_material_len; /**< Keying material length (in bytes) */
-    unsigned char *init_nonce;
-    unsigned char *resp_nonce;
-    unsigned char *init_spi;
-    unsigned char *resp_spi;
-    unsigned char *gir;
-    unsigned char *gir_new;
-    unsigned char *s_key_seed;
-    unsigned char *s_key_seed_rekey;
-    unsigned char *derived_keying_material;
-    unsigned char *derived_keying_material_child;
-    unsigned char *derived_keying_material_child_dh;
-    int key_out_len;
-} AMVP_KDF135_IKEV2_TC;
-
-/**
- * @struct AMVP_KDF135_IKEV1_TC
- * @brief This struct holds data that represents a single test case for kdf135 IKEV1 testing. This
- *        data is passed between libamvp and the crypto module.
- */
-typedef struct amvp_kdf135_ikev1_tc_t {
-    AMVP_CIPHER cipher;
-    unsigned int tc_id; /**< Test case id */
-    AMVP_HASH_ALG hash_alg;
-    AMVP_KDF135_IKEV1_AUTH_METHOD auth_method;
-    int init_nonce_len; /**< Initiator nonce length (in bytes) */
-    int resp_nonce_len; /**< Responder nonce length (in bytes) */
-    int dh_secret_len;  /**< Diffie-Hellman Secret length (in bytes) */
-    int psk_len;        /**< Preshared Key length (in bytes) */
-    unsigned char *init_nonce;
-    unsigned char *resp_nonce;
-    unsigned char *init_ckey;
-    unsigned char *resp_ckey;
-    unsigned char *gxy;
-    unsigned char *psk;
-
-    unsigned char *s_key_id;
-    int s_key_id_len;
-    unsigned char *s_key_id_d;
-    int s_key_id_d_len;
-    unsigned char *s_key_id_a;
-    int s_key_id_a_len;
-    unsigned char *s_key_id_e;
-    int s_key_id_e_len;
-} AMVP_KDF135_IKEV1_TC;
-
-/**
- * @struct AMVP_KDF135_SNMP_TC
- * @brief This struct holds data that represents a single test case for kdf135 SNMP testing. This
- *        data is passed between libamvp and the crypto module.
- */
-typedef struct amvp_kdf135_snmp_tc_t {
-    AMVP_CIPHER cipher;
-    unsigned int tc_id;    /**< Test case id */
-    unsigned char *engine_id;
-    unsigned int engine_id_len;
-    const char *password;
-    unsigned int p_len;
-    unsigned char *s_key;
-    unsigned int skey_len;
-} AMVP_KDF135_SNMP_TC;
-
-
-/**
- * @struct AMVP_KDF135_X942_TC
- * @brief This struct holds data that represents a single test case for kdf135-x942 testing. This
- *        data is passed between libamvp and the crypto module.
- */
-typedef struct amvp_kdf135_x942_tc_t {
-    AMVP_CIPHER cipher;
-    unsigned int tc_id;    /**< Test case id */
-    AMVP_HASH_ALG hash_alg;
-    AMVP_KDF_X942_TYPE type;
-
-    unsigned char *oid; /**< OID is a unique identifier (bit string) of the cipher using the DKM.
-                         * These are fixed, specific values in ANSI X9.42 */
-    unsigned char *zz;
-    unsigned char *party_u_info;
-    unsigned char *party_v_info;
-    unsigned char *supp_pub_info;
-    unsigned char *supp_priv_info;
-    unsigned char *dkm; /**< Buffer for the output DKM */
-
-    int key_len;
-    int oid_len;
-    int zz_len;
-    int party_u_len;
-    int party_v_len;
-    int supp_pub_len;
-    int supp_priv_len;
-    int dkm_len;
-} AMVP_KDF135_X942_TC;
-
-
-/**
- * @struct AMVP_KDF135_X963_TC
- * @brief This struct holds data that represents a single test case for kdf135 TPM testing. This
- *        data is passed between libamvp and the crypto module.
- */
-typedef struct amvp_kdf135_x963_tc_t {
-    AMVP_CIPHER cipher;
-    unsigned int tc_id;    /**< Test case id */
-    AMVP_HASH_ALG hash_alg;
-    int field_size;
-    int key_data_len;
-    int shared_info_len;
-    int z_len;
-    unsigned char *z;
-    unsigned char *shared_info;
-    unsigned char *key_data;
-} AMVP_KDF135_X963_TC;
-
-
-/**
- * @struct AMVP_KDF108_TC
- * @brief This struct holds data that represents a single test case for kdf108 testing. This
- *        data is passed between libamvp and the crypto module.
- */
-typedef struct amvp_kdf108_tc_t {
-    AMVP_CIPHER cipher;
-    unsigned int tc_id;    /**< Test case id */
-    AMVP_KDF108_MODE mode;
-    AMVP_KDF108_MAC_MODE_VAL mac_mode;
-    AMVP_KDF108_FIXED_DATA_ORDER_VAL counter_location;
-    unsigned char *key_in;
-    unsigned char *key_out;
-    unsigned char *fixed_data;
-    unsigned char *iv;
-    int key_in_len;             /**< Length of key_in (in bytes) */
-    int key_out_len;            /**< Length of key_out (in bytes) */
-    int iv_len;                 /**< Length of iv (in bytes) */
-    int fixed_data_len;         /**< Length of fixed_data (in bytes).
-                                     --- User supplied ---
-                                     Must be <= AMVP_KDF108_FIXED_DATA_MAX */
-    int counter_len;
-    int deferred;
-} AMVP_KDF108_TC;
-
-/**
- * @struct AMVP_KDF135_SRTP_TC
- * @brief This struct holds data that represents a single test case for kdf135 SRTP testing. This
- *        data is passed between libamvp and the crypto module.
- */
-typedef struct amvp_kdf135_srtp_tc_t {
-    AMVP_CIPHER cipher;
-    unsigned int tc_id;    /**< Test case id */
-    unsigned char *kdr;
-    int kdr_len;
-    int aes_keylen;
-    char *master_key;
-    char *master_salt;
-    char *idx;
-    char *srtcp_idx;
-
-    unsigned char *srtp_ke;
-    unsigned char *srtp_ka;
-    unsigned char *srtp_ks;
-    unsigned char *srtcp_ke;
-    unsigned char *srtcp_ka;
-    unsigned char *srtcp_ks;
-} AMVP_KDF135_SRTP_TC;
-
-/**
- * @struct AMVP_KDF135_SSH_TC
- * @brief This struct holds data that represents a single test case for kdf135 SSH testing. This
- *        data is passed between libamvp and the crypto module.
- */
-typedef struct amvp_kdf135_ssh_tc_t {
-    AMVP_CIPHER cipher;
-    unsigned int tc_id;              /**< Test case id */
-    AMVP_HASH_ALG sha_type;          /**< SHA algorithm type */
-    unsigned int shared_secret_len;  /**< Length of shared_secret (in bytes) */
-    unsigned int hash_len;           /**< Length of hash (in bytes) */
-    unsigned int session_id_len;     /**< Length of session_id (in bytes) */
-    unsigned int e_key_len;          /**< Expected length of encrypt keys (in bytes) */
-    unsigned int i_key_len;          /**< Expected length of integrity keys (in bytes) */
-    unsigned int iv_len;             /**< Expected length of initial IV (in bytes) */
-    char *shared_secret_k;           /**< Shared secret (K) */
-    char *hash_h;                    /**< Provided hash (H) */
-    char *session_id;                /**< Session ID */
-    unsigned char *cs_init_iv;       /**< Initial IV, client to server
-                                          ---User supplied--- */
-    unsigned char *sc_init_iv;       /**< Initial IV, server to client,
-                                          ---User supplied--- */
-    unsigned char *cs_encrypt_key;   /**< Encryption Key, client to server
-                                          ---User supplied--- */
-    unsigned char *sc_encrypt_key;   /**< Encryption Key, server to client
-                                          ---User supplied--- */
-    unsigned char *cs_integrity_key; /**< Integrity Key, client to server
-                                          ---User supplied--- */
-    unsigned char *sc_integrity_key; /**< Integrity Key, server to client
-                                          ---User supplied--- */
-} AMVP_KDF135_SSH_TC;
-
-/**
- * @struct AMVP_PBKDF_TC
- * @brief This struct holds data that represents a single test case for pbkdf testing. This data is
- *        passed between libamvp and the crypto module.
- */
-typedef struct amvp_pbkdf_tc_t {
-    AMVP_CIPHER cipher;
-    unsigned int tc_id;              /**< Test case id */
-    AMVP_HASH_ALG hmac_type;         /**< HMAC algorithm type */
-    AMVP_PBKDF_TESTTYPE test_type;   /**< Test type */
-    unsigned int key_len;            /**< Length of key to be generated (in bytes) */
-    unsigned char *salt;
-    unsigned int salt_len;           /**< the length of the given salt (in bytes) */
-    char *password;
-    unsigned int pw_len;            /**< The length of the given password (in chars) */
-    unsigned int iterationCount;
-    unsigned char *key;       /**< The output derived key
-                                           ---User supplied--- */
-} AMVP_PBKDF_TC;
-
-/**
- * @struct AMVP_KDF_TLS12_TC
- * @brief This struct holds data that represents a single test case for TLS 1.2 KDF testing. This
- *        data is passed between libamvp and the crypto module.
- */
-typedef struct amvp_kdf_tls12_tc_t {
-    AMVP_CIPHER cipher;
-    unsigned int tc_id;    /**< Test case id */
-    AMVP_HASH_ALG md;
-    unsigned int pm_len;
-    unsigned int kb_len;
-    unsigned char *pm_secret;
-    unsigned char *session_hash;
-    unsigned char *s_rnd;
-    unsigned char *c_rnd;
-    unsigned char *msecret; /**< The resulting data calculated for the test case */
-    unsigned char *kblock;  /**< The resulting data calculated for the test case */
-    int session_hash_len;
-    int s_rnd_len;
-    int c_rnd_len;
-} AMVP_KDF_TLS12_TC;
-
-/**
- * @struct AMVP_KDF_TLS13_TC
- * @brief This struct holds data that represents a single test case for TLS 1.3 KDF testing. This
- *        data is passed between libamvp and the crypto module.
- */
-typedef struct amvp_kdf_tls13_tc_t {
-    AMVP_CIPHER cipher;
-    unsigned int tc_id;              /**< Test case id */
-
-    //test params:
-    AMVP_KDF_TLS13_TESTTYPE test_type;   /**< Test type */
-    AMVP_HASH_ALG hmac_alg;         /**< HMAC algorithm type */
-    AMVP_KDF_TLS13_RUN_MODE running_mode; /**< DHE, PSK, or PSK-DHE */
-    unsigned char *psk; /**< pre shared key, populated for PSK or PSK-DHE */
-    unsigned char *dhe; /**< diffie hellman secret, populated for DHE or PSK-DHE */
-    unsigned char *s_hello_rand; /**< server hello random value */
-    unsigned char *c_hello_rand; /**< client hello random value */
-    unsigned char *fin_s_hello_rand; /**< finished server hello random value */
-    unsigned char *fin_c_hello_rand; /**< finished client hello random value */
-    //test param lengths:
-    int psk_len;
-    int dhe_len;
-    int s_hello_rand_len;
-    int c_hello_rand_len;
-    int fin_s_hello_rand_len;
-    int fin_c_hello_rand_len;
-
-    //user supplied (vars are self descriptive):
-    unsigned char *c_early_traffic_secret;
-    unsigned char *early_expt_master_secret;
-    unsigned char *c_hs_traffic_secret;
-    unsigned char *s_hs_traffic_secret;
-    unsigned char *c_app_traffic_secret;
-    unsigned char *s_app_traffic_secret;
-    unsigned char *expt_master_secret;
-    unsigned char *resume_master_secret;
-    //user supplied lengths of above values in bytes:
-    int cets_len;
-    int eems_len;
-    int chts_len;
-    int shts_len;
-    int cats_len;
-    int sats_len;
-    int ems_len;
-    int rms_len;
-
-} AMVP_KDF_TLS13_TC;
-
-/**
- * @struct AMVP_HMAC_TC
- * @brief This struct holds data that represents a single test case for HMAC testing. This data is
- *        passed between libamvp and the crypto module.
- */
-typedef struct amvp_hmac_tc_t {
-    AMVP_CIPHER cipher;
-    unsigned int tc_id;    /**< Test case id */
-    unsigned char *msg;
-    unsigned int msg_len;
-    unsigned char *mac; /**< The resulting digest calculated for the test case */
-    unsigned int mac_len;
-    unsigned int key_len;
-    unsigned char *key;
-} AMVP_HMAC_TC;
-
-/**
- * @struct AMVP_CMAC_TC
- * @brief This struct holds data that represents a single test case for CMAC testing. This data is
- *        passed between libamvp and the crypto module.
- */
-typedef struct amvp_cmac_tc_t {
-    AMVP_CIPHER cipher;
-    AMVP_CMAC_TESTTYPE test_type;
-    int verify;                            /**< 1 indicates verify. 0 indicates generate. */
-    AMVP_TEST_DISPOSITION ver_disposition; /**< Indicates pass/fail (only in "verify" direction)*/
-    unsigned int tc_id;                    /**< Test case id */
-    unsigned char *msg;
-    unsigned int msg_len;
-    unsigned char *mac; /**< The resulting digest calculated for the test case */
-    unsigned int mac_len;
-    unsigned int key_len;
-    unsigned char *key; /**< for CMAC-AES */
-    unsigned char *key2; /**< for CMAC-TDES */
-    unsigned char *key3; /**< for CMAC-TDES */
-} AMVP_CMAC_TC;
-
-/**
- * @struct AMVP_KMAC_TC
- * @brief This struct holds data that represents a single test case for KMAC testing. This data is
- *        passed between libamvp and the crypto module.
- */
-typedef struct amvp_kmac_tc_t {
-    AMVP_CIPHER cipher;
-    AMVP_KMAC_TESTTYPE test_type;
-    AMVP_TEST_DISPOSITION disposition; /**< Indicates pass/fail when running verification */
-    int tc_id; /**< Test case id */
-    int xof;
-    int hex_customization;
-
-    unsigned char *msg;
-    unsigned char *mac; /**< The resulting digest calculated for the test case, or provided when verifying */
-    unsigned char *key;
-    unsigned char *custom_hex;
-    char *custom;
-
-    int msg_len;
-    int mac_len;
-    int key_len;
-    int custom_len;
-} AMVP_KMAC_TC;
-
-/**
- * @struct AMVP_RSA_KEYGEN_TC
- * @brief This struct holds data that represents a single test case for RSA keygen testing. The
- *        other modes of RSA have their own respective structs. This data is passed between
- *        libamvp and the crypto module.
- */
-typedef struct amvp_rsa_keygen_tc_t {
-    unsigned int tc_id;    /**< Test case id */
-    AMVP_HASH_ALG hash_alg;
-    AMVP_RSA_TESTTYPE test_type;
-    AMVP_RSA_PRIME_TEST_TYPE prime_test;
-    char *prime_result;
-    char *pub_exp;
-
-    AMVP_RSA_KEYGEN_MODE rand_pq;
-    AMVP_RSA_PUB_EXP_MODE pub_exp_mode;
-    AMVP_RSA_KEY_FORMAT key_format;
-    int info_gen_by_server;
-    int test_disposition;
-    unsigned int modulo;
-
-    unsigned char *e;
-    unsigned char *p_rand;
-    unsigned char *q_rand;
-
-    unsigned char *xp1;
-    unsigned char *xp2;
-    unsigned char *xp;
-
-    unsigned char *xq1;
-    unsigned char *xq2;
-    unsigned char *xq;
-
-    unsigned char *dmp1;
-    unsigned char *dmq1;
-    unsigned char *iqmp;
-
-    unsigned char *n;
-    unsigned char *d;
-    unsigned char *p;
-    unsigned char *q;
-
-    unsigned char *seed;
-    int seed_len;
-    int bitlen1;
-    int bitlen2;
-    int bitlen3;
-    int bitlen4;
-
-    int e_len;
-    int n_len;
-    int d_len;
-    int p_len;
-    int q_len;
-    int xq_len;
-    int xq1_len;
-    int xq2_len;
-    int xp_len;
-    int xp1_len;
-    int xp2_len;
-} AMVP_RSA_KEYGEN_TC;
-
-/**
- * @struct AMVP_ECDSA_TC
- * @brief This struct holds data that represents a single test case for ECDSA testing. This data is
- *        passed between libamvp and the crypto module.
- */
-typedef struct amvp_ecdsa_tc_t {
-    unsigned int tc_id;    /**< Test case id */
-    int tg_id;
-    int is_component;
-    AMVP_HASH_ALG hash_alg;
-
-    AMVP_CIPHER cipher;
-
-    AMVP_EC_CURVE curve;
-    AMVP_ECDSA_SECRET_GEN_MODE secret_gen_mode;
-
-    unsigned char *d;
-    int d_len;
-    unsigned char *qy;
-    int qx_len;
-    unsigned char *qx;
-    int qy_len;
-
-    unsigned char *r;
-    int r_len;
-    unsigned char *s;
-    int s_len;
-
-    AMVP_TEST_DISPOSITION ver_disposition; /**< Indicates pass/fail (only in "verify" direction)*/
-    unsigned char *message;
-    int msg_len;
-} AMVP_ECDSA_TC;
-
-/**
- * @struct AMVP_RSA_SIG_TC
- * @brief This struct holds data that represents a single test case for RSA signature testing. Both
- *        siggen and sigver use this struct in their testing. This data is  passed between libamvp
- *        and the crypto module.
- */
-typedef struct amvp_rsa_sig_tc_t {
-    unsigned int tc_id; /**< Test case id */
-    int tg_id;          /**< needed to keep e,n state */
-    char *group_e;
-    char *group_n;
-    AMVP_HASH_ALG hash_alg;
-    AMVP_RSA_SIG_TYPE sig_type;
-    unsigned int modulo;
-    unsigned char *e;
-    int e_len;
-    unsigned char *n;
-    int n_len;
-    char *salt;
-    int salt_len;
-    unsigned char *msg;
-    int msg_len;
-    unsigned char *signature;
-    int sig_len;
-    AMVP_CIPHER sig_mode;
-    AMVP_TEST_DISPOSITION ver_disposition; /**< Indicates pass/fail (only in "verify" direction)*/
-} AMVP_RSA_SIG_TC;
-
 /** @enum AMVP_DSA_MODE */
 typedef enum amvp_dsa_mode {
     AMVP_DSA_MODE_KEYGEN = 1,
@@ -1658,47 +990,6 @@ typedef enum amvp_dsa_gen_parm {
     AMVP_DSA_CANONICAL,
     AMVP_DSA_UNVERIFIABLE
 } AMVP_DSA_GEN_PARM;
-
-/**
- * @struct AMVP_DSA_TC
- * @brief This struct holds data that represents a single test case for DSA testing. This data is
- *        passed between libamvp and the crypto module.
- */
-typedef struct amvp_dsa_tc_t {
-    int tg_id;
-    int tc_id;
-    AMVP_CIPHER cipher;
-    AMVP_DSA_MODE mode; /**< "pqgGen", "pqgVer", etc. */
-    AMVP_HASH_ALG sha;
-    int l;
-    int n;
-    int h;
-    int c;
-    int pqg;
-    int gen_pq;
-    int num;
-    int index;
-    int seedlen;
-    int msglen;
-    int result;
-    int counter;
-    unsigned char *p;
-    int p_len;
-    unsigned char *q;
-    int q_len;
-    unsigned char *g;
-    int g_len;
-    unsigned char *y;
-    int y_len;
-    unsigned char *x;
-    int x_len;
-    unsigned char *r;
-    int r_len;
-    unsigned char *s;
-    int s_len;
-    unsigned char *seed;
-    unsigned char *msg;
-} AMVP_DSA_TC;
 
 /** @enum AMVP_KAS_ECC_MODE */
 typedef enum amvp_kas_ecc_mode {
@@ -1760,40 +1051,6 @@ typedef enum amvp_kas_ecc_schemes {
     AMVP_KAS_ECC_STATIC_UNIFIED,
     AMVP_KAS_ECC_SCHEMES_MAX
 } AMVP_KAS_ECC_SCHEMES;
-
-/** @enum AMVP_KAS_ECC_TEST_TYPE */
-typedef enum amvp_kas_ecc_test_type {
-    AMVP_KAS_ECC_TT_AFT = 1,
-    AMVP_KAS_ECC_TT_VAL
-} AMVP_KAS_ECC_TEST_TYPE;
-
-/**
- * @struct AMVP_KAS_ECC_TC
- * @brief This struct holds data that represents a single test case for KAS-ECC testing. This data
- *        is passed between libamvp and the crypto module.
- */
-typedef struct amvp_kas_ecc_tc_t {
-    AMVP_CIPHER cipher;
-    AMVP_KAS_ECC_FUNC func;
-    AMVP_KAS_ECC_TEST_TYPE test_type;
-    AMVP_KAS_ECC_MODE mode;
-    AMVP_EC_CURVE curve;
-    AMVP_HASH_ALG md;
-    unsigned char *psx;
-    unsigned char *psy;
-    unsigned char *pix;
-    unsigned char *piy;
-    unsigned char *d;
-    unsigned char *z;
-    unsigned char *chash;
-    int psxlen;
-    int psylen;
-    int pixlen;
-    int piylen;
-    int dlen;
-    int zlen;
-    int chashlen;
-} AMVP_KAS_ECC_TC;
 
 /** @enum AMVP_KAS_FFC_MODE */
 typedef enum amvp_kas_ffc_mode {
@@ -1867,41 +1124,6 @@ typedef enum amvp_kas_ffc_test_type {
     AMVP_KAS_FFC_TT_VAL
 } AMVP_KAS_FFC_TEST_TYPE;
 
-/**
- * @struct AMVP_KAS_FFC_TC
- * @brief This struct holds data that represents a single test case for KAS-FFC testing. This data
- *        is passed between libamvp and the crypto module.
- */
-#define DGM_STR_MAX 9
-
-typedef struct amvp_kas_ffc_tc_t {
-    AMVP_CIPHER cipher;
-    AMVP_KAS_FFC_TEST_TYPE test_type;
-    AMVP_HASH_ALG md;
-    AMVP_KAS_FFC_MODE mode;
-    AMVP_KAS_FFC_PARAM dgm;
-    unsigned char *p;
-    unsigned char *q;
-    unsigned char *g;
-    unsigned char *d;
-    unsigned char *eps;
-    unsigned char *epri;
-    unsigned char *epui;
-    unsigned char *z;
-    unsigned char *chash;
-    unsigned char *piut;
-    int plen;
-    int qlen;
-    int glen;
-    int dlen;
-    int zlen;
-    int epslen;
-    int eprilen;
-    int epuilen;
-    int chashlen;
-    int piutlen;
-} AMVP_KAS_FFC_TC;
-
 /** @enum AMVP_SAFE_PRIMES_PARAM */
 typedef enum amvp_safe_primes_param {
     AMVP_SAFE_PRIMES_GENMETH = 1,
@@ -1926,24 +1148,6 @@ typedef enum amvp_safe_primes_test_type {
     AMVP_SAFE_PRIMES_TT_AFT = 1,
     AMVP_SAFE_PRIMES_TT_VAL
 } AMVP_SAFE_PRIMES_TEST_TYPE;
-
-/**
- * @struct AMVP_SAFE_PRIMES_TC
- * @brief This struct holds data that represents a single test case for safe primes testing. This
- *        data is passed between libamvp and the crypto module.
- */
-typedef struct amvp_safe_primes_tc_t {
-    int tg_id;
-    int tc_id;
-    unsigned char *x;
-    unsigned char *y;
-    int xlen;
-    int ylen;
-    int result;
-    AMVP_SAFE_PRIMES_TEST_TYPE test_type;
-    AMVP_CIPHER cipher;
-    AMVP_SAFE_PRIMES_MODE dgm;
-} AMVP_SAFE_PRIMES_TC;
 
 /** @enum AMVP_KAS_IFC_PARAM */
 typedef enum amvp_kas_ifc_param {
@@ -1977,59 +1181,6 @@ typedef enum amvp_kas_ifc_test_type {
     AMVP_KAS_IFC_TT_VAL
 } AMVP_KAS_IFC_TEST_TYPE;
 
-/**
- * @struct AMVP_KAS_IFC_TC
- * @brief This struct holds data that represents a single test case for KAS-IFC testing. This data
- *        is passed between libamvp and the crypto module.
- */
-typedef struct amvp_kas_ifc_tc_t {
-    AMVP_CIPHER cipher;
-    AMVP_KAS_IFC_TEST_TYPE test_type;
-    AMVP_KAS_IFC_KEYGEN key_gen;
-    AMVP_HASH_ALG md;
-    AMVP_KAS_IFC_PARAM scheme;
-    AMVP_KAS_IFC_ROLES kas_role;
-
-    /* Key parameters */
-    unsigned char *server_n;
-    unsigned char *server_e;
-    unsigned char *p;
-    unsigned char *q;
-    unsigned char *d;
-    unsigned char *n;
-    unsigned char *e;
-    /* CRT parameters */
-    unsigned char *dmp1;
-    unsigned char *dmq1;
-    unsigned char *iqmp;
-
-    unsigned char *iut_pt_z;
-    unsigned char *iut_ct_z;
-    unsigned char *provided_pt_z; /**< For VAL tests. Could either be plain Z or hashZ */
-    unsigned char *provided_ct_z; /**< for VAL tests */
-    unsigned char *server_pt_z;
-    unsigned char *server_ct_z;
-    unsigned char *provided_kas2_z; /* The server-provided combined Z for KAS2 cases */
-    int server_nlen;
-    int server_elen;
-    int plen;
-    int qlen;
-    int nlen;
-    int dlen;
-    int elen;
-    int dmp1_len;
-    int dmq1_len;
-    int iqmp_len;
-    int iut_pt_z_len;
-    int iut_ct_z_len;
-    int provided_pt_z_len;
-    int provided_ct_z_len;
-    int server_pt_z_len;
-    int server_ct_z_len;
-    int provided_kas2_z_len;
-    unsigned int modulo;
-} AMVP_KAS_IFC_TC;
-
 /** @enum AMVP_KDA_ENCODING */
 typedef enum amvp_kda_encoding {
     AMVP_KDA_ENCODING_NONE = 0,
@@ -2059,14 +1210,6 @@ typedef enum amvp_kda_mac_salt_method {
     AMVP_KDA_MAC_SALT_METHOD_MAX
 } AMVP_KDA_MAC_SALT_METHOD;
 
-/** @enum AMVP_KDA_TEST_TYPE */
-typedef enum amvp_kda_test_type {
-    AMVP_KDA_TT_NONE = 0,
-    AMVP_KDA_TT_AFT,
-    AMVP_KDA_TT_VAL,
-    AMVP_KDA_TT_MAX
-} AMVP_KDA_TEST_TYPE;
-
 /** @enum AMVP_KDA_PARM */
 typedef enum amvp_kda_param {
     AMVP_KDA_PATTERN = 1,
@@ -2085,136 +1228,6 @@ typedef enum amvp_kda_param {
     AMVP_KDA_TWOSTEP_SUPPORTS_EMPTY_IV,
     AMVP_KDA_TWOSTEP_REQUIRES_EMPTY_IV
 } AMVP_KDA_PARM;
-
-/**
- * @struct AMVP_KDA_ONESTEP_TC
- * @brief This struct holds data that represents a single test case for KDA onestep testing.
- *        This data is passed between libamvp and the crypto module.
- */
-typedef struct amvp_kda_onestep_tc_t {
-    AMVP_CIPHER cipher;
-    AMVP_KDA_TEST_TYPE type;
-    //Incrementing through the array, each element represents a pattern candidate until we reach a 0
-    AMVP_KDA_PATTERN_CANDIDATE fixedInfoPattern[AMVP_KDA_PATTERN_MAX];
-    AMVP_KDA_ENCODING encoding;
-    AMVP_CIPHER aux_function;
-    AMVP_KDA_MAC_SALT_METHOD saltMethod;
-    unsigned int tc_id;
-    unsigned char *salt;
-    unsigned char *z;
-    unsigned char *t;
-    int l;
-    int saltLen;
-    int zLen;
-    int tLen;
-    int uPartyIdLen;
-    int uEphemeralLen;
-    int vPartyIdLen;
-    int vEphemeralLen;
-    int algIdLen;
-    int labelLen;
-    int contextLen;
-    int literalLen;
-    unsigned char *literalCandidate;
-    unsigned char *algorithmId;
-    unsigned char *label;
-    unsigned char *context;
-    unsigned char *uPartyId;
-    unsigned char *uEphemeralData;
-    unsigned char *vPartyId;
-    unsigned char *vEphemeralData;
-    unsigned char *providedDkm;
-    unsigned char *outputDkm;
-} AMVP_KDA_ONESTEP_TC;
-
-/**
- * @struct AMVP_KDA_TWOSTEP_TC
- * @brief This struct holds data that represents a single test case for KDA twostep testing.
- *        This data is passed between libamvp and the crypto module.
- */
-typedef struct amvp_kda_twostep_tc_t {
-    AMVP_CIPHER cipher;
-    AMVP_KDA_TEST_TYPE type;
-    //Incrementing through the array, each element represents a pattern candidate until we reach a 0
-    AMVP_KDA_PATTERN_CANDIDATE fixedInfoPattern[AMVP_KDA_PATTERN_MAX];
-    AMVP_KDA_ENCODING encoding;
-    AMVP_KDF108_MODE kdfMode;
-    AMVP_KDF108_MAC_MODE_VAL macFunction; /**< we re-use the SP800-108 KDF MAC list here, since its part of twostep. */
-    AMVP_KDF108_FIXED_DATA_ORDER_VAL counterLocation;
-    AMVP_KDA_MAC_SALT_METHOD saltMethod;
-    unsigned int tc_id;
-    int uses_hybrid_secret;
-    unsigned char *salt;
-    unsigned char *iv;
-    unsigned char *z;
-    unsigned char *t;
-    int l;
-    int saltLen;
-    int ivLen;
-    int zLen;
-    int tLen;
-    int uPartyIdLen;
-    int uEphemeralLen;
-    int vPartyIdLen;
-    int vEphemeralLen;
-    int algIdLen;
-    int labelLen;
-    int contextLen;
-    int literalLen;
-    int counterLen;
-    unsigned char *literalCandidate;
-    unsigned char *algorithmId;
-    unsigned char *label;
-    unsigned char *context;
-    unsigned char *uPartyId;
-    unsigned char *uEphemeralData;
-    unsigned char *vPartyId;
-    unsigned char *vEphemeralData;
-    unsigned char *providedDkm;
-    unsigned char *outputDkm;
-} AMVP_KDA_TWOSTEP_TC;
-
-/**
- * @struct AMVP_KDA_HKDF_TC
- * @brief This struct holds data that represents a single test case for KDA HKDF testing. This data
- *        is passed between libamvp and the crypto module.
- */
-typedef struct amvp_kda_hkdf_tc_t {
-    AMVP_CIPHER cipher;
-    AMVP_KDA_TEST_TYPE type;
-    //Incrementing through the array, each element represents a pattern candidate until we reach a 0
-    AMVP_KDA_PATTERN_CANDIDATE fixedInfoPattern[AMVP_KDA_PATTERN_MAX];
-    AMVP_KDA_ENCODING encoding;
-    AMVP_HASH_ALG hmacAlg;
-    AMVP_KDA_MAC_SALT_METHOD saltMethod;
-    unsigned int tc_id;
-    unsigned char *salt;
-    unsigned char *z;
-    unsigned char *t;
-    int uses_hybrid_secret;
-    int l;
-    int saltLen;
-    int zLen;
-    int tLen;
-    int uPartyIdLen;
-    int uEphemeralLen;
-    int vPartyIdLen;
-    int vEphemeralLen;
-    int algIdLen;
-    int labelLen;
-    int contextLen;
-    int literalLen;
-    unsigned char *literalCandidate;
-    unsigned char *algorithmId;
-    unsigned char *label;
-    unsigned char *context;
-    unsigned char *uPartyId;
-    unsigned char *uEphemeralData;
-    unsigned char *vPartyId;
-    unsigned char *vEphemeralData;
-    unsigned char *providedDkm;
-    unsigned char *outputDkm;
-} AMVP_KDA_HKDF_TC;
 
 /** @enum AMVP_KTS_IFC_PARAM */
 typedef enum amvp_kts_ifc_param {
@@ -2272,121 +1285,6 @@ typedef enum amvp_kts_ifc_test_type {
     AMVP_KTS_IFC_TT_VAL
 } AMVP_KTS_IFC_TEST_TYPE;
 
-
-
-/**
- * @struct AMVP_KTS_IFC_TC
- * @brief This struct holds data that represents a single test case for KTS-IFC testing. This data
- *        is passed between libamvp and the crypto module.
- */
-typedef struct amvp_kts_ifc_tc_t {
-    AMVP_CIPHER cipher;
-    AMVP_KTS_IFC_TEST_TYPE test_type;
-    AMVP_KTS_IFC_KEYGEN key_gen;
-    AMVP_HASH_ALG md;
-    AMVP_KTS_IFC_ROLES kts_role;
-    AMVP_KTS_IFC_SCHEME_TYPE scheme;
-    unsigned char *p;
-    unsigned char *q;
-    unsigned char *d;
-    unsigned char *n;
-    unsigned char *e;
-    unsigned char *dmp1;
-    unsigned char *dmq1;
-    unsigned char *iqmp;
-    unsigned char *ct;
-    unsigned char *pt;
-    int llen;
-    int plen;
-    int qlen;
-    int nlen;
-    int dlen;
-    int elen;
-    int dmp1_len;
-    int dmq1_len;
-    int iqmp_len;
-    int ct_len;
-    int pt_len;
-    int modulo;
-} AMVP_KTS_IFC_TC;
-
-/**
- * @struct AMVP_DRBG_TC
- * @brief  This struct holds data that represents a single test case for DRBG testing. This data is
- *         passed between libamvp and the crypto module.
- */
-typedef struct amvp_drbg_tc_t {
-    AMVP_CIPHER cipher;
-    AMVP_DRBG_MODE mode;
-    unsigned int tc_id;    /**< Test case id */
-
-    unsigned char *additional_input_0;
-    unsigned char *entropy_input_pr_0;
-    unsigned char *additional_input_1;
-    unsigned char *entropy_input_pr_1;
-    unsigned char *additional_input_2;
-    unsigned char *entropy_input_pr_2;
-    unsigned int pr1_len;
-    unsigned int pr2_len;
-    unsigned char *perso_string;
-    unsigned char *entropy;
-    unsigned char *nonce;
-    unsigned char *drb; /**< The resulting pseudo random generated for the test case */
-
-    unsigned int der_func_enabled;
-    unsigned int pred_resist_enabled;
-    unsigned int reseed;
-    unsigned int additional_input_len; /**< Additional Input length (in bytes) */
-    unsigned int perso_string_len;     /**< Personalization String length (in bytes) */
-    unsigned int entropy_len;          /**< Entropy length (in bytes) */
-    unsigned int nonce_len;            /**< Nonce length (in bytes) */
-    unsigned int drb_len;              /**< Expected drb length (in bytes) */
-} AMVP_DRBG_TC;
-
-/**
- * @struct AMVP_TEST_CASE
- * @brief This is the abstracted test case representation used for passing test case data to/from
- *        the crypto module. Because the callback prototype is generic to all algorithms, we
- *        abstract the various classes of test cases using a union. This struct is then used to
- *        pass a reference to the test case between libamvp and the crypto module.
- */
-typedef struct amvp_test_case_t {
-    union {
-        AMVP_SYM_CIPHER_TC *symmetric;
-        AMVP_HASH_TC *hash;
-        AMVP_DRBG_TC *drbg;
-        AMVP_DSA_TC *dsa;
-        AMVP_HMAC_TC *hmac;
-        AMVP_CMAC_TC *cmac;
-        AMVP_KMAC_TC *kmac;
-        AMVP_RSA_KEYGEN_TC *rsa_keygen;
-        AMVP_RSA_SIG_TC *rsa_sig;
-        AMVP_RSA_PRIM_TC *rsa_prim;
-        AMVP_ECDSA_TC *ecdsa;
-        AMVP_KDF135_SNMP_TC *kdf135_snmp;
-        AMVP_KDF135_SSH_TC *kdf135_ssh;
-        AMVP_KDF135_SRTP_TC *kdf135_srtp;
-        AMVP_KDF135_IKEV2_TC *kdf135_ikev2;
-        AMVP_KDF135_IKEV1_TC *kdf135_ikev1;
-        AMVP_KDF135_X942_TC *kdf135_x942;
-        AMVP_KDF135_X963_TC *kdf135_x963;
-        AMVP_KDF108_TC *kdf108;
-        AMVP_PBKDF_TC *pbkdf;
-        AMVP_KDF_TLS12_TC *kdf_tls12;
-        AMVP_KDF_TLS13_TC *kdf_tls13;
-        AMVP_KAS_ECC_TC *kas_ecc;
-        AMVP_KAS_FFC_TC *kas_ffc;
-        AMVP_KAS_IFC_TC *kas_ifc;
-        AMVP_KDA_ONESTEP_TC *kda_onestep;
-        AMVP_KDA_TWOSTEP_TC *kda_twostep;
-        AMVP_KDA_HKDF_TC *kda_hkdf;
-        AMVP_KTS_IFC_TC *kts_ifc;
-        AMVP_SAFE_PRIMES_TC *safe_primes;
-    } tc; /**< the union abstracting the test case for passing to the user application */
-} AMVP_TEST_CASE;
-
-
-
 /** @defgroup APIs Public APIs for libamvp
  *  @brief this section describes APIs for libamvp.
  */
@@ -2408,15 +1306,11 @@ typedef struct amvp_test_case_t {
  *
  * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
  * @param cipher AMVP_CIPHER enum value identifying the crypto capability.
- * @param crypto_handler Address of function implemented by application that is invoked by libamvp
- *        when the crypto capability is needed during a test session. This crypto_handler function
- *        is expected to return 0 on success and 1 for failure.
  *
  * @return AMVP_RESULT
  */
 AMVP_RESULT amvp_cap_sym_cipher_enable(AMVP_CTX *ctx,
-                                       AMVP_CIPHER cipher,
-                                       int (*crypto_handler)(AMVP_TEST_CASE *test_case));
+                                       AMVP_CIPHER cipher);
 
 /**
  * @brief amvp_cap_sym_cipher_set_parm() allows an application to specify length-based
@@ -2487,15 +1381,11 @@ AMVP_RESULT amvp_cap_sym_cipher_set_domain(AMVP_CTX *ctx,
  *
  * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
  * @param cipher AMVP_CIPHER enum value identifying the crypto capability.
- * @param crypto_handler Address of function implemented by application that is invoked by libamvp
- *        when the crypto capability is needed during a test session. This crypto_handler function
- *        is expected to return 0 on success and 1 for failure.
  *
  * @return AMVP_RESULT
  */
 AMVP_RESULT amvp_cap_hash_enable(AMVP_CTX *ctx,
-                                 AMVP_CIPHER cipher,
-                                 int (*crypto_handler)(AMVP_TEST_CASE *test_case));
+                                 AMVP_CIPHER cipher);
 
 /**
  * @brief amvp_cap_hash_set_parm() allows an application to specify operational parameters to be
@@ -2556,15 +1446,11 @@ AMVP_RESULT amvp_cap_hash_set_domain(AMVP_CTX *ctx,
  *
  * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
  * @param cipher AMVP_CIPHER enum value identifying the crypto capability.
- * @param crypto_handler Address of function implemented by application that is invoked by libamvp
- *        when the crypto capability is needed during a test session. This crypto_handler function
- *        is expected to return 0 on success and 1 for failure.
  *
  * @return AMVP_RESULT
  */
 AMVP_RESULT amvp_cap_drbg_enable(AMVP_CTX *ctx,
-                                 AMVP_CIPHER cipher,
-                                 int (*crypto_handler)(AMVP_TEST_CASE *test_case));
+                                 AMVP_CIPHER cipher);
 
 /**
  * @brief amvp_cap_drbg_set_parm() allows an application to specify operational parameters to be
@@ -2637,15 +1523,11 @@ AMVP_RESULT amvp_cap_drbg_set_length(AMVP_CTX *ctx,
  *
  * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
  * @param cipher AMVP_CIPHER enum value identifying the crypto capability.
- * @param crypto_handler Address of function implemented by application that is invoked by libamvp
- *        when the crypto capability is needed during a test session. This crypto_handler function
- *        is expected to return 0 on success and 1 for failure.
  *
  * @return AMVP_RESULT
  */
 AMVP_RESULT amvp_cap_dsa_enable(AMVP_CTX *ctx,
-                                AMVP_CIPHER cipher,
-                                int (*crypto_handler)(AMVP_TEST_CASE *test_case));
+                                AMVP_CIPHER cipher);
 
 /**
  * @brief amvp_cap_dsa_set_parm() allows an application to specify operational parameters to be
@@ -2679,15 +1561,11 @@ AMVP_RESULT amvp_cap_dsa_set_parm(AMVP_CTX *ctx,
  *
  * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
  * @param cipher AMVP_CIPHER enum value identifying the crypto capability.
- * @param crypto_handler Address of function implemented by application that is invoked by libamvp
- *        when the crypto capability is needed during a test session. This crypto_handler function
- *        is expected to return 0 on success and 1 for failure.
  *
  * @return AMVP_RESULT
  */
 AMVP_RESULT amvp_cap_kas_ecc_enable(AMVP_CTX *ctx,
-                                    AMVP_CIPHER cipher,
-                                    int (*crypto_handler)(AMVP_TEST_CASE *test_case));
+                                    AMVP_CIPHER cipher);
 
 /**
  * @brief amvp_enable_kas_ecc_prereq_cap() allows an application to specify a prerequisite
@@ -2770,15 +1648,11 @@ AMVP_RESULT amvp_cap_kas_ecc_set_scheme(AMVP_CTX *ctx,
  *
  * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
  * @param cipher AMVP_CIPHER enum value identifying the crypto capability.
- * @param crypto_handler Address of function implemented by application that
- *        is invoked by libamvp when the crypto capability is needed during a test session. This
- *        crypto_handler function is expected to return 0 on success and 1 for failure.
  *
  * @return AMVP_RESULT
  */
 AMVP_RESULT amvp_cap_kas_ifc_enable(AMVP_CTX *ctx,
-                                    AMVP_CIPHER cipher,
-                                    int (*crypto_handler)(AMVP_TEST_CASE *test_case));
+                                    AMVP_CIPHER cipher);
 
 
 /**
@@ -2832,15 +1706,11 @@ AMVP_RESULT amvp_cap_kas_ifc_set_exponent(AMVP_CTX *ctx,
  *
  * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
  * @param cipher AMVP_CIPHER enum value identifying the crypto capability.
- * @param crypto_handler Address of function implemented by application that is invoked by libamvp
- *        when the crypto capability is needed during a test session. This crypto_handler function
- *        is expected to return 0 on success and 1 for failure.
  *
  * @return AMVP_RESULT
  */
 AMVP_RESULT amvp_cap_kts_ifc_enable(AMVP_CTX *ctx,
-                                    AMVP_CIPHER cipher,
-                                    int (*crypto_handler)(AMVP_TEST_CASE *test_case));
+                                    AMVP_CIPHER cipher);
 
 
 /**
@@ -2939,16 +1809,12 @@ AMVP_RESULT amvp_cap_kts_ifc_set_scheme_string(AMVP_CTX *ctx,
  *
  * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
  * @param cipher AMVP_CIPHER enum value identifying the crypto capability.
- * @param crypto_handler Address of function implemented by application that is invoked by libamvp
- *        when the crypto capability is needed during a test session. This crypto_handler function
- *        is expected to return 0 on success and 1 for failure.
  *
  * @return AMVP_RESULT
  */
 
 AMVP_RESULT amvp_cap_kas_ffc_enable(AMVP_CTX *ctx,
-                                    AMVP_CIPHER cipher,
-                                    int (*crypto_handler)(AMVP_TEST_CASE *test_case));
+                                    AMVP_CIPHER cipher);
 
 /**
  * @brief amvp_enable_kas_ffc_prereq_cap() allows an application to specify a prerequisite
@@ -3121,15 +1987,11 @@ AMVP_RESULT amvp_cap_kda_twostep_set_parm(AMVP_CTX *ctx,
  *
  * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
  * @param cipher AMVP_CIPHER enum value identifying the crypto capability.
- * @param crypto_handler Address of function implemented by application that is invoked by libamvp
- *        when the crypto capability is needed during a test session. This crypto_handler function
- *        is expected to return 0 on success and 1 for failure.
  *
  * @return AMVP_RESULT
  */
 AMVP_RESULT amvp_cap_kda_enable(AMVP_CTX *ctx,
-                                    AMVP_CIPHER cipher,
-                                    int (*crypto_handler)(AMVP_TEST_CASE *test_case));
+                                    AMVP_CIPHER cipher);
 
 /**
  * @brief amvp_enable_rsa_*_cap()
@@ -3143,27 +2005,20 @@ AMVP_RESULT amvp_cap_kda_enable(AMVP_CTX *ctx,
  *
  * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
  * @param cipher AMVP_CIPHER enum value identifying the crypto capability.
- * @param crypto_handler Address of function implemented by application that is invoked by libamvp
- *        when the crypto capability is needed during a test session. This crypto_handler function
- *        is expected to return 0 on success and 1 for failure.
  *
  * @return AMVP_RESULT
  */
 AMVP_RESULT amvp_cap_rsa_keygen_enable(AMVP_CTX *ctx,
-                                       AMVP_CIPHER cipher,
-                                       int (*crypto_handler)(AMVP_TEST_CASE *test_case));
+                                       AMVP_CIPHER cipher);
 
 AMVP_RESULT amvp_cap_rsa_sig_enable(AMVP_CTX *ctx,
-                                    AMVP_CIPHER cipher,
-                                    int (*crypto_handler)(AMVP_TEST_CASE *test_case));
+                                    AMVP_CIPHER cipher);
 
 AMVP_RESULT amvp_cap_rsa_prim_enable(AMVP_CTX *ctx,
-                                     AMVP_CIPHER cipher,
-                                     int (*crypto_handler)(AMVP_TEST_CASE *test_case));
+                                     AMVP_CIPHER cipher);
 
 AMVP_RESULT amvp_cap_ecdsa_enable(AMVP_CTX *ctx,
-                                  AMVP_CIPHER cipher,
-                                  int (*crypto_handler)(AMVP_TEST_CASE *test_case));
+                                  AMVP_CIPHER cipher);
 
 /**
  * @brief amvp_cap_rsa_*_set_parm() allows an application to specify operational parameters to
@@ -3283,15 +2138,11 @@ AMVP_RESULT amvp_cap_rsa_keygen_set_primes(AMVP_CTX *ctx,
  *
  * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
  * @param cipher AMVP_CIPHER enum value identifying the crypto capability.
- * @param crypto_handler Address of function implemented by application that is invoked by libamvp
- *        when the crypto capability is needed during a test session. This crypto_handler function
- *        is expected to return 0 on success and 1 for failure.
  *
  * @return AMVP_RESULT
  */
 AMVP_RESULT amvp_cap_hmac_enable(AMVP_CTX *ctx,
-                                 AMVP_CIPHER cipher,
-                                 int (*crypto_handler)(AMVP_TEST_CASE *test_case));
+                                 AMVP_CIPHER cipher);
 
 /**
  * @brief amvp_cap_hmac_set_parm() allows an application to specify operational parameters for
@@ -3344,15 +2195,11 @@ AMVP_RESULT amvp_cap_hmac_set_domain(AMVP_CTX *ctx,
  *
  * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
  * @param cipher AMVP_CIPHER enum value identifying the crypto capability.
- * @param crypto_handler Address of function implemented by application that is invoked by libamvp
- *        when the crypto capability is needed during a test session. This crypto_handler function
- *        is expected to return 0 on success and 1 for failure.
  *
  * @return AMVP_RESULT
  */
 AMVP_RESULT amvp_cap_cmac_enable(AMVP_CTX *ctx,
-                                 AMVP_CIPHER cipher,
-                                 int (*crypto_handler)(AMVP_TEST_CASE *test_case));
+                                 AMVP_CIPHER cipher);
 
 /**
  * @brief amvp_cap_cmac_set_parm() allows an application to specify operational parameters for
@@ -3405,15 +2252,11 @@ AMVP_RESULT amvp_cap_cmac_set_domain(AMVP_CTX *ctx,
  *
  * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
  * @param cipher AMVP_CIPHER enum value identifying the crypto capability.
- * @param crypto_handler Address of function implemented by application that is invoked by libamvp
- *        when the crypto capability is needed during a test session. This crypto_handler function
- *        is expected to return 0 on success and 1 for failure.
  *
  * @return AMVP_RESULT
  */
 AMVP_RESULT amvp_cap_kmac_enable(AMVP_CTX *ctx,
-                                 AMVP_CIPHER cipher,
-                                 int (*crypto_handler)(AMVP_TEST_CASE *test_case));
+                                 AMVP_CIPHER cipher);
 
 /**
  * @brief amvp_cap_kmac_set_parm() allows an application to specify operational parameters for
@@ -3461,92 +2304,64 @@ AMVP_RESULT amvp_cap_kmac_set_domain(AMVP_CTX *ctx,
  *        when that crypto capability is needed during a test session.
  *
  * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
- * @param crypto_handler Address of function implemented by application that is invoked by libamvp
- *        when the crypto capability is needed during a test session. This crypto_handler function
- *        is expected to return 0 on success and 1 for failure.
  *
  * @return AMVP_RESULT
  */
-AMVP_RESULT amvp_cap_kdf135_snmp_enable(AMVP_CTX *ctx,
-                                        int (*crypto_handler)(AMVP_TEST_CASE *test_case));
+AMVP_RESULT amvp_cap_kdf135_snmp_enable(AMVP_CTX *ctx);
 
 /**
  * @brief see @ref amvp_cap_kdf135_snmp_enable()
  *
  * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
- * @param crypto_handler Address of function implemented by application that is invoked by libamvp
- *        when the crypto capability is needed during a test session. This crypto_handler function
- *        is expected to return 0 on success and 1 for failure.
  *
  * @return AMVP_RESULT
  */
-AMVP_RESULT amvp_cap_kdf135_ssh_enable(AMVP_CTX *ctx,
-                                       int (*crypto_handler)(AMVP_TEST_CASE *test_case));
+AMVP_RESULT amvp_cap_kdf135_ssh_enable(AMVP_CTX *ctx);
 
 /**
  * @brief see @ref amvp_cap_kdf135_snmp_enable()
  *
  * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
- * @param crypto_handler Address of function implemented by application that is invoked by libamvp
- *        when the crypto capability is needed during a test session. This crypto_handler function
- *        is expected to return 0 on success and 1 for failure.
  *
  * @return AMVP_RESULT
  */
-AMVP_RESULT amvp_cap_kdf135_srtp_enable(AMVP_CTX *ctx,
-                                        int (*crypto_handler)(AMVP_TEST_CASE *test_case));
+AMVP_RESULT amvp_cap_kdf135_srtp_enable(AMVP_CTX *ctx);
 
 /**
  * @brief see @ref amvp_cap_kdf135_snmp_enable()
  *
  * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
- * @param crypto_handler Address of function implemented by application that is invoked by libamvp
- *        when the crypto capability is needed during a test session. This crypto_handler function
- *        is expected to return 0 on success and 1 for failure.
  *
  * @return AMVP_RESULT
  */
-AMVP_RESULT amvp_cap_kdf135_ikev2_enable(AMVP_CTX *ctx,
-                                         int (*crypto_handler)(AMVP_TEST_CASE *test_case));
+AMVP_RESULT amvp_cap_kdf135_ikev2_enable(AMVP_CTX *ctx);
 
 /**
  * @brief see @ref amvp_cap_kdf135_snmp_enable()
  *
  * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
- * @param crypto_handler Address of function implemented by application that is invoked by libamvp
- *        when the crypto capability is needed during a test session. This crypto_handler function
- *        is expected to return 0 on success and 1 for failure.
  *
  * @return AMVP_RESULT
  */
-AMVP_RESULT amvp_cap_kdf135_ikev1_enable(AMVP_CTX *ctx,
-                                         int (*crypto_handler)(AMVP_TEST_CASE *test_case));
+AMVP_RESULT amvp_cap_kdf135_ikev1_enable(AMVP_CTX *ctx);
 
 /**
  * @brief see @ref amvp_cap_kdf135_snmp_enable()
  *
  * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
- * @param crypto_handler Address of function implemented by application that is invoked by libamvp
- *        when the crypto capability is needed during a test session. This crypto_handler function
- *        is expected to return 0 on success and 1 for failure.
  *
  * @return AMVP_RESULT
  */
-AMVP_RESULT amvp_cap_kdf135_x942_enable(AMVP_CTX *ctx,
-                                        int (*crypto_handler)(AMVP_TEST_CASE *test_case));
+AMVP_RESULT amvp_cap_kdf135_x942_enable(AMVP_CTX *ctx);
 
 /**
  * @brief see @ref amvp_cap_kdf135_snmp_enable()
  *
  * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
- * @param crypto_handler Address of function implemented by application that is invoked by libamvp
- *        when the crypto capability is needed during a test session. This crypto_handler function
- *        is expected to return 0 on success and 1 for failure.
  *
  * @return AMVP_RESULT
  */
-AMVP_RESULT amvp_cap_kdf135_x963_enable(AMVP_CTX *ctx,
-                                        int (*crypto_handler)(AMVP_TEST_CASE *test_case));
+AMVP_RESULT amvp_cap_kdf135_x963_enable(AMVP_CTX *ctx);
 
 /**
  * @brief amvp_cap_kdf108_enable() allows an application to specify a kdf cipher capability to be
@@ -3555,14 +2370,10 @@ AMVP_RESULT amvp_cap_kdf135_x963_enable(AMVP_CTX *ctx,
  *        capability is needed during a test session.
  *
  * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
- * @param crypto_handler Address of function implemented by application that is invoked by libamvp
- *        when the crypto capability is needed during a test session. This crypto_handler function
- *        is expected to return 0 on success and 1 for failure.
  *
  * @return AMVP_RESULT
  */
-AMVP_RESULT amvp_cap_kdf108_enable(AMVP_CTX *ctx,
-                                   int (*crypto_handler)(AMVP_TEST_CASE *test_case));
+AMVP_RESULT amvp_cap_kdf108_enable(AMVP_CTX *ctx);
 
 /**
  * @brief amvp_cap_pbkdf_enable() allows an application to specify a kdf cipher capability to be
@@ -3571,14 +2382,10 @@ AMVP_RESULT amvp_cap_kdf108_enable(AMVP_CTX *ctx,
  *        capability is needed during a test session.
  *
  * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
- * @param crypto_handler Address of function implemented by application that is invoked by libamvp
- *        when the crypto capability is needed during a test session. This crypto_handler function
- *        is expected to return 0 on success and 1 for failure.
  *
  * @return AMVP_RESULT
  */
-AMVP_RESULT amvp_cap_pbkdf_enable(AMVP_CTX *ctx,
-                                  int (*crypto_handler)(AMVP_TEST_CASE *test_case));
+AMVP_RESULT amvp_cap_pbkdf_enable(AMVP_CTX *ctx);
 
 /**
  * @brief amvp_cap_kdf_tls12_enable() allows an application to specify a kdf cipher capability to
@@ -3587,14 +2394,10 @@ AMVP_RESULT amvp_cap_pbkdf_enable(AMVP_CTX *ctx,
  *        capability is needed during a test session.
  *
  * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
- * @param crypto_handler Address of function implemented by application that is invoked by libamvp
- *        when the crypto capability is needed during a test session. This crypto_handler function
- *        is expected to return 0 on success and 1 for failure.
  *
  * @return AMVP_RESULT
  */
-AMVP_RESULT amvp_cap_kdf_tls12_enable(AMVP_CTX *ctx,
-                                  int (*crypto_handler)(AMVP_TEST_CASE *test_case));
+AMVP_RESULT amvp_cap_kdf_tls12_enable(AMVP_CTX *ctx);
 
 /**
  * @brief amvp_cap_kdf_tls13_enable() allows an application to specify a kdf cipher capability to
@@ -3603,14 +2406,10 @@ AMVP_RESULT amvp_cap_kdf_tls12_enable(AMVP_CTX *ctx,
  *        capability is needed during a test session.
  *
  * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
- * @param crypto_handler Address of function implemented by application that is invoked by libamvp
- *        when the crypto capability is needed during a test session. This crypto_handler function
- *        is expected to return 0 on success and 1 for failure.
  *
  * @return AMVP_RESULT
  */
-AMVP_RESULT amvp_cap_kdf_tls13_enable(AMVP_CTX *ctx,
-                                  int (*crypto_handler)(AMVP_TEST_CASE *test_case));
+AMVP_RESULT amvp_cap_kdf_tls13_enable(AMVP_CTX *ctx);
 
 /**
  * @brief amvp_cap_kdf135_ssh_set_parm() allows an application to specify operational parameters
@@ -3925,8 +2724,7 @@ AMVP_RESULT amvp_cap_kdf_tls13_set_parm(AMVP_CTX *ctx,
                                         int value);
 
 AMVP_RESULT amvp_cap_safe_primes_enable(AMVP_CTX *ctx,
-                                        AMVP_CIPHER cipher,
-                                        int (*crypto_handler)(AMVP_TEST_CASE *test_case));
+                                        AMVP_CIPHER cipher);
 
 /**
  * @brief amvp_cap_safe_primes_set_parm() allows an application to specify operational
