@@ -57,7 +57,6 @@ char *ca_chain_file;
 char *cert_file;
 char *key_file;
 char *path_segment;
-char *api_context;
 
 /*
  * Read the operational parameters from the various environment
@@ -70,7 +69,6 @@ static void test_setup_session_parameters(void)
     server = "noserver";
     port = 443;
     path_segment = "/amvp/v1/";
-    api_context = "amvp/";
     ca_chain_file = NULL;
     cert_file = NULL;
     key_file = NULL;
@@ -79,7 +77,6 @@ static void test_setup_session_parameters(void)
     amvp_set_cacerts(ctx, ca_chain_file);
     amvp_set_certkey(ctx, cert_file, key_file);
     amvp_set_path_segment(ctx, path_segment);
-    rv = amvp_set_api_context(ctx, api_context);
     amvp_set_2fa_callback(ctx, &dummy_totp);
 }
 

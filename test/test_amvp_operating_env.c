@@ -18,7 +18,6 @@ char *ca_chain_file;
 char *cert_file;
 char *key_file;
 char *path_segment;
-char *api_context;
 static AMVP_CTX *ctx = NULL;
 AMVP_RESULT rv;
 

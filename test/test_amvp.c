@@ -16,7 +16,6 @@ AMVP_CTX *ctx;
 static char filename[] = "filename";
 static char cvalue[] = "same";
 char *test_server = "demo.amvts.nist.gov";
-char *api_context = "amvp/";
 char *path_segment = "amvp/v1/";
 char *uri = "login";
 int port = 443;
@@ -457,10 +456,7 @@ Test(FREE_TEST_SESSION, good_full, .init = setup_full_ctx) {
 Test(RUN, missing_path, .init = setup_full_ctx, .fini = teardown) {
     rv = amvp_set_server(ctx, test_server, port);
     cr_assert(rv == AMVP_SUCCESS);
-    
-    rv = amvp_set_api_context(ctx, api_context);
-    cr_assert(rv == AMVP_SUCCESS);
-    
+
     rv = amvp_set_server(ctx, test_server, port);
     cr_assert(rv == AMVP_SUCCESS);
     
@@ -480,9 +476,6 @@ Test(RUN, missing_path, .init = setup_full_ctx, .fini = teardown) {
  */
 Test(RUN, marked_as_get, .init = setup_full_ctx, .fini = teardown) {
     rv = amvp_set_server(ctx, test_server, port);
-    cr_assert(rv == AMVP_SUCCESS);
-    
-    rv = amvp_set_api_context(ctx, api_context);
     cr_assert(rv == AMVP_SUCCESS);
 
     rv = amvp_set_path_segment(ctx, path_segment);
@@ -511,9 +504,6 @@ Test(RUN, marked_as_get, .init = setup_full_ctx, .fini = teardown) {
  */
 Test(RUN, good, .init = setup_full_ctx, .fini = teardown) {
     rv = amvp_set_server(ctx, test_server, port);
-    cr_assert(rv == AMVP_SUCCESS);
-    
-    rv = amvp_set_api_context(ctx, api_context);
     cr_assert(rv == AMVP_SUCCESS);
     
     rv = amvp_set_path_segment(ctx, path_segment);
@@ -640,8 +630,6 @@ Test(REFRESH, null_ctx, .fini = teardown) {
  */
 Test(REFRESH, good_with_totp, .init = setup_full_ctx, .fini = teardown) {
     rv = amvp_set_server(ctx, test_server, port);
-    cr_assert(rv == AMVP_SUCCESS);
-    rv = amvp_set_api_context(ctx, api_context);
     cr_assert(rv == AMVP_SUCCESS);
     rv = amvp_set_path_segment(ctx, path_segment);
     cr_assert(rv == AMVP_SUCCESS);

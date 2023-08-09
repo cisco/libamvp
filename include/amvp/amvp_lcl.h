@@ -16,6 +16,7 @@
 #define AMVP_LIBRARY_VERSION_NUMBER "0.1.0"
 #define AMVP_LIBRARY_VERSION    "libamvp_oss-0.1.0"
 
+#define AMVP_DEFAULT_PATH_SEGMENT "/amvp/v1"
 
 #ifndef AMVP_LOG_ERR
 #define AMVP_LOG_ERR(msg, ...) do { \
@@ -1710,7 +1711,6 @@ struct amvp_ctx_t {
     int debug;              /* Indicates if the ctx is set to run in "debug" mode for extra output */
     char *server_name;
     char *path_segment;
-    char *api_context;
     int server_port;
     char *cacerts_file;     /* Location of CA certificates Curl will use to verify peer */
     int verify_peer;        /* enables TLS peer verification via Curl */

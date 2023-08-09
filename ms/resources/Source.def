@@ -82,7 +82,6 @@ EXPORTS
   amvp_free_test_session
   amvp_set_server
   amvp_set_path_segment
-  amvp_set_api_context
   amvp_set_cacerts
   amvp_set_certkey
   amvp_mark_as_sample
