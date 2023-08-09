@@ -1082,10 +1082,6 @@ static AMVP_RESULT execute_network_action(AMVP_CTX *ctx,
                                           int *curl_code) {
     AMVP_RESULT result = 0;
     char *resp = NULL;
-#ifdef AMVP_DEPRECATED
-    char large_url[AMVP_ATTR_URL_MAX + 1] = {0};
-    int large_submission = 0;
-#endif
     int resp_len = 0;
     int rc = 0;
 
@@ -1115,33 +1111,12 @@ static AMVP_RESULT execute_network_action(AMVP_CTX *ctx,
             AMVP_LOG_ERR("Failed to post vector set responses");
             return AMVP_JSON_ERR;
         }
-
-#ifdef AMVP_DEPRECATED
-        if (ctx->post_size_constraint && resp_len > ctx->post_size_constraint) {
-            /* Determine if this POST body goes over the "constraint" */
-            large_submission = 1;
+        rc = amvp_curl_http_post(ctx, url, resp, resp_len);
+        //Check for code 400, which means we are reuploading a resp and must use PUT instead
+        result = inspect_http_code(ctx, rc);
+        if (result == AMVP_UNSUPPORTED_OP) {
+            rc = amvp_curl_http_put(ctx, url, resp, resp_len);
         }
-
-        if (large_submission) {
-            /*
-             * Need to tell the server about this large submission.
-             * The server will supply us with a one-time "large" URL;
-             */
-            result = amvp_notify_large(ctx, url, large_url, resp_len);
-            if (result != AMVP_SUCCESS) goto end;
-
-            rc = amvp_curl_http_post(ctx, large_url, resp, resp_len);
-        } else {
-#endif
-            rc = amvp_curl_http_post(ctx, url, resp, resp_len);
-            //Check for code 400, which means we are reuploading a resp and must use PUT instead
-            result = inspect_http_code(ctx, rc);
-            if (result == AMVP_UNSUPPORTED_OP) {
-                rc = amvp_curl_http_put(ctx, url, resp, resp_len);
-            }
-#ifdef AMVP_DEPRECATED
-        }
-#endif
         break;
     case AMVP_NET_DELETE:
         rc = amvp_curl_http_delete(ctx, url);
@@ -1197,20 +1172,12 @@ static AMVP_RESULT execute_network_action(AMVP_CTX *ctx,
                 break;
 
             case AMVP_NET_POST_VS_RESP:
-#ifdef AMVP_DEPRECATED
-                if (large_submission) {
-                    rc = amvp_curl_http_post(ctx, large_url, resp, resp_len);
-                } else {
-#endif
-                    rc = amvp_curl_http_post(ctx, url, resp, resp_len);
-                    //Check for code 400, which means we are reuploading a resp and must use PUT instead
-                    result = inspect_http_code(ctx, rc);
-                    if (result == AMVP_UNSUPPORTED_OP) {
-                        rc = amvp_curl_http_put(ctx, url, resp, resp_len);
-                    }
-#ifdef AMVP_DEPRECATED
+                rc = amvp_curl_http_post(ctx, url, resp, resp_len);
+                //Check for code 400, which means we are reuploading a resp and must use PUT instead
+                result = inspect_http_code(ctx, rc);
+                if (result == AMVP_UNSUPPORTED_OP) {
+                    rc = amvp_curl_http_put(ctx, url, resp, resp_len);
                 }
-#endif
                 break;
             case AMVP_NET_DELETE:
                 amvp_curl_http_delete(ctx, url);

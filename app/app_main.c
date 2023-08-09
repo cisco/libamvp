@@ -41,7 +41,6 @@ const char *ca_chain_file;
 char *cert_file;
 char *key_file;
 const char *path_segment;
-const char *api_context;
 char value[JSON_STRING_LENGTH] = "same";
 
 #define CHECK_ENABLE_CAP_RV(rv) \
@@ -68,9 +67,6 @@ static void setup_session_parameters(void) {
 
     path_segment = getenv("AMV_URI_PREFIX");
     if (!path_segment) path_segment = DEFAULT_URI_PREFIX;
-
-    api_context = getenv("AMV_API_CONTEXT");
-    if (!api_context) api_context = "";
 
     ca_chain_file = getenv("AMV_CA_FILE");
     cert_file = getenv("AMV_CERT_FILE");
@@ -147,13 +143,6 @@ int main(int argc, char **argv) {
     rv = amvp_set_server(ctx, server, port);
     if (rv != AMVP_SUCCESS) {
         printf("Failed to set server/port\n");
-        goto end;
-    }
-
-    /* Set the api context prefix if needed */
-    rv = amvp_set_api_context(ctx, api_context);
-    if (rv != AMVP_SUCCESS) {
-        printf("Failed to set URI prefix\n");
         goto end;
     }
 

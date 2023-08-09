@@ -2828,20 +2828,6 @@ AMVP_RESULT amvp_set_server(AMVP_CTX *ctx, const char *server_name, int port);
 AMVP_RESULT amvp_set_path_segment(AMVP_CTX *ctx, const char *path_segment);
 
 /**
- * @brief amvp_set_api_context() specifies the URI prefix used by the AMVP server. Some AMVP
- *        servers use a context string in the URI for the path to the REST interface. Calling this
- *        function allows the API context prefix to be specified. The value provided to this
- *        function is prepended to the path segment of the URI used for the AMVP REST calls.
- *
- * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
- * @param api_context Value to embed in the URI path after the server name and before the AMVP
- *        well-known path.
- *
- * @return AMVP_RESULT
- */
-AMVP_RESULT amvp_set_api_context(AMVP_CTX *ctx, const char *api_context);
-
-/**
  * @brief amvp_set_cacerts() specifies PEM encoded certificates to use as the root trust anchors
  *        for establishing the TLS session with the AMVP server. AMVP uses TLS as the transport. In
  *        order to verify the identity of the AMVP server, the TLS stack requires one or more root

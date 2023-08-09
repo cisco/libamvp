@@ -610,7 +610,6 @@ AMVP_RESULT amvp_free_test_session(AMVP_CTX *ctx) {
     if (ctx->curl_buf) { free(ctx->curl_buf); }
     if (ctx->server_name) { free(ctx->server_name); }
     if (ctx->path_segment) { free(ctx->path_segment); }
-    if (ctx->api_context) { free(ctx->api_context); }
     if (ctx->cacerts_file) { free(ctx->cacerts_file); }
     if (ctx->tls_cert) { free(ctx->tls_cert); }
     if (ctx->tls_key) { free(ctx->tls_key); }
@@ -1890,31 +1889,6 @@ AMVP_RESULT amvp_set_path_segment(AMVP_CTX *ctx, const char *path_segment) {
 }
 
 /*
- * This function is used by the application to specify the
- * AMVP server URI path segment prefix.
- */
-AMVP_RESULT amvp_set_api_context(AMVP_CTX *ctx, const char *api_context) {
-    if (!ctx) {
-        return AMVP_NO_CTX;
-    }
-    if (!api_context) {
-        return AMVP_INVALID_ARG;
-    }
-    if (strnlen_s(api_context, AMVP_SESSION_PARAMS_STR_LEN_MAX + 1) > AMVP_SESSION_PARAMS_STR_LEN_MAX) {
-        AMVP_LOG_ERR("API context string(s) too long");
-        return AMVP_INVALID_ARG;
-    }
-    if (ctx->api_context) { free(ctx->api_context); }
-    ctx->api_context = calloc(AMVP_SESSION_PARAMS_STR_LEN_MAX + 1, sizeof(char));
-    if (!ctx->api_context) {
-        return AMVP_MALLOC_FAIL;
-    }
-    strcpy_s(ctx->api_context, AMVP_SESSION_PARAMS_STR_LEN_MAX + 1, api_context);
-
-    return AMVP_SUCCESS;
-}
-
-/*
  * This function allows the client to specify the location of the
  * PEM encoded CA certificates that will be used by Curl to verify
  * the AMVP server during the TLS handshake.  If this function is
@@ -2691,9 +2665,6 @@ static AMVP_RESULT amvp_parse_login(AMVP_CTX *ctx) {
     JSON_Object *obj = NULL;
     char *json_buf = ctx->curl_buf;
     const char *jwt;
-#ifdef AMVP_DEPRECATED
-    int large_required = 0;
-#endif
     AMVP_RESULT rv = AMVP_SUCCESS;
 
     /*
@@ -2706,14 +2677,7 @@ static AMVP_RESULT amvp_parse_login(AMVP_CTX *ctx) {
     }
 
     obj = amvp_get_obj_from_rsp(ctx, val);
-#ifdef AMVP_DEPRECATED
-    large_required = json_object_get_boolean(obj, "largeEndpointRequired");
 
-    if (large_required) {
-        /* Grab the large submission sizeConstraint */
-        ctx->post_size_constraint = json_object_get_number(obj, "sizeConstraint");
-    }
-#endif
     /*
      * Get the JWT assigned to this session by the server.  This will need
      * to be included when sending the vector responses back to the server
@@ -2819,115 +2783,6 @@ end:
     if (ts_val) json_value_free(ts_val);
     return rv;
 }
-
-#ifdef AMVP_DEPRECATED
-AMVP_RESULT amvp_notify_large(AMVP_CTX *ctx,
-                              const char *url,
-                              char *large_url,
-                              unsigned int data_len) {
-    AMVP_RESULT rv = AMVP_SUCCESS;
-    JSON_Value *arr_val = NULL, *val = NULL,
-               *server_val = NULL;
-    JSON_Object *obj = NULL, *server_obj = NULL;
-    JSON_Array *arr = NULL;
-    char *substr = NULL;
-    char snipped_url[AMVP_ATTR_URL_MAX + 1] = {0} ;
-    char *large_notify = NULL;
-    const char *jwt = NULL;
-    int notify_len = 0;
-    const char *large_url_str = NULL;
-
-    if (!url) return AMVP_MISSING_ARG;
-    if (!large_url) return AMVP_MISSING_ARG;
-    if (!(data_len > ctx->post_size_constraint)) return AMVP_INVALID_ARG;
-
-    arr_val = json_value_init_array();
-    arr = json_array((const JSON_Value *)arr_val);
-
-    /*
-     * Start the large/ array
-     */
-    val = json_value_init_object();
-    obj = json_value_get_object(val);
-
-    /* 
-     * Cut off the https://name:port/ prefix and /results suffix
-     */
-    strstr_s((char *)url, AMVP_ATTR_URL_MAX, "/amv/v1", 8, &substr);
-    strcpy_s(snipped_url, AMVP_ATTR_URL_MAX, substr);
-    strstr_s(snipped_url, AMVP_ATTR_URL_MAX, "/results", 8, &substr);
-    if (!substr) {
-        rv = AMVP_INVALID_ARG;
-        goto err;
-    }
-    *substr = '\0';
-
-    json_object_set_string(obj, "vectorSetUrl", snipped_url);
-    json_object_set_number(obj, "submissionSize", data_len);
-    
-    json_array_append_value(arr, val);
-
-    large_notify = json_serialize_to_string(arr_val, &notify_len);
-
-    AMVP_LOG_ERR("Notifying /large endpoint for this submission... %s", large_notify);
-    rv = amvp_transport_post(ctx, "large", large_notify, notify_len);
-    if (rv != AMVP_SUCCESS) {
-        AMVP_LOG_ERR("Failed to notify /large endpoint");
-        goto err;
-    }
-
-    server_val = json_parse_string(ctx->curl_buf);
-    if (!server_val) {
-        AMVP_LOG_ERR("JSON parse error");
-        rv = AMVP_JSON_ERR;
-        goto err;
-    }
-    server_obj = amvp_get_obj_from_rsp(ctx, server_val);
-
-    if (!server_obj) {
-        AMVP_LOG_ERR("JSON parse error no server object");
-        rv = AMVP_JSON_ERR;
-        goto err;
-    }
-
-    /* Grab the full large/ endpoint URL */
-    large_url_str = json_object_get_string(server_obj, "url");
-    if (!large_url_str) {
-        AMVP_LOG_ERR("JSON parse error no large URL object");
-        rv = AMVP_JSON_ERR;
-        goto err;
-    }
-
-    strcpy_s(large_url, AMVP_ATTR_URL_MAX, large_url_str);
-
-    jwt = json_object_get_string(server_obj, "accessToken");
-    if (jwt) {
-        /*
-         * A single-use JWT was given.
-         */
-        if (strnlen_s(jwt, AMVP_JWT_TOKEN_MAX + 1) > AMVP_JWT_TOKEN_MAX) {
-            AMVP_LOG_ERR("access_token too large");
-            rv = AMVP_JWT_INVALID;
-            goto err;
-        }
-
-        if (ctx->tmp_jwt) {
-            memzero_s(ctx->tmp_jwt, AMVP_JWT_TOKEN_MAX);
-        } else {
-            ctx->tmp_jwt = calloc(AMVP_JWT_TOKEN_MAX + 1, sizeof(char));
-        }
-        strcpy_s(ctx->tmp_jwt, AMVP_JWT_TOKEN_MAX + 1, jwt);
-
-        ctx->use_tmp_jwt = 1;
-    }
-
-err:
-    if (arr_val) json_value_free(arr_val);
-    if (server_val) json_value_free(server_val);
-    if (large_notify) json_free_serialized_string(large_notify);
-    return rv;
-}
-#endif
 
 /*
  * This routine performs the JSON parsing of the test session registration
