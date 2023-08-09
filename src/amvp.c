@@ -68,6 +68,8 @@ static AMVP_RESULT amvp_retry_handler(AMVP_CTX *ctx, int *retry_period, unsigned
 
 static AMVP_RESULT amvp_handle_protocol_error(AMVP_CTX *ctx, AMVP_PROTOCOL_ERR *err);
 
+static AMVP_RESULT amvp_write_session_info(AMVP_CTX *ctx);
+
 /*
  * This table maps AMVP operations to handlers within libamvp.
  * Each AMVP operation may have unique parameters.  For instance,
@@ -2543,6 +2545,94 @@ AMVP_RESULT amvp_process_amvp_tes(AMVP_CTX *ctx) {
     return rv;
 }
 
+AMVP_RESULT amvp_create_module(AMVP_CTX *ctx, char *filename) {
+    AMVP_RESULT rv = AMVP_SUCCESS;
+    char *reg = NULL;
+    const char *jwt = NULL, * url = NULL;
+    int reg_len = 0;
+
+    JSON_Value *tmp_json = NULL, *val = NULL;
+    JSON_Object *obj = NULL;
+    JSON_Array *tmp_arr = NULL;
+    if (!ctx) {
+        return AMVP_NO_CTX;
+    }
+
+    /*
+     * Send the capabilities to the AMVP server and get the response,
+     * which should be a list of vector set ID urls
+     */
+    AMVP_LOG_STATUS("Reading module file...");
+    tmp_json = json_parse_file(filename);
+    if (!tmp_json) {
+        AMVP_LOG_ERR("Error reading module file");
+        rv = AMVP_JSON_ERR;
+        goto end;
+    }
+
+    /* Quickly sanity check format */
+    tmp_arr = json_value_get_array(tmp_json);
+    if (!tmp_arr) {
+        AMVP_LOG_ERR("Provided capabilities file in invalid format");
+        rv = AMVP_JSON_ERR;
+        goto end;
+    }
+    
+    ctx->registration = tmp_json;
+    reg = json_serialize_to_string(tmp_json, &reg_len);
+    
+    AMVP_LOG_STATUS("Sending module cert request...");
+
+    rv = amvp_transport_post(ctx, "/amvp/v1/modules", reg, reg_len);
+    
+    if (rv == AMVP_SUCCESS) {
+        val = json_parse_string(ctx->curl_buf);
+        if (!val) {
+            AMVP_LOG_ERR("Error while parsing json from server!");
+            rv = AMVP_JSON_ERR;
+            goto end;
+        }
+        obj = amvp_get_obj_from_rsp(ctx, val);
+        if (!obj) {
+            AMVP_LOG_ERR("Error while parsing json from server!");
+            rv = AMVP_JSON_ERR;
+            goto end;
+        }
+
+        jwt = json_object_get_string(obj, "accessToken");
+        if (!jwt) {
+            AMVP_LOG_ERR("No access_token provided in registration response");
+            rv = AMVP_JWT_MISSING;
+            goto end;
+        } else {
+            if (strnlen_s(jwt, AMVP_JWT_TOKEN_MAX + 1) > AMVP_JWT_TOKEN_MAX) {
+                AMVP_LOG_ERR("access_token too large");
+                rv = AMVP_JWT_INVALID;
+                goto end;
+            }
+            ctx->jwt_token = calloc(AMVP_JWT_TOKEN_MAX + 1, sizeof(char));
+            strcpy_s(ctx->jwt_token, AMVP_JWT_TOKEN_MAX + 1, jwt);
+        }
+        url = json_object_get_string(obj, "url");
+        if (!url) {
+            AMVP_LOG_ERR("JSON parse error");
+            return AMVP_JSON_ERR;
+        }
+
+        ctx->session_url = calloc(AMVP_ATTR_URL_MAX + 1, sizeof(char));
+        strcpy_s(ctx->session_url, AMVP_ATTR_URL_MAX + 1, url);
+        
+        amvp_write_session_info(ctx);
+        AMVP_LOG_STATUS("Successfully sent mod cert req and received list of TE URLs");
+        rv = AMVP_SUCCESS;
+    } else {
+        AMVP_LOG_ERR("Failed to send registration");
+        rv = AMVP_TRANSPORT_FAIL;
+    }
+end:
+    return rv;
+}
+
 /*
  * This function is used to register the DUT with the server.
  * Registration allows the DUT to advertise it's capabilities to
@@ -2591,7 +2681,7 @@ AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx) {
     AMVP_LOG_STATUS("Sending module cert request...");
     //AMVP_LOG_STATUS("    request: %s", reg);
     //AMVP_LOG_STATUS("    POST...Url: %s","/amv/v1/certRequest");
-    rv = amvp_transport_post(ctx, "/amv/v1/certRequest", reg, reg_len);
+    rv = amvp_transport_post(ctx, "/amvp/v1/modules", reg, reg_len);
     
     if (rv == AMVP_SUCCESS) {
         rv = amvp_parse_mod_cert_req(ctx);
@@ -3963,8 +4053,6 @@ static AMVP_RESULT amvp_write_session_info(AMVP_CTX *ctx) {
 
     json_object_set_string(ts_obj, "url", ctx->session_url);
     json_object_set_string(ts_obj, "jwt", ctx->jwt_token);
-    json_object_set_boolean(ts_obj, "isSample", ctx->is_sample);
-    json_object_set_value(ts_obj, "registration", ctx->registration);
 
     /* pull test session ID out of URL */
     ptr = ctx->session_url;

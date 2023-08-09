@@ -154,6 +154,8 @@ static void print_usage(int code) {
     printf("      --save_to <file>\n");
     printf("      -s <file>\n");
     printf("\n");
+    printf("To create a module on the AMVP server:\n");
+    printf("      --create_module <module_file>\n");
     printf("To request module certificate using a predefined request file:\n");
     printf("      --module_cert_req <request_file>\n");
     printf("\n");
@@ -262,6 +264,7 @@ static ko_longopt_t longopts[] = {
     { "get_registration", ko_no_argument, 418 },
     { "module_cert_req", ko_required_argument, 419 },
     { "post_resources", ko_required_argument, 420 },
+    { "create_module", ko_required_argument, 421 },
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
     { "disable_fips", ko_no_argument, 500 },
 #endif
@@ -606,6 +609,14 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
                 return 1;
             }
             strcpy_s(cfg->post_resources_filename, JSON_FILENAME_LENGTH + 1, opt.arg);
+            break;
+
+        case 421:
+            cfg->create_module = 1;
+            if (!check_option_length(opt.arg, c, JSON_FILENAME_LENGTH)) {
+                return 1;
+            }
+            strcpy_s(cfg->create_module_file, JSON_FILENAME_LENGTH + 1, opt.arg);
             break;
 
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
