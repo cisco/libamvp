@@ -1172,7 +1172,7 @@ AMVP_RESULT amvp_upload_vectors_from_file(AMVP_CTX *ctx, const char *rsp_filenam
     AMVP_STRING_LIST *vs_entry;
     JSON_Array *vect_sets = NULL;
     const char *test_session_url = NULL;
-    int vs_cnt = 0, isSample = 0;
+    int vs_cnt = 0;
     const char *jwt = NULL;
     char *json_result = NULL;
     JSON_Array *vec_array = NULL;
@@ -1234,17 +1234,9 @@ AMVP_RESULT amvp_upload_vectors_from_file(AMVP_CTX *ctx, const char *rsp_filenam
         rv = AMVP_MALLOC_FAIL;
         goto end;
     }
-    
-    isSample = json_object_get_boolean(obj, "isSample");
-    if (json_object_has_value(obj, "isSample")) {
-        ctx->is_sample = isSample;
-    } else {
-        AMVP_LOG_WARN("Missing indication of whether tests are sample in file, continuing");
-    }
-
     strcpy_s(ctx->jwt_token, AMVP_JWT_TOKEN_MAX + 1, jwt);
 
-    vect_sets = json_object_get_array(obj, "ieSetsId");
+    vect_sets = json_object_get_array(obj, "ievSetsId");
     vs_cnt = json_array_get_count(vect_sets);
     for (i = 0; i < vs_cnt; i++) {
         const char *vsid_url = json_array_get_string(vect_sets, i);
@@ -1285,7 +1277,7 @@ AMVP_RESULT amvp_upload_vectors_from_file(AMVP_CTX *ctx, const char *rsp_filenam
 
         /* check vsId compared to vs URL */
         rsp_obj = json_array_get_object(reg_array, n);
-        ctx->vs_id = json_object_get_number(rsp_obj, "vsId");
+        ctx->vs_id = json_object_get_number(rsp_obj, "ieSetsId");
 
         vec_array_val = json_value_init_array();
         vec_array = json_array((const JSON_Value *)vec_array_val);
@@ -2547,9 +2539,9 @@ AMVP_RESULT amvp_process_amvp_tes(AMVP_CTX *ctx) {
 
 AMVP_RESULT amvp_create_module(AMVP_CTX *ctx, char *filename) {
     AMVP_RESULT rv = AMVP_SUCCESS;
-    char *reg = NULL;
-    const char *jwt = NULL, * url = NULL;
-    int reg_len = 0;
+    char *reg = NULL, *url = NULL;
+    const char *jwt = NULL;
+    int reg_len = 0, id = 0;
 
     JSON_Value *tmp_json = NULL, *val = NULL;
     JSON_Object *obj = NULL;
@@ -2573,7 +2565,7 @@ AMVP_RESULT amvp_create_module(AMVP_CTX *ctx, char *filename) {
     /* Quickly sanity check format */
     tmp_arr = json_value_get_array(tmp_json);
     if (!tmp_arr) {
-        AMVP_LOG_ERR("Provided capabilities file in invalid format");
+        AMVP_LOG_ERR("Provided module creation file in invalid format");
         rv = AMVP_JSON_ERR;
         goto end;
     }
@@ -2582,6 +2574,11 @@ AMVP_RESULT amvp_create_module(AMVP_CTX *ctx, char *filename) {
     reg = json_serialize_to_string(tmp_json, &reg_len);
     
     AMVP_LOG_STATUS("Sending module cert request...");
+    rv = amvp_login(ctx, 0);
+    if (rv != AMVP_SUCCESS) {
+        AMVP_LOG_ERR("ERror logging in with AMVP server while trying to create module");
+        goto end;
+    }
 
     rv = amvp_transport_post(ctx, "/amvp/v1/modules", reg, reg_len);
     
@@ -2601,7 +2598,7 @@ AMVP_RESULT amvp_create_module(AMVP_CTX *ctx, char *filename) {
 
         jwt = json_object_get_string(obj, "accessToken");
         if (!jwt) {
-            AMVP_LOG_ERR("No access_token provided in registration response");
+            AMVP_LOG_ERR("No access_token provided in module creation response");
             rv = AMVP_JWT_MISSING;
             goto end;
         } else {
@@ -2613,22 +2610,48 @@ AMVP_RESULT amvp_create_module(AMVP_CTX *ctx, char *filename) {
             ctx->jwt_token = calloc(AMVP_JWT_TOKEN_MAX + 1, sizeof(char));
             strcpy_s(ctx->jwt_token, AMVP_JWT_TOKEN_MAX + 1, jwt);
         }
-        url = json_object_get_string(obj, "url");
-        if (!url) {
-            AMVP_LOG_ERR("JSON parse error");
-            return AMVP_JSON_ERR;
-        }
+        id = json_object_get_number(obj, "id");
+        url = calloc(AMVP_ATTR_URL_MAX + 1, sizeof(char));
+        snprintf(url, AMVP_ATTR_URL_MAX, "/amvp/v1/modules/%d", id);
 
         ctx->session_url = calloc(AMVP_ATTR_URL_MAX + 1, sizeof(char));
         strcpy_s(ctx->session_url, AMVP_ATTR_URL_MAX + 1, url);
         
         amvp_write_session_info(ctx);
-        AMVP_LOG_STATUS("Successfully sent mod cert req and received list of TE URLs");
+        AMVP_LOG_STATUS("Succesfully created module and saved info to file");
         rv = AMVP_SUCCESS;
     } else {
-        AMVP_LOG_ERR("Failed to send registration");
+        AMVP_LOG_ERR("Failed to send module creation file");
         rv = AMVP_TRANSPORT_FAIL;
     }
+end:
+    return rv;
+}
+
+AMVP_RESULT amvp_get_module(AMVP_CTX *ctx, char *filename) {
+    AMVP_RESULT rv = AMVP_SUCCESS;
+
+    if (!ctx) {
+        return AMVP_NO_CTX;
+    }
+
+    /*
+     * Send the capabilities to the AMVP server and get the response,
+     * which should be a list of vector set ID urls
+     */
+    rv = amvp_parse_session_info_file(ctx, filename);
+    if (rv != AMVP_SUCCESS) {
+        AMVP_LOG_ERR("Failed to parse session info file while trying to get module info");
+        goto end;
+    }
+
+    rv = amvp_transport_get(ctx, ctx->session_url, NULL);
+    if (ctx->log_lvl == AMVP_LOG_LVL_VERBOSE) {
+        printf("\n\n%s\n\n", ctx->curl_buf);
+    } else {
+        AMVP_LOG_STATUS("GET Response:\n\n%s\n", ctx->curl_buf);
+    }
+
 end:
     return rv;
 }
@@ -2681,7 +2704,7 @@ AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx) {
     AMVP_LOG_STATUS("Sending module cert request...");
     //AMVP_LOG_STATUS("    request: %s", reg);
     //AMVP_LOG_STATUS("    POST...Url: %s","/amv/v1/certRequest");
-    rv = amvp_transport_post(ctx, "/amvp/v1/modules", reg, reg_len);
+    rv = amvp_transport_post(ctx, "/amvp/v1/certRequest", reg, reg_len);
     
     if (rv == AMVP_SUCCESS) {
         rv = amvp_parse_mod_cert_req(ctx);

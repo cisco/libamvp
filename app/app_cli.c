@@ -156,6 +156,8 @@ static void print_usage(int code) {
     printf("\n");
     printf("To create a module on the AMVP server:\n");
     printf("      --create_module <module_file>\n");
+    printf("To get info about a created module from the AMVP server:\n");
+    printf("      --get_module <module_info_file>\n");
     printf("To request module certificate using a predefined request file:\n");
     printf("      --module_cert_req <request_file>\n");
     printf("\n");
@@ -265,6 +267,7 @@ static ko_longopt_t longopts[] = {
     { "module_cert_req", ko_required_argument, 419 },
     { "post_resources", ko_required_argument, 420 },
     { "create_module", ko_required_argument, 421 },
+    { "get_module", ko_required_argument, 422 },
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
     { "disable_fips", ko_no_argument, 500 },
 #endif
@@ -619,6 +622,14 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
             strcpy_s(cfg->create_module_file, JSON_FILENAME_LENGTH + 1, opt.arg);
             break;
 
+        case 422:
+            cfg->get_module = 1;
+            if (!check_option_length(opt.arg, c, JSON_FILENAME_LENGTH)) {
+                return 1;
+            }
+            strcpy_s(cfg->get_module_file, JSON_FILENAME_LENGTH + 1, opt.arg);
+            break;
+
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
         case 500:
             cfg->disable_fips = 1;
@@ -650,8 +661,8 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
     }
 
     //Many args do not need an alg specified. Todo: make cleaner
-    if (cfg->empty_alg && !cfg->post && !cfg->get && !cfg->put && !cfg->get_results && !cfg->post_resources
-            && !cfg->get_expected && !cfg->manual_reg && !cfg->vector_upload && !cfg->mod_cert_req
+    if (cfg->empty_alg && !cfg->post && !cfg->get && !cfg->put && !cfg->get_results && !cfg->post_resources && !cfg->create_module
+            && !cfg->get_expected && !cfg->manual_reg && !cfg->vector_upload && !cfg->mod_cert_req && !cfg->get_module
             && !cfg->delete && !cfg->cancel_session && !(cfg->resume_session && 
             cfg->vector_req)) {
         /* The user needs to select at least 1 algorithm */

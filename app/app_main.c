@@ -355,6 +355,12 @@ int main(int argc, char **argv) {
 
     if (cfg.create_module) {
         rv = amvp_create_module(ctx, cfg.create_module_file);
+        goto end;
+    }
+
+    if (cfg.get_module) {
+        rv = amvp_get_module(ctx, cfg.get_module_file);
+        goto end;
     }
 
     /*
