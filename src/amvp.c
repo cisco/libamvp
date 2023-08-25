@@ -1236,7 +1236,8 @@ AMVP_RESULT amvp_upload_vectors_from_file(AMVP_CTX *ctx, const char *rsp_filenam
     }
     strcpy_s(ctx->jwt_token, AMVP_JWT_TOKEN_MAX + 1, jwt);
 
-    vect_sets = json_object_get_array(obj, "ievSetsId");
+    amvp_login(ctx, 0);
+    vect_sets = json_object_get_array(obj, "evSetsId");
     vs_cnt = json_array_get_count(vect_sets);
     for (i = 0; i < vs_cnt; i++) {
         const char *vsid_url = json_array_get_string(vect_sets, i);
@@ -3419,7 +3420,7 @@ static const char *amvp_locate_auto_entry(AMVP_CTX *ctx, const char *evidence)
  * is looked up in the alg_tbl[] and invoked here.
  */
 static AMVP_RESULT amvp_dispatch_ie_set(AMVP_CTX *ctx, JSON_Object *obj) {
-    int ie_id = json_object_get_number(obj, "ievSetsId");
+    int ie_id = json_object_get_number(obj, "evSetsId");
     JSON_Value *groupval;
     JSON_Object *groupobj = NULL;
     JSON_Array *groups;
