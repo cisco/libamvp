@@ -353,6 +353,16 @@ int main(int argc, char **argv) {
         rv = amvp_mark_as_cert_req(ctx, cfg.mod_cert_req_file);
     }
 
+    if (cfg.create_module) {
+        rv = amvp_create_module(ctx, cfg.create_module_file);
+        goto end;
+    }
+
+    if (cfg.get_module) {
+        rv = amvp_get_module(ctx, cfg.get_module_file);
+        goto end;
+    }
+
     /*
      * Run the test session.
      * Perform a FIPS validation on this test session if specified.

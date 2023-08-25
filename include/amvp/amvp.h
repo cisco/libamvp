@@ -3198,6 +3198,8 @@ AMVP_SUB_DRBG amvp_get_drbg_alg(AMVP_CIPHER cipher);
 AMVP_SUB_KAS amvp_get_kas_alg(AMVP_CIPHER cipher);
 AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx);
 AMVP_RESULT amvp_mark_as_cert_req(AMVP_CTX *ctx, char *filename);
+AMVP_RESULT amvp_create_module(AMVP_CTX *ctx, char *filename);
+AMVP_RESULT amvp_get_module(AMVP_CTX *ctx, char *filename);
 AMVP_RESULT amvp_retrieve_docs(AMVP_CTX *ctx, char *vsid_url);
 AMVP_RESULT amvp_mark_as_post_resources(AMVP_CTX *ctx, char *filename);
 AMVP_RESULT amvp_post_resources(AMVP_CTX *ctx, const char *resource_file);

@@ -69,6 +69,8 @@ typedef struct app_config {
     char validation_metadata_file[JSON_FILENAME_LENGTH + 1];
     char save_file[JSON_FILENAME_LENGTH + 1];
     char mod_cert_req_file[JSON_FILENAME_LENGTH + 1];
+    char create_module_file[JSON_FILENAME_LENGTH + 1];
+    char get_module_file[JSON_FILENAME_LENGTH + 1];
     char post_resources_filename[JSON_FILENAME_LENGTH + 1];
 
     /*
@@ -84,6 +86,8 @@ typedef struct app_config {
     int safe_primes;
     int mod_cert_req;
     int post_resources;
+    int create_module;
+    int get_module;
     int testall; /* So the app can check whether the user indicated to test all possible algorithms */
 } APP_CONFIG;
 
