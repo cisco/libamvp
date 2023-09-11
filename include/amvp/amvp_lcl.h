@@ -59,6 +59,12 @@
 #define AMVP_LOG_TRUNCATED_STR_LEN 14
 #define AMVP_LOG_MAX_MSG_LEN 2048
 
+#define AMVP_MODULE_FILENAME_MAX_LEN 32 /* Arbitrary */
+#define AMVP_MODULE_FILENAME_DEFAULT "module"
+#define AMVP_MODULE_ENDPOINT "modules"
+
+#define AMVP_REQ_FILENAME_DEFAULT "request"
+
 #define AMVP_BIT2BYTE(x) ((x + 7) >> 3) /**< Convert bit length (x, of type integer) into byte length */
 
 #define AMVP_ALG_MAX AMVP_CIPHER_END - 1  /* Used by alg_tbl[] */
@@ -1699,6 +1705,27 @@ typedef struct amvp_fips_t {
     AMVP_OE *oe; /* Pointer to the Operating Environment to use for this validation */
 } AMVP_FIPS;
 
+#define AMVP_MAX_CONTACTS_PER_CERT_REQ 10
+#define AMVP_CONTACT_STR_MAX_LEN 16
+typedef struct amvp_cert_req_t {
+    int module_id;
+    int vendor_id;
+    int contact_count; 
+    char *contact_id[AMVP_MAX_CONTACTS_PER_CERT_REQ];
+} AMVP_CERT_REQ;
+
+typedef enum amvp_action {
+    AMVP_ACTION_UNSET = 0,
+    AMVP_ACTION_GET,
+    AMVP_ACTION_POST,
+    AMVP_ACTION_PUT,
+    AMVP_ACTION_DELETE,
+    AMVP_ACTION_CERT_REQ,
+    AMVP_ACTION_CREATE_MODULE,
+    AMVP_ACTION_SUBMIT_CRSESSION_RESPONSES,
+    AMVP_ACTION_NA
+} AMVP_ACTION;
+
 /*
  * This struct holds all the global data for a test session, such
  * as the server name, port#, etc.  Some of the values in this
@@ -1725,26 +1752,24 @@ struct amvp_ctx_t {
     char *session_url;
     int session_passed;
 
+    AMVP_ACTION action;
+
     char *json_filename;    /* filename of registration JSON */
     int use_json;           /* flag to indicate a JSON file is being used for registration */
     int is_sample;          /* flag to idicate that we are requesting sample vector responses */
     char *vector_req_file;  /* filename to use to store vector request JSON */
     int vector_req;         /* flag to indicate we are storing vector request JSON in a file */
     int vector_rsp;         /* flag to indicate we are storing vector responses JSON in a file */
-    int get;                /* flag to indicate we are only getting status or metadata */
-    char *get_string;       /* string used for get request */
-    int post;               /* flag to indicate we are only posting metadata */
+    char *get_string;       /* string used for get  request */
     char *post_filename;    /* string used for post */
-    int put;                /* flag to indicate we are only putting metadata  for post test validation*/
     char *put_filename;     /* string used for put */
-    int delete;             /* flag to indicate we are only requesting deleting a resource */
     char *delete_string;    /* string used for delete request */
     char *save_filename;    /* string used for file to save certain HTTP requests to */
-    int mod_cert_req;
     char *mod_cert_req_file;    /* string used for file to save certain HTTP requests to */
     int post_resources;
     char *post_resources_filename;    /* string used for file to save certain HTTP requests to */
 
+    AMVP_CERT_REQ cert_req_info; /* Stores info related to a cert request */
     AMVP_FIPS fips; /* Information related to a FIPS validation */
 
     /* test session data */
@@ -1785,6 +1810,8 @@ AMVP_RESULT amvp_process_tests(AMVP_CTX *ctx);
 AMVP_RESULT amvp_send_test_session_registration(AMVP_CTX *ctx, char *reg, int len);
 
 AMVP_RESULT amvp_send_login(AMVP_CTX *ctx, char *login, int len);
+
+AMVP_RESULT amvp_send_module_creation(AMVP_CTX *ctx, char *module, int len);
 
 AMVP_RESULT amvp_transport_put_validation(AMVP_CTX *ctx, const char *data, int data_len);
 

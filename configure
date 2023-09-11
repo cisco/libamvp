@@ -11470,7 +11470,7 @@ if test ${with_libcurl_dir+y}
 then :
   withval=$with_libcurl_dir; libcurldir="$withval"
 else $as_nop
-  with_libcurldir=no
+  libcurldir="/usr"
 fi
 
 

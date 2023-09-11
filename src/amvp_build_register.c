@@ -4535,312 +4535,34 @@ static AMVP_RESULT amvp_build_safe_primes_register_cap(AMVP_CTX *ctx,
 }
 
 /*
- * This function builds the JSON register message that
- * will be sent to the AMVP server to advertised the crypto
- * capabilities of the module under test.
+ * This builds a cert req
  */
 AMVP_RESULT amvp_build_registration_json(AMVP_CTX *ctx, JSON_Value **reg) {
     AMVP_RESULT rv = AMVP_SUCCESS;
     AMVP_CAPS_LIST *cap_entry;
     JSON_Value *val = NULL, *cap_val = NULL;
-    JSON_Array *caps_arr = NULL;
+    JSON_Array *req_arr = NULL;
     JSON_Object *cap_obj = NULL;
-
+    int i = 0;
     if (!ctx) {
         AMVP_LOG_ERR("No ctx for build_test_session");
         return AMVP_NO_CTX;
     }
+    if (ctx->cert_req_info.contact_count <= 0) {
+        AMVP_LOG_ERR("Cannot build cert req without any contact IDs");
+        return AMVP_MISSING_ARG;
+    }
 
-  /*  val = json_value_init_object();
-    obj = json_value_get_object(val);
+    val = json_value_init_object();
+    cap_obj = json_value_get_object(val);
 
+    json_object_set_number(cap_obj, "moduleId", ctx->cert_req_info.module_id);
+    json_object_set_number(cap_obj, "vendorId", ctx->cert_req_info.vendor_id);
+    json_object_set_value(cap_obj, "contacts", json_value_init_array());
+    req_arr = json_object_get_array(cap_obj, "contacts");
 
-    json_object_set_value(obj, "algorithms", json_value_init_array());
-    caps_arr = json_object_get_array(obj, "algorithms"); */
-    val = json_value_init_array();
-    caps_arr = json_value_get_array(val);
-    /*
-     * Iterate through all the capabilities the user has enabled
-     */
-    if (ctx->caps_list) {
-        cap_entry = ctx->caps_list;
-        while (cap_entry) {
-            /*
-             * Create a new capability to be advertised in the JSON
-             * registration message
-             */
-            cap_val = json_value_init_object();
-            cap_obj = json_value_get_object(cap_val);
-
-            /*
-             * Build up the capability JSON based on the cipher type
-             */
-            switch (cap_entry->cipher) {
-            case AMVP_AES_GCM:
-            case AMVP_AES_XPN:
-            case AMVP_AES_GMAC:
-            case AMVP_AES_CTR:
-                /**
-                 * If we need to test both internal and external IV gen, we need two different
-                 * algorithm registrations/vector sets currently.
-                 */
-                if (cap_entry->cap.sym_cap->ivgen_source == AMVP_SYM_CIPH_IVGEN_SRC_EITHER) {
-                    cap_entry->cap.sym_cap->ivgen_source = AMVP_SYM_CIPH_IVGEN_SRC_INT;
-                    rv = amvp_build_sym_cipher_register_cap(cap_obj, cap_entry);
-                    if (rv != AMVP_SUCCESS) {
-                        cap_entry->cap.sym_cap->ivgen_source = AMVP_SYM_CIPH_IVGEN_SRC_EITHER;
-                        break;
-                    }
-                    json_array_append_value(caps_arr, cap_val);
-                    cap_val = json_value_init_object();
-                    cap_obj = json_value_get_object(cap_val);
-                    cap_entry->cap.sym_cap->ivgen_source = AMVP_SYM_CIPH_IVGEN_SRC_EXT;
-                    rv = amvp_build_sym_cipher_register_cap(cap_obj, cap_entry);
-                    cap_entry->cap.sym_cap->ivgen_source = AMVP_SYM_CIPH_IVGEN_SRC_EITHER;
-                } else {
-                    rv = amvp_build_sym_cipher_register_cap(cap_obj, cap_entry);
-                }
-                break;
-            case AMVP_AES_GCM_SIV:
-            case AMVP_AES_CCM:
-            case AMVP_AES_ECB:
-            case AMVP_AES_CFB1:
-            case AMVP_AES_CFB8:
-            case AMVP_AES_CFB128:
-            case AMVP_AES_OFB:
-            case AMVP_AES_CBC:
-            case AMVP_AES_CBC_CS1:
-            case AMVP_AES_CBC_CS2:
-            case AMVP_AES_CBC_CS3:
-            case AMVP_AES_KW:
-            case AMVP_AES_KWP:
-            case AMVP_AES_XTS:
-            case AMVP_TDES_ECB:
-            case AMVP_TDES_CBC:
-            case AMVP_TDES_CTR:
-            case AMVP_TDES_OFB:
-            case AMVP_TDES_CFB64:
-            case AMVP_TDES_CFB8:
-            case AMVP_TDES_CFB1:
-            case AMVP_TDES_CBCI:
-            case AMVP_TDES_OFBI:
-            case AMVP_TDES_CFBP1:
-            case AMVP_TDES_CFBP8:
-            case AMVP_TDES_CFBP64:
-            case AMVP_TDES_KW:
-                rv = amvp_build_sym_cipher_register_cap(cap_obj, cap_entry);
-                break;
-            case AMVP_HASH_SHA1:
-            case AMVP_HASH_SHA224:
-            case AMVP_HASH_SHA256:
-            case AMVP_HASH_SHA384:
-            case AMVP_HASH_SHA512:
-            case AMVP_HASH_SHA512_224:
-            case AMVP_HASH_SHA512_256:
-            case AMVP_HASH_SHA3_224:
-            case AMVP_HASH_SHA3_256:
-            case AMVP_HASH_SHA3_384:
-            case AMVP_HASH_SHA3_512:
-            case AMVP_HASH_SHAKE_128:
-            case AMVP_HASH_SHAKE_256:
-                rv = amvp_build_hash_register_cap(cap_obj, cap_entry);
-                break;
-            case AMVP_HASHDRBG:
-            case AMVP_HMACDRBG:
-            case AMVP_CTRDRBG:
-                rv = amvp_build_drbg_register_cap(cap_obj, cap_entry);
-                break;
-            case AMVP_HMAC_SHA1:
-            case AMVP_HMAC_SHA2_224:
-            case AMVP_HMAC_SHA2_256:
-            case AMVP_HMAC_SHA2_384:
-            case AMVP_HMAC_SHA2_512:
-            case AMVP_HMAC_SHA2_512_224:
-            case AMVP_HMAC_SHA2_512_256:
-            case AMVP_HMAC_SHA3_224:
-            case AMVP_HMAC_SHA3_256:
-            case AMVP_HMAC_SHA3_384:
-            case AMVP_HMAC_SHA3_512:
-                rv = amvp_build_hmac_register_cap(cap_obj, cap_entry);
-                break;
-            case AMVP_CMAC_AES:
-            case AMVP_CMAC_TDES:
-                rv = amvp_build_cmac_register_cap(cap_obj, cap_entry);
-                break;
-            case AMVP_KMAC_128:
-            case AMVP_KMAC_256:
-                rv = amvp_build_kmac_register_cap(cap_obj, cap_entry);
-                break;
-            case AMVP_DSA_KEYGEN:
-                rv = amvp_build_dsa_register_cap(cap_obj, cap_entry, AMVP_DSA_MODE_KEYGEN);
-                break;
-            case AMVP_DSA_PQGVER:
-                rv = amvp_build_dsa_register_cap(cap_obj, cap_entry, AMVP_DSA_MODE_PQGVER);
-                break;
-            case AMVP_DSA_PQGGEN:
-                rv = amvp_build_dsa_register_cap(cap_obj, cap_entry, AMVP_DSA_MODE_PQGGEN);
-                break;
-            case AMVP_DSA_SIGGEN:
-                rv = amvp_build_dsa_register_cap(cap_obj, cap_entry, AMVP_DSA_MODE_SIGGEN);
-                break;
-            case AMVP_DSA_SIGVER:
-                rv = amvp_build_dsa_register_cap(cap_obj, cap_entry, AMVP_DSA_MODE_SIGVER);
-                break;
-            case AMVP_RSA_KEYGEN:
-                rv = amvp_build_rsa_keygen_register_cap(cap_obj, cap_entry);
-                break;
-            case AMVP_RSA_SIGGEN:
-            case AMVP_RSA_SIGVER:
-                rv = amvp_build_rsa_sig_register_cap(cap_obj, cap_entry);
-                break;
-            case AMVP_RSA_SIGPRIM:
-            case AMVP_RSA_DECPRIM:
-                rv = amvp_build_rsa_prim_register_cap(cap_obj, cap_entry);
-                break;
-            case AMVP_ECDSA_KEYGEN:
-            case AMVP_ECDSA_KEYVER:
-                rv = amvp_build_ecdsa_register_cap(ctx, cap_entry->cipher, cap_obj, cap_entry);
-                break;
-            case AMVP_ECDSA_SIGGEN:
-                /* If component_test = BOTH, we need two registrations */
-                if (cap_entry->cap.ecdsa_siggen_cap->component == AMVP_ECDSA_COMPONENT_MODE_BOTH) {
-                    cap_entry->cap.ecdsa_siggen_cap->component = AMVP_ECDSA_COMPONENT_MODE_NO;
-                    rv = amvp_build_ecdsa_register_cap(ctx, cap_entry->cipher, cap_obj, cap_entry);
-                    if (rv != AMVP_SUCCESS) {
-                        cap_entry->cap.ecdsa_siggen_cap->component = AMVP_ECDSA_COMPONENT_MODE_BOTH;
-                        break;
-                    }
-                    json_array_append_value(caps_arr, cap_val);
-                    cap_val = json_value_init_object();
-                    cap_obj = json_value_get_object(cap_val);
-                    cap_entry->cap.ecdsa_siggen_cap->component = AMVP_ECDSA_COMPONENT_MODE_YES;
-                    rv = amvp_build_ecdsa_register_cap(ctx, cap_entry->cipher, cap_obj, cap_entry);
-                    cap_entry->cap.ecdsa_siggen_cap->component = AMVP_ECDSA_COMPONENT_MODE_BOTH;
-                } else {
-                    rv = amvp_build_ecdsa_register_cap(ctx, cap_entry->cipher, cap_obj, cap_entry);
-                }
-                break;
-            case AMVP_ECDSA_SIGVER:
-                /* If component_test = BOTH, we need two registrations */
-                if (cap_entry->cap.ecdsa_sigver_cap->component == AMVP_ECDSA_COMPONENT_MODE_BOTH) {
-                    cap_entry->cap.ecdsa_sigver_cap->component = AMVP_ECDSA_COMPONENT_MODE_NO;
-                    rv = amvp_build_ecdsa_register_cap(ctx, cap_entry->cipher, cap_obj, cap_entry);
-                    if (rv != AMVP_SUCCESS) {
-                        cap_entry->cap.ecdsa_sigver_cap->component = AMVP_ECDSA_COMPONENT_MODE_BOTH;
-                        break;
-                    }
-                    json_array_append_value(caps_arr, cap_val);
-                    cap_val = json_value_init_object();
-                    cap_obj = json_value_get_object(cap_val);
-                    cap_entry->cap.ecdsa_sigver_cap->component = AMVP_ECDSA_COMPONENT_MODE_YES;
-                    rv = amvp_build_ecdsa_register_cap(ctx, cap_entry->cipher, cap_obj, cap_entry);
-                    cap_entry->cap.ecdsa_sigver_cap->component = AMVP_ECDSA_COMPONENT_MODE_BOTH;
-                } else {
-                    rv = amvp_build_ecdsa_register_cap(ctx, cap_entry->cipher, cap_obj, cap_entry);
-                }
-                break;
-            case AMVP_KDF135_SNMP:
-                rv = amvp_build_kdf135_snmp_register_cap(cap_obj, cap_entry);
-                break;
-            case AMVP_KDF135_SSH:
-                rv = amvp_build_kdf135_ssh_register_cap(cap_obj, cap_entry);
-                break;
-            case AMVP_KDF135_SRTP:
-                rv = amvp_build_kdf135_srtp_register_cap(cap_obj, cap_entry);
-                break;
-            case AMVP_KDF135_IKEV2:
-                rv = amvp_build_kdf135_ikev2_register_cap(cap_obj, cap_entry);
-                break;
-            case AMVP_KDF135_IKEV1:
-                rv = amvp_build_kdf135_ikev1_register_cap(cap_obj, cap_entry);
-                break;
-            case AMVP_KDF135_X942:
-                rv = amvp_build_kdf135_x942_register_cap(cap_obj, cap_entry);
-                break;
-            case AMVP_KDF135_X963:
-                rv = amvp_build_kdf135_x963_register_cap(cap_obj, cap_entry);
-                break;
-            case AMVP_KDF108:
-                rv = amvp_build_kdf108_register_cap(cap_obj, cap_entry);
-                break;
-            case AMVP_PBKDF:
-                rv = amvp_build_pbkdf_register_cap(cap_obj, cap_entry);
-                break;
-            case AMVP_KDF_TLS12:
-                rv = amvp_build_kdf_tls12_register_cap(cap_obj, cap_entry);
-                break;
-            case AMVP_KDF_TLS13:
-                rv = amvp_build_kdf_tls13_register_cap(cap_obj, cap_entry);
-                break;
-            case AMVP_KAS_ECC_CDH:
-                rv = amvp_build_kas_ecc_register_cap(ctx, cap_obj, cap_entry, AMVP_KAS_ECC_MODE_CDH);
-                break;
-            case AMVP_KAS_ECC_COMP:
-                rv = amvp_build_kas_ecc_register_cap(ctx, cap_obj, cap_entry, AMVP_KAS_ECC_MODE_COMPONENT);
-                break;
-            case AMVP_KAS_ECC_SSC:
-                rv = amvp_build_kas_ecc_register_cap(ctx, cap_obj, cap_entry, AMVP_KAS_ECC_MODE_NONE);
-                break;
-            case AMVP_KAS_ECC_NOCOMP:
-                rv = amvp_build_kas_ecc_register_cap(ctx, cap_obj, cap_entry, AMVP_KAS_ECC_MODE_NOCOMP);
-                break;
-            case AMVP_KAS_FFC_COMP:
-                rv = amvp_build_kas_ffc_register_cap(ctx, cap_obj, cap_entry, AMVP_KAS_FFC_MODE_COMPONENT);
-                break;
-            case AMVP_KAS_FFC_NOCOMP:
-                rv = amvp_build_kas_ffc_register_cap(ctx, cap_obj, cap_entry, AMVP_KAS_FFC_MODE_NOCOMP);
-                break;
-            case AMVP_KAS_FFC_SSC:
-                rv = amvp_build_kas_ffc_register_cap(ctx, cap_obj, cap_entry, AMVP_KAS_FFC_MODE_NONE);
-                break;
-            case AMVP_KAS_IFC_SSC:
-                rv = amvp_build_kas_ifc_register_cap(ctx, cap_obj, cap_entry);
-                break;
-            case AMVP_KDA_ONESTEP:
-                rv = amvp_build_kda_onestep_register_cap(ctx, cap_obj, cap_entry);
-                break;
-            case AMVP_KDA_TWOSTEP:
-                rv = amvp_build_kda_twostep_register_cap(ctx, cap_obj, cap_entry);
-                break;
-            case AMVP_KDA_HKDF:
-                rv = amvp_build_kda_hkdf_register_cap(ctx, cap_obj, cap_entry);
-                break;
-            case AMVP_KTS_IFC:
-                rv = amvp_build_kts_ifc_register_cap(ctx, cap_obj, cap_entry);
-                break;
-            case AMVP_SAFE_PRIMES_KEYGEN:
-            case AMVP_SAFE_PRIMES_KEYVER:
-                rv = amvp_build_safe_primes_register_cap(ctx, cap_obj, cap_entry);
-                break;
-            case AMVP_CIPHER_START:
-            case AMVP_CIPHER_END:
-            default:
-                AMVP_LOG_ERR("Cap entry not found, %d.", cap_entry->cipher);
-                json_value_free(cap_val);
-                json_value_free(val);
-                return AMVP_NO_CAP;
-            }
-
-            if (rv != AMVP_SUCCESS) {
-                AMVP_LOG_ERR("failed to build registration for cipher %s (%d)", amvp_lookup_cipher_name(cap_entry->cipher), rv);
-                json_value_free(cap_val);
-                json_value_free(val);
-                return rv;
-            }
-
-            /*
-             * Now that we've built up the JSON for this capability,
-             * add it to the array of capabilities on the register message.
-             */
-            json_array_append_value(caps_arr, cap_val);
-
-            /* Advance to next cap entry */
-            cap_entry = cap_entry->next;
-        }
-    } else {
-        AMVP_LOG_ERR("No capabilities added to ctx");
-        json_value_free(val);
-        return AMVP_NO_CAP;
+    for (i = 0; i < ctx->cert_req_info.contact_count; i++) {
+        json_array_append_string(req_arr, ctx->cert_req_info.contact_id[ctx->cert_req_info.contact_count]);
     }
 
     *reg = val;

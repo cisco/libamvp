@@ -14,9 +14,6 @@
 #include "amvp/amvp.h"
 #include "safe_lib.h"
 
-#include <openssl/crypto.h>
-#include <openssl/evp.h>
-
 #define AMVP_APP_HELP_MSG "Use amvp_app --help for more information."
 
 static void print_usage(int code) {
@@ -159,7 +156,7 @@ static void print_usage(int code) {
     printf("To get info about a created module from the AMVP server:\n");
     printf("      --get_module <module_info_file>\n");
     printf("To request module certificate using a predefined request file:\n");
-    printf("      --module_cert_req <request_file>\n");
+    printf("      --module_cert_req --with_module <module_id_number> --with_vendor <vendor_id_number> --with-contact <CMVP contact ID> ...\n");
     printf("\n");
     printf("To post all resources a predefined resource json file:\n");
     printf("      --post_resources <resource_file>\n");
@@ -194,27 +191,6 @@ static void print_usage(int code) {
 
 static void print_version_info(void) {
     printf("\nAMVP library version(protocol version): %s(%s)\n\n", amvp_version(), amvp_protocol_version());
-    printf("        Runtime mode: yes\n");
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
-    if (FIPS_mode()) {
-        printf("           FIPS mode: yes\n");
-    } else {
-        printf("           FIPS mode: no\n");
-    }
-#else
-    if (EVP_default_properties_is_fips_enabled(NULL)) {
-        printf("           FIPS by default: yes\n");
-    } else {
-        printf("           FIPS by default: no\n");
-    }
-#endif
-
-#ifdef OPENSSL_VERSION_TEXT
-    printf("Compiled SSL version: %s\n", OPENSSL_VERSION_TEXT);
-#else
-    printf("Compiled SSL version: not detected\n");
-#endif
-    printf("  Linked SSL version: %s\n", OpenSSL_version(OPENSSL_VERSION));
 }
 
 static ko_longopt_t longopts[] = {
@@ -227,24 +203,6 @@ static ko_longopt_t longopts[] = {
     { "verbose", ko_no_argument, 307 },
     { "none", ko_no_argument, 308 },
     { "sample", ko_no_argument, 309 },
-    { "aes", ko_no_argument, 310 },
-    { "tdes", ko_no_argument, 311 },
-    { "hash", ko_no_argument, 312 },
-    { "cmac", ko_no_argument, 313 },
-    { "hmac", ko_no_argument, 314 },
-    { "kdf", ko_no_argument, 315 },
-    { "dsa", ko_no_argument, 316 },
-    { "rsa", ko_no_argument, 317 },
-    { "drbg", ko_no_argument, 318 },
-    { "ecdsa", ko_no_argument, 319 },
-    { "kas_ecc", ko_no_argument, 320 },
-    { "kas_ffc", ko_no_argument, 321 },
-    { "safe_primes", ko_no_argument, 322 },
-    { "kas_ifc", ko_no_argument, 323 },
-    { "kts_ifc", ko_no_argument, 324 },
-    { "kda", ko_no_argument, 325 },
-    { "kmac", ko_no_argument, 326 },
-    { "all_algs", ko_no_argument, 350 },
     { "manual_registration", ko_required_argument, 400 },
     { "kat", ko_required_argument, 401 },
     { "fips_validation", ko_required_argument, 402 },
@@ -264,39 +222,19 @@ static ko_longopt_t longopts[] = {
     { "cost", ko_no_argument, 416 },
     { "debug", ko_no_argument, 417 },
     { "get_registration", ko_no_argument, 418 },
-    { "module_cert_req", ko_required_argument, 419 },
+    { "module_cert_req", ko_no_argument, 419 },
     { "post_resources", ko_required_argument, 420 },
     { "create_module", ko_required_argument, 421 },
     { "get_module", ko_required_argument, 422 },
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L
-    { "disable_fips", ko_no_argument, 500 },
-#endif
+    { "with_module", ko_required_argument, 423 },
+    { "with_vendor", ko_required_argument, 424} ,
+    { "with_contact", ko_required_argument, 425 } ,
     { NULL, 0, 0 }
 };
 
 
 static void default_config(APP_CONFIG *cfg) {
     cfg->level = AMVP_LOG_LVL_STATUS;
-}
-
-static void enable_all_algorithms(APP_CONFIG *cfg) {
-    cfg->aes = 1;
-    cfg->tdes = 1;
-    cfg->hash = 1;
-    cfg->cmac = 1;
-    cfg->hmac = 1;
-    cfg->kmac = 1;
-    cfg->dsa = 1;
-    cfg->kas_ffc = 1;
-    cfg->safe_primes = 1;
-    cfg->rsa = 1;
-    cfg->drbg = 1;
-    cfg->ecdsa = 1;
-    cfg->kas_ecc = 1;
-    cfg->kas_ifc = 1;
-    cfg->kda = 1;
-    cfg->kts_ifc = 1;
-    cfg->kdf = 1;
 }
 
 static const char* lookup_arg_name(int c) {
@@ -325,7 +263,7 @@ static int check_option_length(const char *opt, int c, int maxAllowed) {
 
 int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
     ketopt_t opt = KETOPT_INIT;
-    int c = 0, diff = 0, len = 0;
+    int c = 0, diff = 0, tmp = 0;
 
     cfg->empty_alg = 1;
 
@@ -343,12 +281,12 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
         case 'h':
         case 302:
             if (opt.arg) {
-                len = strnlen_s(opt.arg, JSON_FILENAME_LENGTH + 1);
-                if (len > JSON_FILENAME_LENGTH || len <= 0) {
+                tmp = strnlen_s(opt.arg, JSON_FILENAME_LENGTH + 1);
+                if (tmp > JSON_FILENAME_LENGTH || tmp <= 0) {
                     printf("invalid help option length\n");
                     return 1;
                 }
-                strncmp_s(opt.arg, len, "--verbose", 9, &diff);
+                strncmp_s(opt.arg, tmp, "--verbose", 9, &diff);
                 if (!diff) {
                     print_usage(AMVP_LOG_LVL_VERBOSE);
                 } else {
@@ -378,80 +316,6 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
             break;
         case 309:
             cfg->sample = 1;
-            break;
-        case 310:
-            cfg->aes = 1;
-            cfg->empty_alg = 0;
-            break;
-        case 311:
-            cfg->tdes = 1;
-            cfg->empty_alg = 0;
-            break;
-        case 312:
-            cfg->hash = 1;
-            cfg->empty_alg = 0;
-            break;
-        case 313:
-            cfg->cmac = 1;
-            cfg->empty_alg = 0;
-            break;
-        case 314:
-            cfg->hmac = 1;
-            cfg->empty_alg = 0;
-            break;
-        case 315:
-            cfg->kdf = 1;
-            cfg->empty_alg = 0;
-            break;
-        case 316:
-            cfg->dsa = 1;
-            cfg->empty_alg = 0;
-            break;
-        case 317:
-            cfg->rsa = 1;
-            cfg->empty_alg = 0;
-            break;
-        case 318:
-            cfg->drbg = 1;
-            cfg->empty_alg = 0;
-            break;
-        case 319:
-            cfg->ecdsa = 1;
-            cfg->empty_alg = 0;
-            break;
-        case 320:
-            cfg->kas_ecc = 1;
-            cfg->empty_alg = 0;
-            break;
-        case 321:
-            cfg->kas_ffc = 1;
-            cfg->empty_alg = 0;
-            break;
-        case 322:
-            cfg->safe_primes = 1;
-            cfg->empty_alg = 0;
-            break;
-        case 323:
-            cfg->kas_ifc = 1;
-            cfg->empty_alg = 0;
-            break;
-        case 324:
-            cfg->kts_ifc = 1;
-            cfg->empty_alg = 0;
-            break;
-        case 325:
-            cfg->kda = 1;
-            cfg->empty_alg = 0;
-            break;
-        case 326:
-            cfg->kmac = 1;
-            cfg->empty_alg = 0;
-            break;
-        case 'a':
-        case 350:
-            enable_all_algorithms(cfg);
-            cfg->empty_alg = 0;
-            cfg->testall = 1;
             break;
 
         case 400:
@@ -600,10 +464,6 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
 
         case 419:
             cfg->mod_cert_req = 1;
-            if (!check_option_length(opt.arg, c, JSON_FILENAME_LENGTH)) {
-                return 1;
-            }
-            strcpy_s(cfg->mod_cert_req_file, JSON_FILENAME_LENGTH + 1, opt.arg);
             break;
 
         case 420:
@@ -628,6 +488,37 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
                 return 1;
             }
             strcpy_s(cfg->get_module_file, JSON_FILENAME_LENGTH + 1, opt.arg);
+            break;
+
+        case 423:
+            tmp = atoi(opt.arg);
+            if (!tmp) {
+                printf("Invalid module ID format\n");
+                return 1;
+            }
+            printf("Module ID: %d\n", tmp);
+            cfg->module_id = tmp;
+            break;
+
+        case 424:
+            tmp = atoi(opt.arg);
+            if (!tmp) {
+                printf("Invalid vendor ID format\n");
+                return 1;
+            }
+            cfg->vendor_id = tmp;
+            break;
+
+        case 425:
+            if (cfg->num_contacts >= AMVP_MAX_CONTACTS_PER_CERT_REQ) {
+                printf("Too many contacts provided for cert req\n");
+                return 1;
+            }
+            if (!check_option_length(opt.arg, c, AMVP_CONTACT_STR_MAX_LEN)) {
+                return 1;
+            }
+            strcpy_s(cfg->contact_ids[cfg->num_contacts], AMVP_CONTACT_STR_MAX_LEN + 1, opt.arg);
+            cfg->num_contacts++;
             break;
 
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
@@ -669,6 +560,15 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
         printf(ANSI_COLOR_RED "Requires at least 1 Algorithm Test Suite\n"ANSI_COLOR_RESET);
         printf("%s\n", AMVP_APP_HELP_MSG);
         return 1;
+    }
+
+    if (cfg->mod_cert_req && (!cfg->module_id || !cfg->vendor_id || !cfg->num_contacts)) {
+        printf("Module cert request requires module module ID, vendor ID, and at least one contact ID to be provided\n");
+        return 1;
+    }
+
+    if (!cfg->mod_cert_req && (cfg->module_id || cfg->vendor_id || cfg->num_contacts)) {
+        printf("Warning: Module ID/Vendor ID/Contact ID provided, but not performing a cert request. These options will be ignored\n");
     }
 
     printf("\n");

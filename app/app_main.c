@@ -15,20 +15,8 @@
  * It will default to 127.0.0.1 port 443 if no arguments are given.
  */
 #include <stdio.h>
-#include <openssl/rsa.h>
-#include <openssl/bn.h>
 
 #include "app_lcl.h"
-
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L
-#include <openssl/provider.h>
-#include <openssl/evp.h>
-#ifdef _WIN32
-#include <Windows.h>
-#else
-#include <unistd.h>
-#endif
-#endif
 
 #include "safe_mem_lib.h"
 #include "safe_str_lib.h"
@@ -182,6 +170,7 @@ int main(int argc, char **argv) {
      * This may or may not be turned on...
      */
     if (app_setup_two_factor_auth(ctx)) {
+        printf("Error setting  up two factor auth\n");
         goto end;
     }
 
@@ -264,7 +253,6 @@ int main(int argc, char **argv) {
         if (reg) free(reg);
         goto end;
     }
-
     if (cfg.kat) {
        rv = amvp_load_kat_filename(ctx, cfg.kat_file);
        goto end;
@@ -350,7 +338,10 @@ int main(int argc, char **argv) {
     }
 
     if (cfg.mod_cert_req) {
-        rv = amvp_mark_as_cert_req(ctx, cfg.mod_cert_req_file);
+        rv = amvp_mark_as_cert_req(ctx, cfg.module_id, cfg.vendor_id);
+        for (diff = 0; diff < cfg.num_contacts; diff++) {
+            amvp_cert_req_add_contact(ctx, cfg.contact_ids[diff]);
+        }
     }
 
     if (cfg.create_module) {

@@ -72,22 +72,15 @@ typedef struct app_config {
     char create_module_file[JSON_FILENAME_LENGTH + 1];
     char get_module_file[JSON_FILENAME_LENGTH + 1];
     char post_resources_filename[JSON_FILENAME_LENGTH + 1];
+    char contact_ids[AMVP_MAX_CONTACTS_PER_CERT_REQ][AMVP_CONTACT_STR_MAX_LEN + 1];
 
-    /*
-     * Algorithm Flags
-     * 0 is off, 1 is on
-     */
-    int aes; int tdes;
-    int hash; int cmac; int hmac; int kmac;
-    int dsa; int rsa;
-    int drbg; int ecdsa;
-    int kas_ecc; int kas_ffc; int kas_ifc; int kda; int kts_ifc;
-    int kdf;
-    int safe_primes;
+    int num_contacts;
     int mod_cert_req;
     int post_resources;
     int create_module;
     int get_module;
+    int module_id;
+    int vendor_id;
     int testall; /* So the app can check whether the user indicated to test all possible algorithms */
 } APP_CONFIG;
 
@@ -98,15 +91,6 @@ unsigned int swap_uint_endian(unsigned int i);
 int check_is_little_endian(void);
 char *remove_str_const(const char *str);
 int save_string_to_file(const char *str, const char *path);
-int get_nid_for_curve(AMVP_EC_CURVE curve);
-const EVP_MD *get_md_for_hash_alg(AMVP_HASH_ALG alg);
-const char *get_md_string_for_hash_alg(AMVP_HASH_ALG alg, int *md_size);
-char *ec_point_to_pub_key(unsigned char *x, int x_len, unsigned char *y, int y_len, int *key_len);
-
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L
-AMVP_RESULT fips_sanity_check(void);
-const char *get_string_from_oid(unsigned char *oid, int oid_len);
-#endif
 
 #ifdef __cplusplus
 }

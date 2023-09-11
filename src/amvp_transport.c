@@ -686,6 +686,23 @@ AMVP_RESULT amvp_send_login(AMVP_CTX *ctx,
 }
 
 /*
+ * This is the transport function used within libamvp to submit a module
+ * payload for creation on the server
+ */
+AMVP_RESULT amvp_send_module_creation(AMVP_CTX *ctx,
+                            char *module,
+                            int len) {
+#ifdef AMVP_OFFLINE 
+    AMVP_LOG_ERR("Curl not linked, exiting function"); 
+    return AMVP_TRANSPORT_FAIL;
+#else
+    return amvp_send_with_path_seg(ctx, AMVP_NET_POST,
+                                   AMVP_MODULE_ENDPOINT, module, len);
+#endif
+}
+
+
+/*
  * This function is used to submit a vector set response
  * to the ACV server.
  */

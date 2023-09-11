@@ -1686,7 +1686,7 @@ AMVP_RESULT amvp_resume_test_session(AMVP_CTX *ctx, const char *request_filename
             }
         }
 
-        if (ctx->put) {
+        if (ctx->action == AMVP_ACTION_PUT) {
            rv = amvp_put_data_from_ctx(ctx);
         }
     }
@@ -2004,7 +2004,7 @@ AMVP_RESULT amvp_mark_as_get_only(AMVP_CTX *ctx, char *string) {
     }
 
     strcpy_s(ctx->get_string, AMVP_REQUEST_STR_LEN_MAX + 1, string);
-    ctx->get = 1;
+    ctx->action = AMVP_ACTION_GET;
     return AMVP_SUCCESS;
 }
 
@@ -2017,7 +2017,7 @@ AMVP_RESULT amvp_set_get_save_file(AMVP_CTX *ctx, char *filename) {
         AMVP_LOG_ERR("No filename given");
         return AMVP_MISSING_ARG;
     }
-    if (!ctx->get) {
+    if (ctx->action != AMVP_ACTION_GET) {
         AMVP_LOG_ERR("Session must be marked as get only to set a get save file");
         return AMVP_UNSUPPORTED_OP;
     }
@@ -2054,10 +2054,69 @@ AMVP_RESULT amvp_mark_as_put_after_test(AMVP_CTX *ctx, char *filename) {
         return AMVP_MALLOC_FAIL;
     }
     strcpy_s(ctx->put_filename, AMVP_SESSION_PARAMS_STR_LEN_MAX + 1, filename);
-    ctx->put = 1;
+    ctx->action = AMVP_ACTION_PUT;
     return AMVP_SUCCESS;
 }
 
+AMVP_RESULT amvp_mark_as_cert_req(AMVP_CTX *ctx, int module_id, int vendor_id) {
+    if (!ctx) {
+        return AMVP_NO_CTX;
+    }
+
+    if (!module_id || !vendor_id) {
+        AMVP_LOG_ERR("Missing module or vendor ID");
+        return AMVP_INVALID_ARG;
+    }
+    ctx->cert_req_info.module_id = module_id;
+    ctx->cert_req_info.vendor_id = vendor_id;
+    ctx->action = AMVP_ACTION_CERT_REQ;
+    return AMVP_SUCCESS;
+}
+
+AMVP_RESULT amvp_cert_req_add_contact(AMVP_CTX *ctx, const char *contact_id) {
+    int len = 0;
+
+    if (!ctx) {
+        return AMVP_NO_CTX;
+    }
+
+    if (!contact_id) {
+        return AMVP_MISSING_ARG;
+    }
+
+    if (ctx->action != AMVP_ACTION_CERT_REQ) {
+        AMVP_LOG_ERR("Session must be marked as a certify request to add contact info");
+        return AMVP_UNSUPPORTED_OP;
+    }
+    if (ctx->cert_req_info.contact_count >= AMVP_MAX_CONTACTS_PER_CERT_REQ) {
+        AMVP_LOG_ERR("Already at maximum number of contacts per cert request");
+        return AMVP_UNSUPPORTED_OP;
+    }
+
+    len = strnlen_s(contact_id, AMVP_CONTACT_STR_MAX_LEN + 1);
+    if (!len || len > AMVP_CONTACT_STR_MAX_LEN) {
+        AMVP_LOG_ERR("Provided contact ID string is too long or empty");
+        return AMVP_INVALID_ARG;
+    }
+
+    ctx->cert_req_info.contact_id[ctx->cert_req_info.contact_count] = calloc(len + 1, sizeof(char));
+    if (!ctx->cert_req_info.contact_id[ctx->cert_req_info.contact_count]) {
+        AMVP_LOG_ERR("Error allocating memory for contact ID in cert request");
+        return AMVP_MALLOC_FAIL;
+    }
+
+    if (strncpy_s(ctx->cert_req_info.contact_id[ctx->cert_req_info.contact_count], len + 1, contact_id, len)) {
+        AMVP_LOG_ERR("Error copying contact ID string into cert request");
+        free(ctx->cert_req_info.contact_id[ctx->cert_req_info.contact_count]);
+        return AMVP_INTERNAL_ERR;
+    }
+
+    ctx->cert_req_info.contact_count++;
+
+    return AMVP_SUCCESS;
+}
+
+/*
 AMVP_RESULT amvp_mark_as_cert_req(AMVP_CTX *ctx, char *filename) {
     if (!ctx) {
         return AMVP_NO_CTX;
@@ -2076,9 +2135,9 @@ AMVP_RESULT amvp_mark_as_cert_req(AMVP_CTX *ctx, char *filename) {
         return AMVP_MALLOC_FAIL;
     }
     strcpy_s(ctx->mod_cert_req_file, AMVP_SESSION_PARAMS_STR_LEN_MAX + 1, filename);
-    ctx->mod_cert_req = 1;
+    ctx->action = AMVP_ACTION_CERT_REQ;
     return AMVP_SUCCESS;
-}
+} */
 
 AMVP_RESULT amvp_mark_as_post_only(AMVP_CTX *ctx, char *filename) {
 
@@ -2100,7 +2159,7 @@ AMVP_RESULT amvp_mark_as_post_only(AMVP_CTX *ctx, char *filename) {
     }
 
     strcpy_s(ctx->post_filename, AMVP_SESSION_PARAMS_STR_LEN_MAX + 1, filename);
-    ctx->post = 1;
+    ctx->action = AMVP_ACTION_POST;
     return AMVP_SUCCESS;
 }
 
@@ -2147,7 +2206,7 @@ AMVP_RESULT amvp_mark_as_delete_only(AMVP_CTX *ctx, char *request_url) {
     }
 
     strcpy_s(ctx->delete_string, AMVP_REQUEST_STR_LEN_MAX + 1, request_url);
-    ctx->delete = 1;
+    ctx->action = AMVP_ACTION_DELETE;
     return AMVP_SUCCESS;
 }
 
@@ -2540,8 +2599,8 @@ AMVP_RESULT amvp_process_amvp_tes(AMVP_CTX *ctx) {
 
 AMVP_RESULT amvp_create_module(AMVP_CTX *ctx, char *filename) {
     AMVP_RESULT rv = AMVP_SUCCESS;
-    char *reg = NULL, *url = NULL;
-    const char *jwt = NULL;
+    char *reg = NULL;
+    const char *url = NULL;
     int reg_len = 0, id = 0;
 
     JSON_Value *tmp_json = NULL, *val = NULL;
@@ -2574,16 +2633,16 @@ AMVP_RESULT amvp_create_module(AMVP_CTX *ctx, char *filename) {
     ctx->registration = tmp_json;
     reg = json_serialize_to_string(tmp_json, &reg_len);
     
-    AMVP_LOG_STATUS("Sending module cert request...");
+    AMVP_LOG_STATUS("Sending module create request...");
     rv = amvp_login(ctx, 0);
     if (rv != AMVP_SUCCESS) {
-        AMVP_LOG_ERR("ERror logging in with AMVP server while trying to create module");
+        AMVP_LOG_ERR("Error logging in with AMVP server while trying to create module");
         goto end;
     }
 
-    rv = amvp_transport_post(ctx, "/amvp/v1/modules", reg, reg_len);
-    
+    rv = amvp_send_module_creation(ctx, reg, reg_len);
     if (rv == AMVP_SUCCESS) {
+        /*
         val = json_parse_string(ctx->curl_buf);
         if (!val) {
             AMVP_LOG_ERR("Error while parsing json from server!");
@@ -2596,36 +2655,55 @@ AMVP_RESULT amvp_create_module(AMVP_CTX *ctx, char *filename) {
             rv = AMVP_JSON_ERR;
             goto end;
         }
+        url = json_object_get_string(obj, "url");
 
-        jwt = json_object_get_string(obj, "accessToken");
-        if (!jwt) {
-            AMVP_LOG_ERR("No access_token provided in module creation response");
-            rv = AMVP_JWT_MISSING;
+        file = calloc(AMVP_MODULE_FILENAME_MAX_LEN + 1, sizeof(char));
+        if (!file) {
+            AMVP_LOG_ERR("Unable to allocate memory for storing module file");
             goto end;
-        } else {
-            if (strnlen_s(jwt, AMVP_JWT_TOKEN_MAX + 1) > AMVP_JWT_TOKEN_MAX) {
-                AMVP_LOG_ERR("access_token too large");
-                rv = AMVP_JWT_INVALID;
-                goto end;
-            }
-            ctx->jwt_token = calloc(AMVP_JWT_TOKEN_MAX + 1, sizeof(char));
-            strcpy_s(ctx->jwt_token, AMVP_JWT_TOKEN_MAX + 1, jwt);
         }
-        id = json_object_get_number(obj, "id");
-        url = calloc(AMVP_ATTR_URL_MAX + 1, sizeof(char));
-        snprintf(url, AMVP_ATTR_URL_MAX, "/amvp/v1/modules/%d", id);
+        snprintf(file, AMVP_MODULE_FILENAME_MAX_LEN + 1, "%s_%s_%d.json", AMVP_REQ_FILENAME_DEFAULT, AMVP_MODULE_FILENAME_DEFAULT, id);
+        tmp_json = json_value_init_array();
+        obj = json_value_get_object(json_value_init_object());
+        if (!tmp_json || !obj) {
+            AMVP_LOG_ERR("Error initializing JSON for storing module creation response");
+            goto end;
+        }
+        json_object_set_string(obj, "url", url);
+        json_object_set_string(obj, "jwt", jwt);
+        tmp_arr = json_value_get_array(tmp_json);
+        json_array_append_value(tmp_arr, json_object_get_wrapping_value(obj));
 
-        ctx->session_url = calloc(AMVP_ATTR_URL_MAX + 1, sizeof(char));
-        strcpy_s(ctx->session_url, AMVP_ATTR_URL_MAX + 1, url);
-        
-        amvp_write_session_info(ctx);
-        AMVP_LOG_STATUS("Succesfully created module and saved info to file");
-        rv = AMVP_SUCCESS;
-    } else {
-        AMVP_LOG_ERR("Failed to send module creation file");
-        rv = AMVP_TRANSPORT_FAIL;
+        rv = amvp_json_serialize_to_file_pretty_w(tmp_json, file);
+        if (rv != AMVP_SUCCESS) {
+            AMVP_LOG_ERR("Failed to write module creation response to file. Attempting to log...");
+            AMVP_LOG_STATUS("Module URL: %s", url);
+            AMVP_LOG_STATUS("JWT: %s", jwt);
+        } else {
+            amvp_json_serialize_to_file_pretty_a(NULL, file);
+            AMVP_LOG_STATUS("Successfully created module and saved to file %s", file);
+        }
+        */
+        val = json_parse_string(ctx->curl_buf);
+        if (!val) {
+            AMVP_LOG_ERR("Error while parsing json from server!");
+            rv = AMVP_JSON_ERR;
+            goto end;
+        }
+        obj = amvp_get_obj_from_rsp(ctx, val);
+        if (!obj) {
+            AMVP_LOG_ERR("Error while parsing json from server!");
+            rv = AMVP_JSON_ERR;
+            goto end;
+        }
+        url = json_object_get_string(obj, "url");
+        AMVP_LOG_STATUS("Request created! URL: %s", url);
     }
+
 end:
+    if (reg) free(reg);
+    //if (url) free(url);
+    if (val) json_value_free(val);
     return rv;
 }
 
@@ -2669,12 +2747,13 @@ AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx) {
     char *reg = NULL;
     int reg_len = 0, count = 0;
 
-    JSON_Value *tmp_json = NULL;
+    JSON_Value *tmp_json = NULL, *tmp2 = NULL;
     JSON_Array *tmp_arr = NULL;
+    JSON_Object *tmp_obj = NULL;
     if (!ctx) {
         return AMVP_NO_CTX;
     }
-
+#if 0
     /*
      * Send the capabilities to the AMVP server and get the response,
      * which should be a list of vector set ID urls
@@ -2701,11 +2780,20 @@ AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx) {
     }
     ctx->registration = tmp_json;
     reg = json_serialize_to_string(tmp_json, &reg_len);
+#endif
+    AMVP_LOG_STATUS("Creating module cert request...");
     
+    if (amvp_build_registration_json(ctx, &tmp_json) != AMVP_SUCCESS) {
+        AMVP_LOG_ERR("Error building cert request JSON");
+        rv = AMVP_JSON_ERR;
+        goto end;
+    }
+    amvp_create_array(&tmp_obj, &tmp2, &tmp_arr);
+    json_array_append_value(tmp_arr, tmp_json);
+    reg = json_serialize_to_string(tmp2, &reg_len);
+    AMVP_LOG_STATUS("Cert request:\n%s", reg);
     AMVP_LOG_STATUS("Sending module cert request...");
-    //AMVP_LOG_STATUS("    request: %s", reg);
-    //AMVP_LOG_STATUS("    POST...Url: %s","/amv/v1/certRequest");
-    rv = amvp_transport_post(ctx, "/amvp/v1/certRequest", reg, reg_len);
+    rv = amvp_transport_post(ctx, "/amvp/v1/certRequests", reg, reg_len);
     
     if (rv == AMVP_SUCCESS) {
         rv = amvp_parse_mod_cert_req(ctx);
@@ -3176,7 +3264,6 @@ static AMVP_RESULT amvp_login(AMVP_CTX *ctx, int refresh) {
         AMVP_LOG_ERR("Unable to build login message");
         goto end;
     }
-    AMVP_LOG_STATUS("    Login info: %s", login);
 
     /*
      * Send the login to the AMVP server and get the response,
@@ -4207,7 +4294,7 @@ static AMVP_RESULT amvp_cert_req(AMVP_CTX *ctx)
     AMVP_LOG_STATUS("Draft Certificate url: %s", dc);
 
 
-    if (ctx->mod_cert_req) {
+    if (ctx->action == AMVP_ACTION_CERT_REQ) {
         static char validation[] = "[{ \"implementationUrls\": [\"/acvp/v1/1234\", \"/esv/v1/5678\", \"amv/v1/13780\" ] }]";
         int validation_len = sizeof(validation);
         /*
@@ -4244,7 +4331,7 @@ AMVP_RESULT amvp_run(AMVP_CTX *ctx, int fips_validation) {
         }
     }
 
-    if (ctx->get) { 
+    if (ctx->action == AMVP_ACTION_GET) { 
         rv = amvp_transport_get(ctx, ctx->get_string, NULL);
         if (ctx->save_filename) {
             AMVP_LOG_STATUS("Saving GET result to specified file...");
@@ -4271,7 +4358,7 @@ AMVP_RESULT amvp_run(AMVP_CTX *ctx, int fips_validation) {
         goto end;
     }
 
-    if (ctx->post) { 
+    if (ctx->action == AMVP_ACTION_POST) { 
         rv = amvp_post_data(ctx, ctx->post_filename);
         goto end;
     }
@@ -4281,12 +4368,12 @@ AMVP_RESULT amvp_run(AMVP_CTX *ctx, int fips_validation) {
         goto end;
     }
 
-    if (ctx->mod_cert_req) { 
+    if (ctx->action == AMVP_ACTION_CERT_REQ) {
         rv = amvp_mod_cert_req(ctx);
         goto check;
     }
 
-    if (ctx->delete) {
+    if (ctx->action == AMVP_ACTION_DELETE) {
         rv = amvp_transport_delete(ctx, ctx->delete_string);
         if (ctx->save_filename) {
             AMVP_LOG_STATUS("Saving DELETE response to specified file...");
@@ -4336,7 +4423,7 @@ AMVP_RESULT amvp_run(AMVP_CTX *ctx, int fips_validation) {
     }
     
     //write session info so if we time out or lose connection waiting for results, we can recheck later on
-    if (!ctx->put) {
+    if (ctx->action != AMVP_ACTION_PUT) {
         if (amvp_write_session_info(ctx) != AMVP_SUCCESS) {
             AMVP_LOG_ERR("Error writing the session info file. Continuing, but session will not be able to be resumed or checked later on");
         }
@@ -4368,7 +4455,7 @@ check:
         AMVP_LOG_ERR("Unable to retrieve test results");
         goto end;
     }
-    if (ctx->mod_cert_req) {
+    if (ctx->action == AMVP_ACTION_CERT_REQ) {
         rv = amvp_cert_req(ctx);
         goto end;
     }
@@ -4384,7 +4471,7 @@ check:
         }
     }
 
-   if (ctx->put) {
+   if (ctx->action == AMVP_ACTION_PUT) {
        rv = amvp_put_data_from_ctx(ctx);
    }
 end:
