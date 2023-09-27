@@ -21,7 +21,7 @@
 #include "parson.h"
 #include "safe_str_lib.h"
 #include "safe_mem_lib.h"
-
+#if 0
 typedef struct amvp_prereqs_mode_name_t {
     AMVP_PREREQ_ALG alg;
     const char *name;
@@ -4533,17 +4533,15 @@ static AMVP_RESULT amvp_build_safe_primes_register_cap(AMVP_CTX *ctx,
     }
     return AMVP_SUCCESS;
 }
-
+#endif
 /*
  * This builds a cert req
  */
 AMVP_RESULT amvp_build_registration_json(AMVP_CTX *ctx, JSON_Value **reg) {
-    AMVP_RESULT rv = AMVP_SUCCESS;
-    AMVP_CAPS_LIST *cap_entry;
-    JSON_Value *val = NULL, *cap_val = NULL;
+    JSON_Value *val = NULL;
     JSON_Array *req_arr = NULL;
     JSON_Object *cap_obj = NULL;
-    char *contact = NULL;
+
     int i = 0;
     if (!ctx) {
         AMVP_LOG_ERR("No ctx for build_test_session");
