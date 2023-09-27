@@ -63,7 +63,14 @@
 #define AMVP_MODULE_FILENAME_DEFAULT "module"
 #define AMVP_MODULE_ENDPOINT "modules"
 
+#define AMVP_REQ_FILENAME_MAX_LEN 32 /* Arbitrary */
 #define AMVP_REQ_FILENAME_DEFAULT "request"
+
+#define AMVP_CERT_REQUEST_FILENAME_MAX_LEN 32 /* Arbitrary */
+#define AMVP_CERT_REQUEST_FILENAME_DEFAULT "certification_session"
+
+#define AMVP_REQ_STATUS_STR_INITIAL "initial"
+#define AMVP_REQ_STATUS_STR_APPROVED "approved"
 
 #define AMVP_BIT2BYTE(x) ((x + 7) >> 3) /**< Convert bit length (x, of type integer) into byte length */
 
@@ -1662,6 +1669,12 @@ typedef enum amvp_resource_status {
     AMVP_RESOURCE_STATUS_INCOMPLETE,
 } AMVP_RESOURCE_STATUS;
 
+typedef enum amvp_request_status {
+    AMVP_REQUEST_STATUS_INITIAL = 1,
+    AMVP_REQUEST_STATUS_APPROVED,
+    AMVP_REQUEST_STATUS_REJECTED
+} AMVP_REQUEST_STATUS;
+
 typedef enum amvp_waiting_status {
     AMVP_WAITING_FOR_TESTS = 1,
     AMVP_WAITING_FOR_RESULTS,
@@ -1945,6 +1958,7 @@ AMVP_KDF108_MODE read_mode(const char *str);
 
 AMVP_RESULT amvp_json_serialize_to_file_pretty_a(const JSON_Value *value, const char *filename);
 AMVP_RESULT amvp_json_serialize_to_file_pretty_w(const JSON_Value *value, const char *filename);
+int amvp_get_request_status(AMVP_CTX *ctx, char **output);
 
 
 #endif

@@ -71,6 +71,7 @@ typedef struct app_config {
     char mod_cert_req_file[JSON_FILENAME_LENGTH + 1];
     char create_module_file[JSON_FILENAME_LENGTH + 1];
     char get_module_file[JSON_FILENAME_LENGTH + 1];
+    char ev_file[JSON_FILENAME_LENGTH + 1];
     char post_resources_filename[JSON_FILENAME_LENGTH + 1];
     char contact_ids[AMVP_MAX_CONTACTS_PER_CERT_REQ][AMVP_CONTACT_STR_MAX_LEN + 1];
 
@@ -79,6 +80,7 @@ typedef struct app_config {
     int post_resources;
     int create_module;
     int get_module;
+    int submit_ev;
     int module_id;
     int vendor_id;
     int testall; /* So the app can check whether the user indicated to test all possible algorithms */

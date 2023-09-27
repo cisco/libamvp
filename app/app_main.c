@@ -350,7 +350,12 @@ int main(int argc, char **argv) {
     }
 
     if (cfg.get_module) {
-        rv = amvp_get_module(ctx, cfg.get_module_file);
+        rv = amvp_get_module_request(ctx, cfg.get_module_file);
+        goto end;
+    }
+
+    if (cfg.submit_ev) {
+        rv = amvp_submit_evidence(ctx, cfg.ev_file);
         goto end;
     }
 

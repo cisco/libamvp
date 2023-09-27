@@ -4543,6 +4543,7 @@ AMVP_RESULT amvp_build_registration_json(AMVP_CTX *ctx, JSON_Value **reg) {
     JSON_Value *val = NULL, *cap_val = NULL;
     JSON_Array *req_arr = NULL;
     JSON_Object *cap_obj = NULL;
+    char *contact = NULL;
     int i = 0;
     if (!ctx) {
         AMVP_LOG_ERR("No ctx for build_test_session");
@@ -4562,7 +4563,7 @@ AMVP_RESULT amvp_build_registration_json(AMVP_CTX *ctx, JSON_Value **reg) {
     req_arr = json_object_get_array(cap_obj, "contacts");
 
     for (i = 0; i < ctx->cert_req_info.contact_count; i++) {
-        json_array_append_string(req_arr, ctx->cert_req_info.contact_id[ctx->cert_req_info.contact_count]);
+        json_array_append_string(req_arr, ctx->cert_req_info.contact_id[i]);
     }
 
     *reg = val;

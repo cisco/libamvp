@@ -813,13 +813,8 @@ CRITERION_CFLAGS
 CLEANFILES
 LIBAMVP_CFLAGS
 LIBAMVP_LDFLAGS
-USE_FOM_OBJ_FALSE
-USE_FOM_OBJ_TRUE
-FOM_LDFLAGS
-FOM_CFLAGS
 LIBCURL_LDFLAGS
 LIBCURL_CFLAGS
-FOM_OBJ_DIR
 SSL_LDFLAGS
 SSL_CFLAGS
 ADDL_LIB_DEPENDENCIES
@@ -964,7 +959,6 @@ enable_app
 enable_lib
 with_libamvp_dir
 with_ssl_dir
-with_fom_dir
 enable_offline
 enable_force_static_linking
 with_libcurl_dir
@@ -980,8 +974,7 @@ CC
 CFLAGS
 LDFLAGS
 LIBS
-CPPFLAGS
-FOM_OBJ_DIR'
+CPPFLAGS'
 
 
 # Initialize some variables set by options.
@@ -1646,7 +1639,6 @@ Optional Packages:
                           building the app only
   --with-ssl-dir          location of OpenSSL install folder, defaults to
                           /usr/local/ssl
-  --with-fom-dir          Path to FOM install directory
   --with-libcurl-dir      enable support for client proxy using libcurl
   --with-criterion-dir    location of Criterion install folder
 
@@ -1658,7 +1650,6 @@ Some influential environment variables:
   LIBS        libraries to pass to the linker, e.g. -l<library>
   CPPFLAGS    (Objective) C/C++ preprocessor flags, e.g. -I<include dir> if
               you have headers in a nonstandard directory <include dir>
-  FOM_OBJ_DIR "directory with fipscanister.o"
 
 Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -5516,13 +5507,13 @@ then :
 else $as_nop
   lt_cv_nm_interface="BSD nm"
   echo "int some_variable = 0;" > conftest.$ac_ext
-  (eval echo "\"\$as_me:5519: $ac_compile\"" >&5)
+  (eval echo "\"\$as_me:5510: $ac_compile\"" >&5)
   (eval "$ac_compile" 2>conftest.err)
   cat conftest.err >&5
-  (eval echo "\"\$as_me:5522: $NM \\\"conftest.$ac_objext\\\"\"" >&5)
+  (eval echo "\"\$as_me:5513: $NM \\\"conftest.$ac_objext\\\"\"" >&5)
   (eval "$NM \"conftest.$ac_objext\"" 2>conftest.err > conftest.out)
   cat conftest.err >&5
-  (eval echo "\"\$as_me:5525: output\"" >&5)
+  (eval echo "\"\$as_me:5516: output\"" >&5)
   cat conftest.out >&5
   if $GREP 'External.*some_variable' conftest.out > /dev/null; then
     lt_cv_nm_interface="MS dumpbin"
@@ -6772,7 +6763,7 @@ ia64-*-hpux*)
   ;;
 *-*-irix6*)
   # Find out which ABI we are using.
-  echo '#line 6775 "configure"' > conftest.$ac_ext
+  echo '#line 6766 "configure"' > conftest.$ac_ext
   if { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_compile\""; } >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -8119,11 +8110,11 @@ else $as_nop
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:8122: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:8113: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:8126: \$? = $ac_status" >&5
+   echo "$as_me:8117: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -8459,11 +8450,11 @@ else $as_nop
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:8462: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:8453: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:8466: \$? = $ac_status" >&5
+   echo "$as_me:8457: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -8566,11 +8557,11 @@ else $as_nop
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:8569: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:8560: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:8573: \$? = $ac_status" >&5
+   echo "$as_me:8564: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -8622,11 +8613,11 @@ else $as_nop
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:8625: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:8616: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:8629: \$? = $ac_status" >&5
+   echo "$as_me:8620: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -11000,7 +10991,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 11003 "configure"
+#line 10994 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -11097,7 +11088,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 11100 "configure"
+#line 11091 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -11410,20 +11401,9 @@ if test ${with_ssl_dir+y}
 then :
   withval=$with_ssl_dir; ssldir="$withval"
 else $as_nop
-  ssldir="/usr/local/ssl"
+  ssldir="/usr"
 fi
 
-    # FOM installation directory path
-
-# Check whether --with-fom-dir was given.
-if test ${with_fom_dir+y}
-then :
-  withval=$with_fom_dir; fomdir="$withval"
-else $as_nop
-  with_fomdir=no
-fi
-
-    # If using SSL >= 3.0.0, FIPS is mananged at runtime
 fi
 
 # Offline mode
@@ -12022,14 +12002,6 @@ else
     #assume we are using openssl < 3 if lib check is disabled
     use_ssl_3="false"
 fi
-#SSL versions < 3 use --with-fom-dir for FIPS. Versions >= 3 use --enable-fips or --enable-runtime-fips
-if test "x$use_ssl_3" = "xtrue" && test "x$with_fomdir" != "xno" ; then
-    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-printf "%s\n" "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "--with-fom-dir should not be provided with versions of SSL greater than 1.1.1;
-                    use --enable-fips or --enable-runtime-fips instead
-See \`config.log' for more details" "$LINENO" 5; }
-fi
 
 if test "x$disable_app" = "xno" ; then
     SSL_CFLAGS="-I$ssldir/include"
@@ -12041,8 +12013,8 @@ if test "x$disable_app" = "xno" ; then
         SSL_LDFLAGS="-L$ssldir/lib -lcrypto"
 
     fi
-
 fi
+
 if test "x$libcurldir" != "x" ; then
     LIBCURL_CFLAGS="-I$libcurldir/include"
 
@@ -12060,24 +12032,6 @@ fi
 #########################################################################
 LDFLAGS="$pre_ldflags"
 LIBS="$pre_libs"
-
-#Set any applicable FIPS flags
-if test "x$with_fomdir" != "xno" ; then
-    FOM_CFLAGS="-DAMVP_NO_RUNTIME -DOPENSSL_FIPS -I$fomdir/include"
-
-    FOM_LDFLAGS="-L$fomdir/lib"
-
-    FOM_OBJ_DIR="$fomdir/lib"
-
-fi
- if test "x$with_fomdir" != "xno"; then
-  USE_FOM_OBJ_TRUE=
-  USE_FOM_OBJ_FALSE='#'
-else
-  USE_FOM_OBJ_TRUE='#'
-  USE_FOM_OBJ_FALSE=
-fi
-
 
 # If given a libamvp_dir, use that when building things dependent on library, otherwise, use defaults
 if test "x$libamvpdir" != "x" ; then
@@ -12331,10 +12285,6 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${FORCE_STATIC_TRUE}" && test -z "${FORCE_STATIC_FALSE}"; then
   as_fn_error $? "conditional \"FORCE_STATIC\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
-if test -z "${USE_FOM_OBJ_TRUE}" && test -z "${USE_FOM_OBJ_FALSE}"; then
-  as_fn_error $? "conditional \"USE_FOM_OBJ\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${UNIT_TEST_SUPPORTED_TRUE}" && test -z "${UNIT_TEST_SUPPORTED_FALSE}"; then

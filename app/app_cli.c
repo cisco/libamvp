@@ -154,7 +154,7 @@ static void print_usage(int code) {
     printf("To create a module on the AMVP server:\n");
     printf("      --create_module <module_file>\n");
     printf("To get info about a created module from the AMVP server:\n");
-    printf("      --get_module <module_info_file>\n");
+    printf("      --check_module_request <module_info_file>\n");
     printf("To request module certificate using a predefined request file:\n");
     printf("      --module_cert_req --with_module <module_id_number> --with_vendor <vendor_id_number> --with-contact <CMVP contact ID> ...\n");
     printf("\n");
@@ -225,10 +225,11 @@ static ko_longopt_t longopts[] = {
     { "module_cert_req", ko_no_argument, 419 },
     { "post_resources", ko_required_argument, 420 },
     { "create_module", ko_required_argument, 421 },
-    { "get_module", ko_required_argument, 422 },
+    { "check_module_request", ko_required_argument, 422 },
     { "with_module", ko_required_argument, 423 },
     { "with_vendor", ko_required_argument, 424} ,
     { "with_contact", ko_required_argument, 425 } ,
+    { "submit_evidence", ko_required_argument, 426 },
     { NULL, 0, 0 }
 };
 
@@ -496,7 +497,6 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
                 printf("Invalid module ID format\n");
                 return 1;
             }
-            printf("Module ID: %d\n", tmp);
             cfg->module_id = tmp;
             break;
 
@@ -519,6 +519,14 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
             }
             strcpy_s(cfg->contact_ids[cfg->num_contacts], AMVP_CONTACT_STR_MAX_LEN + 1, opt.arg);
             cfg->num_contacts++;
+            break;
+
+        case 426:
+            cfg->submit_ev = 1;
+            if (!check_option_length(opt.arg, c, JSON_FILENAME_LENGTH)) {
+                return 1;
+            }
+            strcpy_s(cfg->ev_file, JSON_FILENAME_LENGTH + 1, opt.arg);
             break;
 
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
@@ -554,7 +562,7 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
     //Many args do not need an alg specified. Todo: make cleaner
     if (cfg->empty_alg && !cfg->post && !cfg->get && !cfg->put && !cfg->get_results && !cfg->post_resources && !cfg->create_module
             && !cfg->get_expected && !cfg->manual_reg && !cfg->vector_upload && !cfg->mod_cert_req && !cfg->get_module
-            && !cfg->delete && !cfg->cancel_session && !(cfg->resume_session && 
+            && !cfg->delete && !cfg->cancel_session && !cfg->submit_ev && !(cfg->resume_session && 
             cfg->vector_req)) {
         /* The user needs to select at least 1 algorithm */
         printf(ANSI_COLOR_RED "Requires at least 1 Algorithm Test Suite\n"ANSI_COLOR_RESET);
