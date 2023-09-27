@@ -1389,3 +1389,68 @@ end:
     json_free_serialized_string(serialized_string);
     return return_code;
 }
+
+/*
+ * Gets the status of a request from the curl buffer. If status is approved, store approved Url in the buffer 
+ */
+int amvp_get_request_status(AMVP_CTX *ctx, char **output) {
+    JSON_Value *val = NULL;
+    JSON_Object *obj = NULL;
+    const char *stat = NULL, *other = NULL;
+    char *out = NULL;
+    int diff = 0, len = 0, rv = 0;
+
+    val = json_parse_string(ctx->curl_buf);
+    if (!val) return 0;
+    obj = amvp_get_obj_from_rsp(ctx, val);
+    if (!obj) goto end;
+    stat = json_object_get_string(obj, "status");
+    if (!stat) goto end;
+
+    len = strnlen_s(stat, AMVP_REQUEST_STR_LEN_MAX + 1);
+    if (len > AMVP_REQUEST_STR_LEN_MAX) return 0;
+
+    strncmp_s(stat, len, "initial", 7, &diff);
+    if (!diff) {
+        rv = AMVP_REQUEST_STATUS_INITIAL;
+        goto end;
+    }
+
+    strncmp_s(stat, len, "approved", 7, &diff);
+    if (!diff) {
+        other = json_object_get_string(obj, "approvedUrl");
+        if (!other) {
+            AMVP_LOG_ERR("Request has approved status, but is missing approved URL from server");
+            goto end;
+        }
+        len = strnlen_s(other, AMVP_REQUEST_STR_LEN_MAX + 1);
+        if (len > AMVP_REQUEST_STR_LEN_MAX) {
+            AMVP_LOG_ERR("Approved URL string length too long");
+            goto end;
+        }
+        out = calloc(len + 1, sizeof(char));
+        if (!out) {
+            AMVP_LOG_ERR("Unable to allocate memory for approved URL");
+            goto end;
+        }
+        if (strncpy_s(out, len + 1, other, len)) {
+            AMVP_LOG_ERR("Failure to copy approved URL");
+            free(out);
+            goto end;
+        }
+
+        *output = out;
+        rv = AMVP_REQUEST_STATUS_APPROVED;
+        goto end;
+    }
+
+    strncmp_s(stat, len, "rejected", 8, &diff);
+    if (!diff) {
+        rv = AMVP_REQUEST_STATUS_REJECTED;
+        goto end;
+    }
+
+end:
+    if (val) json_value_free(val);
+    return rv;
+}

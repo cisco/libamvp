@@ -92,7 +92,6 @@ bin_PROGRAMS = amvp_app$(EXEEXT)
 @FORCE_STATIC_TRUE@am__append_1 = -all-static
 @BUILDING_OFFLINE_FALSE@am__append_2 = $(LIBCURL_LDFLAGS)
 @BUILDING_OFFLINE_FALSE@am__append_3 = $(LIBCURL_CFLAGS)
-@USE_FOM_OBJ_TRUE@am__append_4 = $(FOM_OBJ_DIR)/fipscanister.o
 subdir = app
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/libtool.m4 \
@@ -112,7 +111,7 @@ am__objects_1 = amvp_app-app_main.$(OBJEXT) amvp_app-app_cli.$(OBJEXT) \
 am_amvp_app_OBJECTS = $(am__objects_1)
 amvp_app_OBJECTS = $(am_amvp_app_OBJECTS)
 am__DEPENDENCIES_1 =
-amvp_app_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__append_4)
+amvp_app_DEPENDENCIES = $(am__DEPENDENCIES_1)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
@@ -215,9 +214,6 @@ EGREP = @EGREP@
 ETAGS = @ETAGS@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
-FOM_CFLAGS = @FOM_CFLAGS@
-FOM_LDFLAGS = @FOM_LDFLAGS@
-FOM_OBJ_DIR = @FOM_OBJ_DIR@
 GREP = @GREP@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
@@ -327,11 +323,10 @@ tmp_sources = app_main.c \
 amvp_app_includedir = $(includedir)/amvp
 amvp_app_SOURCES = ${tmp_sources}
 amvp_app_CFLAGS = -g -fPIE $(LIBAMVP_CFLAGS) $(SSL_CFLAGS) \
-	$(FOM_CFLAGS) $(SAFEC_CFLAGS) $(COND_ALG_CFLAGS) \
-	$(am__append_3)
-amvp_app_LDFLAGS = $(LIBAMVP_LDFLAGS) $(SSL_LDFLAGS) $(FOM_LDFLAGS) \
-	$(am__append_1) $(am__append_2)
-amvp_app_LDADD = $(ADDL_LIB_DEPENDENCIES) $(am__append_4)
+	$(SAFEC_CFLAGS) $(COND_ALG_CFLAGS) $(am__append_3)
+amvp_app_LDFLAGS = $(LIBAMVP_LDFLAGS) $(SSL_LDFLAGS) $(am__append_1) \
+	$(am__append_2)
+amvp_app_LDADD = $(ADDL_LIB_DEPENDENCIES)
 all: all-am
 
 .SUFFIXES:

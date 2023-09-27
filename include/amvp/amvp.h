@@ -24,6 +24,8 @@ extern "C"
 #define AMVP_TOTP_LENGTH 8
 #define AMVP_TOTP_TOKEN_MAX 128
 
+#define AMVP_MAX_CONTACTS_PER_CERT_REQ 10
+#define AMVP_CONTACT_STR_MAX_LEN 16
 
 /**
  * @enum AMVP_LOG_LVL
@@ -3197,9 +3199,11 @@ AMVP_SUB_KDF amvp_get_kdf_alg(AMVP_CIPHER cipher);
 AMVP_SUB_DRBG amvp_get_drbg_alg(AMVP_CIPHER cipher);
 AMVP_SUB_KAS amvp_get_kas_alg(AMVP_CIPHER cipher);
 AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx);
-AMVP_RESULT amvp_mark_as_cert_req(AMVP_CTX *ctx, char *filename);
+AMVP_RESULT amvp_mark_as_cert_req(AMVP_CTX *ctx, int module_id, int vendor_id);
+AMVP_RESULT amvp_cert_req_add_contact(AMVP_CTX *ctx, const char *contact_id);
 AMVP_RESULT amvp_create_module(AMVP_CTX *ctx, char *filename);
-AMVP_RESULT amvp_get_module(AMVP_CTX *ctx, char *filename);
+AMVP_RESULT amvp_get_module_request(AMVP_CTX *ctx, char *filename);
+AMVP_RESULT amvp_submit_evidence(AMVP_CTX *ctx, const char *filename);
 AMVP_RESULT amvp_retrieve_docs(AMVP_CTX *ctx, char *vsid_url);
 AMVP_RESULT amvp_mark_as_post_resources(AMVP_CTX *ctx, char *filename);
 AMVP_RESULT amvp_post_resources(AMVP_CTX *ctx, const char *resource_file);

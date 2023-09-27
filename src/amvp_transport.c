@@ -314,7 +314,7 @@ static long amvp_curl_http_post(AMVP_CTX *ctx, const char *url, const char *data
     crv = curl_easy_setopt(hnd, CURLOPT_CUSTOMREQUEST, "POST");
     if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_CUSTOMREQUEST, stopping"); goto end; }
     crv = curl_easy_setopt(hnd, CURLOPT_POST, 1L);
-    if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_POST, stopping"); goto end; }
+    if (crv) { AMVP_LOG_ERR("fError setting curl option CURLOPT_POST, stopping"); goto end; }
     crv = curl_easy_setopt(hnd, CURLOPT_POSTFIELDS, data);
     if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_POSTFIELDS, stopping"); goto end; }
     crv = curl_easy_setopt(hnd, CURLOPT_POSTFIELDSIZE_LARGE, (curl_off_t)data_len);
@@ -684,6 +684,23 @@ AMVP_RESULT amvp_send_login(AMVP_CTX *ctx,
                                    AMVP_LOGIN_URI, login, len);
 #endif
 }
+
+/*
+ * This is the transport function used within libamvp to submit a module
+ * payload for creation on the server
+ */
+AMVP_RESULT amvp_send_module_creation(AMVP_CTX *ctx,
+                            char *module,
+                            int len) {
+#ifdef AMVP_OFFLINE 
+    AMVP_LOG_ERR("Curl not linked, exiting function"); 
+    return AMVP_TRANSPORT_FAIL;
+#else
+    return amvp_send_with_path_seg(ctx, AMVP_NET_POST,
+                                   AMVP_MODULE_ENDPOINT, module, len);
+#endif
+}
+
 
 /*
  * This function is used to submit a vector set response
@@ -1242,14 +1259,12 @@ static void log_network_status(AMVP_CTX *ctx,
                         curl_code, url, ctx->curl_buf);
         break;
     case AMVP_NET_POST:
-        AMVP_LOG_STATUS("POST...\n\tStatus: %d\n\tUrl: %s\n\tResp: %s\n",
+        AMVP_LOG_VERBOSE("POST...\n\tStatus: %d\n\tUrl: %s\n\tResp: %s\n",
                         curl_code, url, ctx->curl_buf);
         break;
     case AMVP_NET_POST_LOGIN:
         AMVP_LOG_VERBOSE("POST Login...\n\tStatus: %d\n\tUrl: %s\n\tResp: Recieved\n",
                       curl_code, url);
-        AMVP_LOG_STATUS("POST Login...\n\tStatus: %d\n\tUrl: %s\n\tResp: %s\n",
-                      curl_code, url, ctx->curl_buf);
         break;
     case AMVP_NET_POST_REG:
         AMVP_LOG_VERBOSE("POST Registration...\n\tStatus: %d\n\tUrl: %s\n\tResp: Recieved\n",

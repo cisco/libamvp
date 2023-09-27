@@ -94,14 +94,7 @@ if test "x$disable_app" = "xno" ; then
         [AS_HELP_STRING([--with-ssl-dir],
         [location of OpenSSL install folder, defaults to /usr/local/ssl])],
         [ssldir="$withval"],
-        [ssldir="/usr/local/ssl"])
-    # FOM installation directory path
-    AC_ARG_WITH([fom-dir],
-        [AS_HELP_STRING([--with-fom-dir],
-        [Path to FOM install directory])],
-        [fomdir="$withval"],
-        [with_fomdir=no])
-    # If using SSL >= 3.0.0, FIPS is mananged at runtime
+        [ssldir="/usr"])
 fi
 
 # Offline mode
@@ -126,7 +119,7 @@ if test "x$enable_offline" = "xfalse" && test "x$disable_lib" != "xyes" ; then
         [AS_HELP_STRING([--with-libcurl-dir],
         [enable support for client proxy using libcurl])],
         [libcurldir="$withval"],
-        [with_libcurldir=no])
+        [libcurldir="/usr"])
 
     if test "x$libcurldir" = "x" && test "x$offline" = "xfalse" ; then
         AC_MSG_FAILURE([libcurl or libmurl directory must be set if building library for online use])
@@ -240,11 +233,6 @@ else
     #assume we are using openssl < 3 if lib check is disabled
     use_ssl_3="false"
 fi
-#SSL versions < 3 use --with-fom-dir for FIPS. Versions >= 3 use --enable-fips or --enable-runtime-fips
-if test "x$use_ssl_3" = "xtrue" && test "x$with_fomdir" != "xno" ; then
-    AC_MSG_FAILURE([--with-fom-dir should not be provided with versions of SSL greater than 1.1.1;
-                    use --enable-fips or --enable-runtime-fips instead])
-fi
 
 if test "x$disable_app" = "xno" ; then
     AC_SUBST([SSL_CFLAGS], "-I$ssldir/include")
@@ -253,8 +241,8 @@ if test "x$disable_app" = "xno" ; then
     else
         AC_SUBST([SSL_LDFLAGS], "-L$ssldir/lib -lcrypto")
     fi
-    AC_ARG_VAR(FOM_OBJ_DIR, "directory with fipscanister.o")
 fi
+
 if test "x$libcurldir" != "x" ; then
     AC_SUBST([LIBCURL_CFLAGS], "-I$libcurldir/include")
     AC_SUBST([LIBCURL_LDFLAGS], "-L$libcurldir/lib -lcurl")
@@ -268,14 +256,6 @@ fi
 #########################################################################
 LDFLAGS="$pre_ldflags"
 LIBS="$pre_libs"
-
-#Set any applicable FIPS flags
-if test "x$with_fomdir" != "xno" ; then
-    AC_SUBST([FOM_CFLAGS], "-DAMVP_NO_RUNTIME -DOPENSSL_FIPS -I$fomdir/include")
-    AC_SUBST([FOM_LDFLAGS], "-L$fomdir/lib")
-    AC_SUBST([FOM_OBJ_DIR], "$fomdir/lib")
-fi
-AM_CONDITIONAL([USE_FOM_OBJ], [test "x$with_fomdir" != "xno"])
 
 # If given a libamvp_dir, use that when building things dependent on library, otherwise, use defaults
 if test "x$libamvpdir" != "x" ; then
