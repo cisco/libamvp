@@ -3040,7 +3040,7 @@ AMVP_RESULT amvp_submit_evidence(AMVP_CTX *ctx, const char *filename) {
         goto end;
     }
 
-    cert = json_object_get_string(obj, "validationCertificateNumber");
+    cert = json_object_get_string(obj, "certificate");
     if (!cert) {
         AMVP_LOG_ERR("No certiifcate number listed in certify request. Server response:\n%s", ctx->curl_buf);
         goto end;
