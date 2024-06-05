@@ -2879,7 +2879,7 @@ AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx) {
     AMVP_LOG_STATUS("Fetching info about cert req...");
     url = calloc(AMVP_ATTR_URL_MAX + 1, sizeof(char));
     if (!url) {
-        AMVP_LOG_ERR("Memory allocation error while fetching cert r eq info");
+        AMVP_LOG_ERR("Memory allocation error while fetching cert req info");
         goto end;
     }
     snprintf(url, AMVP_ATTR_URL_MAX + 1, "/amvp/v1/modules/%d", ctx->cert_req_info.module_id);
