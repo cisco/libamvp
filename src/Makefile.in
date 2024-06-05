@@ -136,8 +136,8 @@ LTLIBRARIES = $(lib_LTLIBRARIES)
 am__DEPENDENCIES_1 =
 libamvp_la_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_libamvp_la_OBJECTS = amvp.lo amvp_build_register.lo \
-	amvp_capabilities.lo amvp_operating_env.lo amvp_transport.lo \
-	amvp_util.lo amvp_error.lo parson.lo
+	amvp_operating_env.lo amvp_transport.lo amvp_util.lo \
+	amvp_error.lo parson.lo
 libamvp_la_OBJECTS = $(am_libamvp_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -159,8 +159,7 @@ DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = ./$(DEPDIR)/amvp.Plo \
-	./$(DEPDIR)/amvp_build_register.Plo \
-	./$(DEPDIR)/amvp_capabilities.Plo ./$(DEPDIR)/amvp_error.Plo \
+	./$(DEPDIR)/amvp_build_register.Plo ./$(DEPDIR)/amvp_error.Plo \
 	./$(DEPDIR)/amvp_operating_env.Plo \
 	./$(DEPDIR)/amvp_transport.Plo ./$(DEPDIR)/amvp_util.Plo \
 	./$(DEPDIR)/parson.Plo
@@ -346,7 +345,6 @@ AM_CFLAGS = -I$(top_srcdir)/include/amvp $(SAFEC_CFLAGS) \
 	$(LIBCURL_CFLAGS) $(am__append_1)
 libamvp_la_SOURCES = amvp.c \
                     amvp_build_register.c \
-                    amvp_capabilities.c \
                     amvp_operating_env.c \
                     amvp_transport.c \
                     amvp_util.c \
@@ -440,7 +438,6 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_build_register.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_capabilities.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_error.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_operating_env.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_transport.Plo@am__quote@ # am--include-marker
@@ -634,7 +631,6 @@ clean-am: clean-generic clean-libLTLIBRARIES clean-libtool \
 distclean: distclean-am
 		-rm -f ./$(DEPDIR)/amvp.Plo
 	-rm -f ./$(DEPDIR)/amvp_build_register.Plo
-	-rm -f ./$(DEPDIR)/amvp_capabilities.Plo
 	-rm -f ./$(DEPDIR)/amvp_error.Plo
 	-rm -f ./$(DEPDIR)/amvp_operating_env.Plo
 	-rm -f ./$(DEPDIR)/amvp_transport.Plo
@@ -687,7 +683,6 @@ installcheck-am:
 maintainer-clean: maintainer-clean-am
 		-rm -f ./$(DEPDIR)/amvp.Plo
 	-rm -f ./$(DEPDIR)/amvp_build_register.Plo
-	-rm -f ./$(DEPDIR)/amvp_capabilities.Plo
 	-rm -f ./$(DEPDIR)/amvp_error.Plo
 	-rm -f ./$(DEPDIR)/amvp_operating_env.Plo
 	-rm -f ./$(DEPDIR)/amvp_transport.Plo
