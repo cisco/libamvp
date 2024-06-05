@@ -7,7 +7,6 @@ endif
 
 libamvp_la_SOURCES =  amvp.c \
                     amvp_build_register.c \
-                    amvp_capabilities.c \
                     amvp_operating_env.c \
                     amvp_transport.c \
                     amvp_util.c \

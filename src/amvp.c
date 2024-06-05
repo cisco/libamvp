@@ -2879,7 +2879,7 @@ AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx) {
     AMVP_LOG_STATUS("Fetching info about cert req...");
     url = calloc(AMVP_ATTR_URL_MAX + 1, sizeof(char));
     if (!url) {
-        AMVP_LOG_ERR("Memory allocation error while fetching cert req info");
+        AMVP_LOG_ERR("Memory allocation error while fetching cert r eq info");
         goto end;
     }
     snprintf(url, AMVP_ATTR_URL_MAX + 1, "/amvp/v1/modules/%d", ctx->cert_req_info.module_id);
@@ -2920,7 +2920,7 @@ AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx) {
         goto end;
     }
     AMVP_LOG_STATUS("Module certify session created. Saving session info to file.");
-    id = json_object_get_number(tmp_obj, "id");
+    id = json_object_get_number(tmp_obj, "certRequestId");
     file = calloc(AMVP_CERT_REQUEST_FILENAME_MAX_LEN + 1, sizeof(char));
     if (!file) {
         AMVP_LOG_ERR("Error allocating memory for certify request filename");
@@ -2954,9 +2954,9 @@ end:
 }
 
 AMVP_RESULT amvp_submit_evidence(AMVP_CTX *ctx, const char *filename) {
-    AMVP_RESULT rv = AMVP_SUCCESS;
+    AMVP_RESULT rv = AMVP_INTERNAL_ERR;
     char *reg = NULL, *file = NULL, *ev = NULL;
-    const char *url = NULL, *cert = NULL;
+    const char *url = NULL, *cert = NULL, *access_token = NULL;
     int ev_len = 0;
 
     JSON_Value *val = NULL, *tmp = NULL, *submission = NULL;
@@ -2990,6 +2990,26 @@ AMVP_RESULT amvp_submit_evidence(AMVP_CTX *ctx, const char *filename) {
     }
 
     url = json_object_get_string(obj, "url");
+    if (!url) {
+        AMVP_LOG_ERR("URL missing from evidence submission file");
+        goto end;
+    }
+
+    /*
+     * The accessToken needed for this specific test session.
+     */
+    access_token = json_object_get_string(obj, "accessToken");
+    if (!access_token) {
+        AMVP_LOG_ERR("accessToken missing from evidence submission file");
+        return AMVP_JSON_ERR;
+    }
+    if (strnlen_s(access_token, AMVP_JWT_TOKEN_MAX + 1) > AMVP_JWT_TOKEN_MAX) {
+        AMVP_LOG_ERR("access_token too large");
+        return AMVP_JWT_INVALID;
+    }
+    memzero_s(ctx->jwt_token, AMVP_JWT_TOKEN_MAX + 1);
+    strcpy_s(ctx->jwt_token, AMVP_JWT_TOKEN_MAX + 1, access_token);
+
     rv = amvp_create_array(&submission_obj, &submission, &submission_arr);
     if (rv != AMVP_SUCCESS) {
         AMVP_LOG_ERR("Error preparing evidence for submission");
@@ -3000,11 +3020,11 @@ AMVP_RESULT amvp_submit_evidence(AMVP_CTX *ctx, const char *filename) {
     json_array_append_value(submission_arr, tmp);
     ev = json_serialize_to_string_pretty(submission, &ev_len);
 
-    rv = amvp_login(ctx, 0);
-    if (rv != AMVP_SUCCESS) {
-        AMVP_LOG_ERR("Error logging in with AMVP server while trying to submit evidence");
-        goto end;
-    }
+  //  rv = amvp_login(ctx, 0);
+  //  if (rv != AMVP_SUCCESS) {
+  //      AMVP_LOG_ERR("Error logging in with AMVP server while trying to submit evidence");
+  //      goto end;
+ //   }
     
     rv = amvp_transport_post(ctx, url, ev, ev_len);
     if (rv != AMVP_SUCCESS) {
@@ -3047,6 +3067,8 @@ AMVP_RESULT amvp_submit_evidence(AMVP_CTX *ctx, const char *filename) {
     }
 
     AMVP_LOG_STATUS("Certification complete! Certificate number: %s", cert);
+
+    rv = AMVP_SUCCESS;
 end:
     if (reg) json_free_serialized_string(reg);
     if (val) json_value_free(val);

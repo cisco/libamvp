@@ -374,17 +374,3 @@ end:
 
     return rv;
 }
-#if 0
-static int enable_hash(AMVP_CTX *ctx) {
-    AMVP_RESULT rv = AMVP_SUCCESS;
-
-    rv = amvp_cap_hash_enable(ctx, AMVP_HASH_SHA256, &app_sha_handler);
-    CHECK_ENABLE_CAP_RV(rv);
-    rv = amvp_cap_hash_set_domain(ctx, AMVP_HASH_SHA256, AMVP_HASH_MESSAGE_LEN,
-                                  0, 65536, 8);
-    CHECK_ENABLE_CAP_RV(rv);
-
-end:
-    return rv;
-}
-#endif
