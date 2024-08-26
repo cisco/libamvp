@@ -41,7 +41,6 @@
 #include <sys/utsname.h>
 #endif
 
-
 /*
  * Macros
  */
@@ -118,7 +117,6 @@ static struct curl_slist *amvp_add_auth_hdr(AMVP_CTX *ctx, struct curl_slist *sl
     } else {
         snprintf(bearer, bearer_size + 1, "%s%s", bearer_title, ctx->jwt_token);
     }
-
     slist = curl_slist_append(slist, bearer);
 
     free(bearer);
@@ -292,7 +290,6 @@ static long amvp_curl_http_post(AMVP_CTX *ctx, const char *url, const char *data
      * Set the Content-Type header in the HTTP request
      */
     slist = curl_slist_append(slist, "Content-Type:application/json");
-
     /*
      * Create the Authorzation header if needed
      */
@@ -665,6 +662,29 @@ AMVP_RESULT amvp_send_test_session_registration(AMVP_CTX *ctx,
 #endif
 }
 
+#define AMVP_EVIDENCE_URI "evidence"
+AMVP_RESULT amvp_send_evidence(AMVP_CTX *ctx,
+                                        const char *url,
+                                        char *ev,
+                                        int ev_len) {
+    char *full_url = NULL;
+    int url_len = strnlen_s(url, AMVP_ATTR_URL_MAX + 1);
+    if (url_len > AMVP_ATTR_URL_MAX - sizeof(AMVP_EVIDENCE_URI)) {
+        AMVP_LOG_ERR("Invalid URL provided for submitting evidence (too long)");
+        return AMVP_TRANSPORT_FAIL;
+    }
+
+    full_url = calloc(AMVP_ATTR_URL_MAX + 1, sizeof(char));
+    if (!full_url) {
+        AMVP_LOG_ERR("Failed to allocate memory while sending evidence file");
+        return AMVP_TRANSPORT_FAIL;
+    }
+    snprintf(full_url, AMVP_ATTR_URL_MAX, "%s/%s", url, AMVP_EVIDENCE_URI);
+
+    return amvp_transport_post(ctx, full_url, ev, ev_len);
+}
+
+
 /*
  * This is the transport function used within libamvp to login before
  * it is able to register parameters with the server
@@ -1031,7 +1051,14 @@ static AMVP_RESULT inspect_http_code(AMVP_CTX *ctx, int code) {
         /* 200 */
         return AMVP_SUCCESS;
     } else if (amvp_is_protocol_error_message(ctx->curl_buf)) {
-        return AMVP_PROTOCOL_RSP_ERR; /* Let the caller parse the error */
+        /* If anything can be handled by the transport layer here, do it, otherwise return to sender */
+        /* Check if JWT expired, and try to refresh if so */
+        if (ctx->error) {
+            AMVP_LOG_WARN("A new protocol error has been encountered before the previous was handled. Data will be lost.");
+            amvp_free_protocol_err(ctx->error);
+        }
+        ctx->error = amvp_parse_protocol_error(ctx->curl_buf);
+        return AMVP_PROTOCOL_RSP_ERR; /* Let the caller handle the error */
     }
 
     if (code == HTTP_BAD_REQ) {

@@ -26,6 +26,7 @@ extern "C"
 
 #define AMVP_MAX_CONTACTS_PER_CERT_REQ 10
 #define AMVP_CONTACT_STR_MAX_LEN 16
+#define AMVP_MAX_MODULE_NAME_LEN 128
 
 /**
  * @enum AMVP_LOG_LVL
@@ -3204,6 +3205,7 @@ AMVP_RESULT amvp_cert_req_add_contact(AMVP_CTX *ctx, const char *contact_id);
 AMVP_RESULT amvp_create_module(AMVP_CTX *ctx, char *filename);
 AMVP_RESULT amvp_get_module_request(AMVP_CTX *ctx, char *filename);
 AMVP_RESULT amvp_submit_evidence(AMVP_CTX *ctx, const char *filename);
+
 AMVP_RESULT amvp_retrieve_docs(AMVP_CTX *ctx, char *vsid_url);
 AMVP_RESULT amvp_mark_as_post_resources(AMVP_CTX *ctx, char *filename);
 AMVP_RESULT amvp_post_resources(AMVP_CTX *ctx, const char *resource_file);
