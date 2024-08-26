@@ -2857,6 +2857,136 @@ end:
     return rv;
 }
 
+static char* amvp_get_module_name_from_id(AMVP_CTX *ctx, int id) {
+    char *url = NULL, *module_name = NULL;
+    AMVP_RESULT rv = AMVP_SUCCESS;
+    JSON_Value *val = NULL;
+    JSON_Object *obj = NULL;
+
+    url = calloc(AMVP_ATTR_URL_MAX + 1, sizeof(char));
+    if (!url) {
+        AMVP_LOG_ERR("Memory allocation error while fetching module name");
+        goto end;
+    }
+    snprintf(url, AMVP_ATTR_URL_MAX + 1, "/amvp/v1/modules/%d", ctx->cert_req_info.module_id);
+    rv = amvp_transport_get(ctx, url, NULL);
+    if (rv != AMVP_SUCCESS) {
+        AMVP_LOG_ERR("Error fetching module name");
+        goto end;
+    }
+
+    val = json_parse_string(ctx->curl_buf);
+    if (!val) {
+        AMVP_LOG_ERR("Error reading response when getting module name");
+        goto end;
+    }
+    obj = amvp_get_obj_from_rsp(ctx, val);
+    if (json_object_has_value(obj, "name")) {
+        module_name = calloc(AMVP_MAX_MODULE_NAME_LEN + 1, sizeof(char));
+        if (!module_name) {
+            AMVP_LOG_ERR("Error allocating memory for module name");
+            goto end;
+        }
+        strncpy_s(module_name, AMVP_MAX_MODULE_NAME_LEN + 1, json_object_get_string(obj, "name"), json_object_get_string_len(obj, "name"));
+    }
+
+end:
+    if (val) json_value_free(val);
+    if (url) free(url);
+    return module_name;
+
+}
+
+/* Output prettified cert request status to log; if filename is provided, generate template file for response (not yet implemented) */
+static AMVP_RESULT amvp_output_cert_request_status(AMVP_CTX *ctx, JSON_Object *status_json, char *filename) {
+    JSON_Object *tmp_obj = NULL;
+    JSON_Array *arr = NULL;
+    char *module_name = NULL;
+    int req_id = 0, module_id = 0, vendor_id = 0, diff = 0, i = 0;
+    size_t arr_size = 0;
+    AMVP_RESULT rv = AMVP_INTERNAL_ERR;
+    AMVP_NAME_LIST *te_list = NULL, *te_iter = NULL;
+    AMVP_SL_LIST *sp_list = NULL, *sp_iter = NULL;
+
+    if (!ctx || !status_json) {
+        return AMVP_INTERNAL_ERR;
+    }
+
+    strncmp_s("Ready", 5, json_object_get_string(status_json, "status"), json_object_get_string_len(status_json, "status"), &diff);
+    if (diff) {
+        AMVP_LOG_ERR("Cert request not in \"Ready\" status");
+        return AMVP_INTERNAL_ERR;
+    }
+
+    /* We want to collect all the information from JSON first, then output all at once so we have better control over output */
+    req_id = (int)json_object_get_number(status_json, "certRequestId");
+    module_id = (int)json_object_get_number(status_json, "moduleId");
+    module_name = amvp_get_module_name_from_id(ctx, module_id);
+    if (!module_name) {
+        AMVP_LOG_ERR("Error getting module name from cert request info");
+        goto err;
+    }
+    vendor_id = (int)json_object_get_number(status_json, "vendorId");
+
+    /* Get the expected evidence list, or the list of not submitted yet TEs */
+    arr = json_object_get_array(status_json, "expectedEvidence");
+    if (!arr) {
+        AMVP_LOG_ERR("Cert request status missing expected evidence array");
+        goto err;
+    }
+    arr_size = json_array_get_count(arr);
+    for (i = 0; i < (int)arr_size; i++) {
+        tmp_obj = json_array_get_object(arr, i);
+        amvp_append_name_list(&te_list, json_object_get_string(tmp_obj, "testRequirement"));
+    }
+
+    /* Get the list of missing security policy sections */
+    arr = json_object_get_array(status_json, "missingSecurityPolicySection");
+    if (!arr) {
+        AMVP_LOG_ERR("Cert request status missing security policy section array");
+        goto err;
+    }
+    arr_size = json_array_get_count(arr);
+    for (i = 0; i < (int)arr_size; i++) {
+        tmp_obj = json_array_get_object(arr, i);
+        amvp_append_sl_list(&sp_list, json_array_get_number(arr, i));
+    }
+
+#define AMVP_ANSI_COLOR_GREEN "\e[0;32m"
+#define AMVP_ANSI_COLOR_YELLOW "\x1b[33m"
+#define AMVP_ANSI_COLOR_RESET "\x1b[0m"
+
+    /* Begin prettified logging of data */
+    AMVP_LOG_STATUS("");
+    AMVP_LOG_STATUS("Current status of module certification request:");
+    AMVP_LOG_STATUS(AMVP_ANSI_COLOR_GREEN "    Certification Request ID: %d" AMVP_ANSI_COLOR_RESET, req_id);
+    AMVP_LOG_STATUS(AMVP_ANSI_COLOR_GREEN "    Module ID: %d"AMVP_ANSI_COLOR_RESET, module_id);
+    AMVP_LOG_STATUS(AMVP_ANSI_COLOR_GREEN "    Module Name: %s" AMVP_ANSI_COLOR_RESET, module_name);
+    AMVP_LOG_STATUS(AMVP_ANSI_COLOR_GREEN "    Vendor ID: %d" AMVP_ANSI_COLOR_RESET, vendor_id);
+
+    AMVP_LOG_STATUS("    List of remaining required evidence submissions:");
+    te_iter = te_list;
+    while (te_iter) {
+        AMVP_LOG_STATUS(AMVP_ANSI_COLOR_YELLOW "        %s" AMVP_ANSI_COLOR_RESET, te_iter->name);
+        te_iter = te_iter->next;
+    }
+
+    AMVP_LOG_STATUS("    List of unsubmitted security policy sections:");
+    sp_iter = sp_list;
+    while (sp_iter) {
+        AMVP_LOG_STATUS(AMVP_ANSI_COLOR_YELLOW "        %d" AMVP_ANSI_COLOR_RESET, sp_iter->length);
+        sp_iter = sp_iter->next;
+    }
+    AMVP_LOG_STATUS("");
+
+    rv = AMVP_SUCCESS;
+err:
+    if (te_list) amvp_cap_free_nl(te_list);
+    if (sp_list) amvp_cap_free_sl(sp_list);
+    if (module_name) free(module_name);
+    return rv;
+}
+
 /*
  * This function is used to register the DUT with the server.
  * Registration allows the DUT to advertise it's capabilities to
@@ -2865,45 +2995,47 @@ end:
  */
 AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx) {
     AMVP_RESULT rv = AMVP_SUCCESS;
-    char *reg = NULL, *file = NULL, *url = NULL;
-    const char *name = NULL;
-    int reg_len = 0, id = 0, i = 0;
-
-    JSON_Value *tmp_json = NULL, *tmp2 = NULL;
-    JSON_Array *tmp_arr = NULL;
+    char *module_name = NULL, *reg = NULL, *file = NULL, *url = NULL;
+    const char *token = NULL;
+    int reg_len = 0, id = 0, i = 0, retry_period = 0, retry = 1;
+    unsigned int time_waited_so_far = 0;
+    JSON_Value *arr_val = NULL, *cert_submission_val = NULL, *cert_rsp_val = NULL, *cert_info_val = NULL,
+               *output_file_val = NULL, *output_file_header_val = NULL, *output_file_body_val = NULL;
+    JSON_Array *submission_arr = NULL, *output_file_arr = NULL;
     JSON_Object *tmp_obj = NULL;
     if (!ctx) {
         return AMVP_NO_CTX;
     }
 
+    /* do a get on the module ID provided and show its basic info in logs */
     AMVP_LOG_STATUS("Fetching info about cert req...");
-    url = calloc(AMVP_ATTR_URL_MAX + 1, sizeof(char));
-    if (!url) {
-        AMVP_LOG_ERR("Memory allocation error while fetching cert req info");
-        goto end;
+
+    module_name = amvp_get_module_name_from_id(ctx, ctx->cert_req_info.module_id);
+
+    AMVP_LOG_STATUS("    Module: %s", module_name);
+    if (ctx->cert_req_info.vendor_id) {
+        AMVP_LOG_STATUS("    Vendor: %d", ctx->cert_req_info.vendor_id);
     }
-    snprintf(url, AMVP_ATTR_URL_MAX + 1, "/amvp/v1/modules/%d", ctx->cert_req_info.module_id);
-    rv = amvp_transport_get(ctx, url, NULL);
-    tmp_json = json_parse_string(ctx->curl_buf);
-    tmp_obj = amvp_get_obj_from_rsp(ctx, tmp_json);
-    name = json_object_get_string(tmp_obj, "name");
-    AMVP_LOG_STATUS("    Module: %s", name);
     if (ctx->cert_req_info.contact_count > 0) {
         AMVP_LOG_STATUS("    Contacts:");
     }
     for (i = 0; i < ctx->cert_req_info.contact_count; i++) {
         AMVP_LOG_STATUS("        %s", ctx->cert_req_info.contact_id[i]);
     }
+
+    /* Create the module cert request value */
     AMVP_LOG_STATUS("Creating module cert request...");
-    
-    if (amvp_build_registration_json(ctx, &tmp_json) != AMVP_SUCCESS) {
+    if (amvp_build_registration_json(ctx, &cert_submission_val) != AMVP_SUCCESS) {
         AMVP_LOG_ERR("Error building cert request JSON");
         rv = AMVP_JSON_ERR;
         goto end;
     }
-    amvp_create_array(&tmp_obj, &tmp2, &tmp_arr);
-    json_array_append_value(tmp_arr, tmp_json);
-    reg = json_serialize_to_string(tmp2, &reg_len);
+    /* create an array with amvVersion header, append request as the second object in the array */
+    amvp_create_array(&tmp_obj, &arr_val, &submission_arr);
+    json_array_append_value(submission_arr, cert_submission_val);
+    reg = json_serialize_to_string(arr_val, &reg_len);
+
+    /* Send it */
     AMVP_LOG_STATUS("Sending module cert request...");
     rv = amvp_transport_post(ctx, "/amvp/v1/certRequests", reg, reg_len);
     if (rv != AMVP_SUCCESS) {
@@ -2911,45 +3043,116 @@ AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx) {
         goto end;
     }
 
-    if (tmp2) json_value_free(tmp2);
-    tmp2 = json_parse_string(ctx->curl_buf);
-    tmp_obj = amvp_get_obj_from_rsp(ctx, tmp2);
+    cert_rsp_val = json_parse_string(ctx->curl_buf);
+    tmp_obj = amvp_get_obj_from_rsp(ctx, cert_rsp_val);
     if (!tmp_obj) {
         AMVP_LOG_ERR("Error parsing response to certify request");
         rv = AMVP_JSON_ERR;
         goto end;
     }
-    AMVP_LOG_STATUS("Module certify session created. Saving session info to file.");
+
     id = json_object_get_number(tmp_obj, "certRequestId");
-    file = calloc(AMVP_CERT_REQUEST_FILENAME_MAX_LEN + 1, sizeof(char));
-    if (!file) {
-        AMVP_LOG_ERR("Error allocating memory for certify request filename");
-        rv = AMVP_MALLOC_FAIL;
-        goto end;
-    }
-    snprintf(file, AMVP_CERT_REQUEST_FILENAME_MAX_LEN + 1, "%s_%d.json", AMVP_CERT_REQUEST_FILENAME_DEFAULT, id);
-    rv = amvp_json_serialize_to_file_pretty_w(json_object_get_wrapping_value(tmp_obj), file);
-    if (rv != AMVP_SUCCESS) {
-        AMVP_LOG_ERR("Failed to write module creation response to file. Session ID: %d", id);
+
+    token = json_object_get_string(tmp_obj, "accessToken");
+    if (!ctx->jwt_token) {
+        ctx->jwt_token = calloc(AMVP_JWT_TOKEN_MAX + 1, sizeof(char));
+        if (!ctx->jwt_token) {
+            AMVP_LOG_ERR("Unable to allocate memory for JWT");
+            return AMVP_MALLOC_FAIL;
+        }
     } else {
-        amvp_json_serialize_to_file_pretty_a(NULL, file);
-        AMVP_LOG_STATUS("Successfully started module certification request and saved evidence requirements to file %s", file);
+        memzero_s(ctx->jwt_token, AMVP_JWT_TOKEN_MAX + 1);
     }
-#if 0
-    /*
-     * Now we process the test cases given to us during
-     * registration earlier.
-     */
-    rv = amvp_process_amvp_tes(ctx);
-    if (rv != AMVP_SUCCESS) {
-        AMVP_LOG_ERR("Failed to process TEs");
-        goto end;
+    strcpy_s(ctx->jwt_token, AMVP_JWT_TOKEN_MAX + 1, token);
+
+    AMVP_LOG_STATUS("Cert request succesfully created. Checking status...");
+
+    url = calloc(AMVP_ATTR_URL_MAX + 1, sizeof(char));
+    snprintf(url, AMVP_ATTR_URL_MAX +1, "%s/%d", "/amvp/v1/certRequests", id);
+
+    while (retry) {
+        rv = amvp_transport_get(ctx, url, NULL);
+        if (rv != AMVP_SUCCESS) {
+            AMVP_LOG_ERR("Failed to get info about created certify request");
+            goto end;
+        }
+
+        if (cert_info_val) json_value_free(cert_info_val);
+        cert_info_val = json_parse_string(ctx->curl_buf);
+        tmp_obj = amvp_get_obj_from_rsp(ctx, cert_info_val);
+        if (!tmp_obj) {
+            AMVP_LOG_ERR("Error parsing info about certify request");
+            rv = AMVP_JSON_ERR;
+            goto end;
+        }
+
+
+        /* Check if we received a retry response */
+        retry_period = json_object_get_number(tmp_obj, "retry");
+        if (retry_period) {
+            /*  Wait and try again to retrieve the cert session information */
+            if (amvp_retry_handler(ctx, &retry_period, &time_waited_so_far, 1, AMVP_WAITING_FOR_TESTS) != AMVP_KAT_DOWNLOAD_RETRY) {
+                AMVP_LOG_STATUS("Maximum wait time with server reached! (Max: %d seconds)", AMVP_MAX_WAIT_TIME);
+                rv = AMVP_TRANSPORT_FAIL;
+                goto end;
+            };
+        } else {
+            retry = 0;
+            AMVP_LOG_STATUS("Module Certification Session created and ready for data submission!");
+            amvp_output_cert_request_status(ctx, amvp_get_obj_from_rsp(ctx, cert_info_val), NULL);
+
+            AMVP_LOG_STATUS("Saving session info to file...");
+            /* Create the name of the file we are saving info to */
+            file = calloc(AMVP_CERT_REQUEST_FILENAME_MAX_LEN + 1, sizeof(char));
+            if (!file) {
+                AMVP_LOG_ERR("Error allocating memory for certify request filename");
+                rv = AMVP_MALLOC_FAIL;
+                goto end;
+            }
+            snprintf(file, AMVP_CERT_REQUEST_FILENAME_MAX_LEN + 1, "%s_%d.json", AMVP_CERT_REQUEST_FILENAME_DEFAULT, id);
+
+            /* Create a JSON file that contains the intial info from the creation response (ID, accessToken, etc), as well as the list of requirements */
+            output_file_val = json_value_init_array();
+            output_file_arr = json_array(output_file_val);
+            if (!output_file_arr) {
+                AMVP_LOG_ERR("Error occured while trying to generate output file");
+                goto end;
+            }
+            /* Get the certRequest URL and the access token into an object, make that the first array element */
+            output_file_header_val = json_value_init_object();
+            tmp_obj = json_value_get_object(output_file_header_val);
+            if (!tmp_obj) {
+                AMVP_LOG_ERR("Error occured while trying to generate output file header");
+                goto end;
+            }
+            json_object_set_string(tmp_obj, "url", url);
+            json_object_set_string(tmp_obj, "accessToken", token);
+            json_array_append_value(output_file_arr, output_file_header_val);
+
+            /* Make a duplicate of the current status JSON we just got and make it the second element */
+            output_file_body_val = json_value_deep_copy(json_object_get_wrapping_value(amvp_get_obj_from_rsp(ctx, cert_info_val)));
+            json_array_append_value(output_file_arr, output_file_body_val);
+
+            /* Take this array and save it to the cert request file */
+            rv = amvp_json_serialize_to_file_pretty_w(output_file_val, file);
+            if (rv != AMVP_SUCCESS) {
+                AMVP_LOG_ERR("Failed to write module creation response to file!");
+            } else {
+                amvp_json_serialize_to_file_pretty_a(NULL, file);
+                AMVP_LOG_STATUS("Successfully created cert request file %s", file);
+            }
+        }
     }
-#endif
+
 end:
     if (reg) json_free_serialized_string(reg);
-    if (tmp2) json_value_free(tmp2);
     if (file) free(file);
+    if (module_name) free(module_name);
+    if (url) free(url);
+    if (output_file_val) json_value_free(output_file_val); //Also frees the header and body vals
+    if (cert_info_val) json_value_free(cert_info_val);
+    if (cert_rsp_val) json_value_free(cert_rsp_val);
+    if (arr_val) json_value_free(arr_val); //Also frees submission_val
     return rv;
 }
 
@@ -3007,7 +3210,15 @@ AMVP_RESULT amvp_submit_evidence(AMVP_CTX *ctx, const char *filename) {
         AMVP_LOG_ERR("access_token too large");
         return AMVP_JWT_INVALID;
     }
-    memzero_s(ctx->jwt_token, AMVP_JWT_TOKEN_MAX + 1);
+    if (!ctx->jwt_token) {
+        ctx->jwt_token = calloc(AMVP_JWT_TOKEN_MAX + 1, sizeof(char));
+        if (!ctx->jwt_token) {
+            AMVP_LOG_ERR("Unable to allocate memory for JWT");
+            return AMVP_MALLOC_FAIL;
+        }
+    } else {
+        memzero_s(ctx->jwt_token, AMVP_JWT_TOKEN_MAX + 1);
+    }
     strcpy_s(ctx->jwt_token, AMVP_JWT_TOKEN_MAX + 1, access_token);
 
     rv = amvp_create_array(&submission_obj, &submission, &submission_arr);
@@ -3020,17 +3231,15 @@ AMVP_RESULT amvp_submit_evidence(AMVP_CTX *ctx, const char *filename) {
     json_array_append_value(submission_arr, tmp);
     ev = json_serialize_to_string_pretty(submission, &ev_len);
 
-  //  rv = amvp_login(ctx, 0);
-  //  if (rv != AMVP_SUCCESS) {
-  //      AMVP_LOG_ERR("Error logging in with AMVP server while trying to submit evidence");
-  //      goto end;
- //   }
-    
-    rv = amvp_transport_post(ctx, url, ev, ev_len);
-    if (rv != AMVP_SUCCESS) {
-        AMVP_LOG_ERR("Failed to send certify request");
-        goto end;
+    printf("Evidence payload:\n%s", ev);
+    rv = amvp_send_evidence(ctx, url, ev, ev_len);
+    if (rv == AMVP_PROTOCOL_RSP_ERR) {
+        rv = amvp_handle_protocol_error(ctx, ctx->error);
+        if (rv == AMVP_RETRY_OPERATION) {
+            rv = amvp_send_evidence(ctx, url, ev, ev_len);
+        }
     }
+    
     AMVP_LOG_STATUS("Evidence successfully submitted!");
     AMVP_LOG_STATUS("Waiting for 45 seconds, then checking status of certify session...");
 
@@ -3457,11 +3666,11 @@ static AMVP_RESULT amvp_retry_handler(AMVP_CTX *ctx, int *retry_period, unsigned
         AMVP_LOG_WARN("retry_period not found, using max retry period!");
     }
     if (situation == AMVP_WAITING_FOR_TESTS) {
-        AMVP_LOG_STATUS("200 OK KAT values not ready, server requests we wait %u seconds and try again...", *retry_period);
+        AMVP_LOG_STATUS("Certification request session not yet ready, server requests we wait %u seconds and try again...", *retry_period);
     } else if (situation == AMVP_WAITING_FOR_RESULTS) {
-        AMVP_LOG_STATUS("200 OK results not ready, waiting %u seconds and trying again...", *retry_period);
+        AMVP_LOG_STATUS("Results not ready, waiting %u seconds and trying again...", *retry_period);
     } else {
-        AMVP_LOG_STATUS("200 OK, waiting %u seconds and trying again...", *retry_period);
+        AMVP_LOG_STATUS("Waiting %u seconds and trying again...", *retry_period);
     }
 
     #ifdef _WIN32
@@ -3508,7 +3717,6 @@ AMVP_RESULT amvp_check_test_results(AMVP_CTX *ctx) {
 
 static AMVP_RESULT amvp_login(AMVP_CTX *ctx, int refresh) {
     AMVP_RESULT rv = AMVP_SUCCESS;
-    AMVP_PROTOCOL_ERR *err = NULL;
     char *login = NULL;
     int login_len = 0;
 
@@ -3533,11 +3741,9 @@ static AMVP_RESULT amvp_login(AMVP_CTX *ctx, int refresh) {
         AMVP_LOG_STATUS("Login Response Failed, %d", rv);
     } else {
         AMVP_LOG_STATUS("Login successful");
-        //AMVP_LOG_STATUS("    Login Response: %s", ctx->curl_buf);
     }
 end:
     if (login) free(login);
-    if (err) amvp_free_protocol_err(err);
     return rv;
 }
 
@@ -5099,5 +5305,7 @@ static AMVP_RESULT amvp_handle_protocol_error(AMVP_CTX *ctx, AMVP_PROTOCOL_ERR *
         return AMVP_INVALID_ARG;
     }
 
+    amvp_free_protocol_err(ctx->error);
+    ctx->error = NULL;
     return rv;
 }

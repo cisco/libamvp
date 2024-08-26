@@ -11,6 +11,7 @@
 #define amvp_lcl_h
 
 #include "parson.h"
+#include "amvp_error.h"
 
 #define AMVP_VERSION    "1.0"
 #define AMVP_LIBRARY_VERSION_NUMBER "0.1.0"
@@ -1813,7 +1814,7 @@ struct amvp_ctx_t {
     int post_size_constraint;  /**< The number of bytes that the body of an HTTP POST may contain
                                     without requiring the use of the /large endpoint. If the POST body
                                     is larger than this value, then use of the /large endpoint is necessary */
-
+    AMVP_PROTOCOL_ERR *error; /**< Object to store info related to protocol error. Should be freed and set null when handled */
 };
 
 AMVP_RESULT amvp_check_test_results(AMVP_CTX *ctx);
@@ -1825,6 +1826,8 @@ AMVP_RESULT amvp_send_test_session_registration(AMVP_CTX *ctx, char *reg, int le
 AMVP_RESULT amvp_send_login(AMVP_CTX *ctx, char *login, int len);
 
 AMVP_RESULT amvp_send_module_creation(AMVP_CTX *ctx, char *module, int len);
+
+AMVP_RESULT amvp_send_evidence(AMVP_CTX *ctx, const char *url, char *ev, int ev_len);
 
 AMVP_RESULT amvp_transport_put_validation(AMVP_CTX *ctx, const char *data, int data_len);
 

@@ -1,14 +1,104 @@
 [
+{
+    "amvVersion": "1.0"
+    },
     {
-      "url": "/amvp/v1/modules"
-    }, 
-    {
-        "name": "OpenSSL FOM Algorithms",
-        "version": "6.3",
-        "type": "Firmware",
-        "vendorUrl": "/amvp/v1/vendors/11175",
-        "addressUrl": "/amvp/v1/vendors/11175/addresses/11138",
-        "contactUrls": ["/amvp/v1/persons/14941" ],
-        "description" : "Software FOM"
+    "schemaVersion": "initial",
+    "moduleInfo": {
+      "name": "libamvp Sample Module",
+      "count": 1,
+      "description": "Sample Module for libamvp testing v1.0 ",
+      "embodiment": "Single Chip",
+      "type": "software",
+      "opEnvType": "Intel X86_64",
+      "submissionLevel": "Level 1",
+      "itar": false,
+      "overallSecurityLevel": 1
+    },
+      "secLevels": [
+        {
+          "section": 1,
+          "level": 1
+        },
+        {
+          "section": 2,
+          "level": 1
+        },
+        {
+          "section": 3,
+          "level": 1
+        },
+        {
+          "section": 4,
+          "level": 1
+        },
+        {
+          "section": 5,
+          "level": 1
+        },
+        {
+          "section": 6,
+          "level": 1
+        },
+        {
+          "section": 7,
+          "level": 1
+        },
+        {
+          "section": 8,
+          "level": 1
+        },
+        {
+          "section": 9,
+          "level": 1
+        },
+        {
+          "section": 10,
+          "level": 1
+        },
+        {
+          "section": 11,
+          "level": 1
+        },
+        {
+          "section": 12,
+          "level": 1
+        }
+      ],
+    "implementsOtar": true,
+    "hasNonApprovedMode": true,
+    "requiresInitialization": true,
+    "hasExcludedComponents": true,
+    "hasDegradedMode": false,
+    "hasPPAorPAI": false,
+    "hasEmbeddedOrBoundModule": false,
+    "hasCriticalFunctions": false,
+    "hasNonApprovedAlgorithmsInApprovedMode": false,
+    "hasExternalInputDevice": false,
+    "hasExternalOutputDevice": false,
+    "usesTrustedChannel": true,
+    "supportsConcurrentOperators": true,
+    "usesIdentityBasedAuthentication": true,
+    "hasMaintenanceRole": true,
+    "allowsOperatorToChangeRoles": false,
+    "hasDefaultAuthenticationData": true,
+    "usesEDC": true,
+    "allowsExternalLoadingOfSoftwareOrFirmware": false,
+    "containsNonReconfigurableMemory": true,
+    "usesOpenSource": false,
+    "providesMaintenanceAccessInterface": false,
+    "hasVentilationOrSlits": false,
+    "hasRemovableCover": false,
+    "hasTamperSeals": false,
+    "hasOperatorAppliedTamperSeals": false,
+    "hasEFPorEFT": false,
+    "outputsSensitiveDataAsPlaintext": false,
+    "supportsManualSSPEntry": true,
+    "usesSplitKnowledge": true,
+    "hasCVE": true,
+    "hasAdditionalMitigations": false,
+    "usesOtherCurve": true,
+    "supportsBypassCapability": false,
+    "hasOTPMemory": false
     }
-]
+  ]
