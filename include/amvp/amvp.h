@@ -3205,6 +3205,8 @@ AMVP_RESULT amvp_cert_req_add_contact(AMVP_CTX *ctx, const char *contact_id);
 AMVP_RESULT amvp_create_module(AMVP_CTX *ctx, char *filename);
 AMVP_RESULT amvp_get_module_request(AMVP_CTX *ctx, char *filename);
 AMVP_RESULT amvp_submit_evidence(AMVP_CTX *ctx, const char *filename);
+AMVP_RESULT amvp_submit_security_policy(AMVP_CTX *ctx, const char *filename);
+AMVP_RESULT amvp_read_cert_req_info_file(AMVP_CTX *ctx, const char *filename);
 
 AMVP_RESULT amvp_retrieve_docs(AMVP_CTX *ctx, char *vsid_url);
 AMVP_RESULT amvp_mark_as_post_resources(AMVP_CTX *ctx, char *filename);

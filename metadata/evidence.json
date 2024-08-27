@@ -1,0 +1,59 @@
+{
+    "functionalTest":
+    {
+        "remoteTesting": true,
+        "accessToModule": "physical or virtual (e.g., via SSH, or VPN, or WebConferencing)",
+        "testHarness": "list the name and version of all of the test harnesses (e.g., OpenSSL-test script v1.2.3)",
+        "testSetup": "description of testing environment setup",
+        "testMethod": "description of test method (e.g., automated or manual)",
+        "testProcedure": "description of test procedure (e.g., how the input to test is provided and how the output is observed)",
+        "errorInduction": "description of modifications made to the module or its OE to induce an error for the purpose of performing negative testing",
+        "testResults": "directory or location of test logs or screenshots (e.g., labArchive/TID-11-XXXX/FT/TestResults)",
+        "testResultsIntegrity":
+        {
+          "digest": "ABCD",
+          "integrityMechanism": "SHA2-256"
+        },
+        "functionalTestEvidence":
+        [
+            {
+                "teList":
+                [
+                    "TE02.12.01","TE02.03.02","TE02.07.01", "TE02.07.02", "TE02.10.01", "TE02.10.02"
+                ],
+                "test": "Test FTE1",
+                "process": "Process FTE1",
+                "input": "Input FTE1",
+                "output": "Output FTE1",
+                "status": "Status FTE1"
+            }
+        ],
+        "selfTestEvidence":
+        {
+            "teList":
+            [
+                "TE02.12.01"
+            ],
+            "postFailureTests":
+            [
+                {
+                    "test": "Test STE1",
+                    "process": "Process STE1",
+                    "input": "Input STE1",
+                    "output": "Output STE1",
+                    "status": "Status STE1"
+                }
+            ],
+            "conditionalFailureTests":
+            [
+                {
+                    "test": "Test CFT1",
+                    "process": "Process CFT1",
+                    "input": "Input CFT1",
+                    "output": "Output CFT1",
+                    "status": "Status CFT1"
+                }
+            ]
+        }
+    }
+}

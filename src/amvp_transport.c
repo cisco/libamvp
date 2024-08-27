@@ -684,6 +684,27 @@ AMVP_RESULT amvp_send_evidence(AMVP_CTX *ctx,
     return amvp_transport_post(ctx, full_url, ev, ev_len);
 }
 
+#define AMVP_SP_URI "securityPolicy"
+AMVP_RESULT amvp_send_security_policy(AMVP_CTX *ctx,
+                                        const char *url,
+                                        char *sp,
+                                        int sp_len) {
+    char *full_url = NULL;
+    int url_len = strnlen_s(url, AMVP_ATTR_URL_MAX + 1);
+    if (url_len > AMVP_ATTR_URL_MAX - sizeof(AMVP_SP_URI)) {
+        AMVP_LOG_ERR("Invalid URL provided for submitting security policy (too long)");
+        return AMVP_TRANSPORT_FAIL;
+    }
+
+    full_url = calloc(AMVP_ATTR_URL_MAX + 1, sizeof(char));
+    if (!full_url) {
+        AMVP_LOG_ERR("Failed to allocate memory while sending security policy file");
+        return AMVP_TRANSPORT_FAIL;
+    }
+    snprintf(full_url, AMVP_ATTR_URL_MAX, "%s/%s", url, AMVP_SP_URI);
+
+    return amvp_transport_post(ctx, full_url, sp, sp_len);
+}
 
 /*
  * This is the transport function used within libamvp to login before

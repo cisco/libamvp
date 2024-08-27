@@ -304,12 +304,12 @@ int main(int argc, char **argv) {
     if (!cfg.empty_alg && cfg.put) {
         amvp_mark_as_put_after_test(ctx, cfg.put_filename);
     }
-    
+
     if (cfg.get_results) {
         rv = amvp_get_results_from_server(ctx, cfg.session_file);
         goto end;
     }
-    
+
     if (cfg.resume_session) {
         rv = amvp_resume_test_session(ctx, cfg.session_file, cfg.fips_validation);
         goto end;
@@ -354,8 +354,26 @@ int main(int argc, char **argv) {
         goto end;
     }
 
-    if (cfg.submit_ev) {
-        rv = amvp_submit_evidence(ctx, cfg.ev_file);
+    if (cfg.ingest_cert_info) {
+        rv = amvp_read_cert_req_info_file(ctx, cfg.mod_cert_req_file);
+        if (rv != AMVP_SUCCESS) {
+            printf("Error reading cert request info file; ensure it exists and is properly formatted\n");
+            goto end;
+        }
+        if (cfg.submit_ev) {
+            rv = amvp_submit_evidence(ctx, cfg.ev_file);
+            if (rv != AMVP_SUCCESS) {
+                printf("Error submitting evidence for module cert request\n");
+                goto end;
+            }
+        }
+        if (cfg.submit_sp) {
+            rv = amvp_submit_security_policy(ctx, cfg.sp_file);
+            if (rv != AMVP_SUCCESS) {
+                printf("Error submitting security policy for module cert request\n");
+                goto end;
+            }
+        }
         goto end;
     }
 

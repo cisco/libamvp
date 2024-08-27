@@ -161,11 +161,6 @@ static void print_usage(int code) {
     printf("To post all resources a predefined resource json file:\n");
     printf("      --post_resources <resource_file>\n");
     printf("\n");
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L
-    printf("To disable FIPS mode for this run (Note, a warning will be issued):\n");
-    printf("      -disable_fips\n");
-    printf("\n");
-#endif
     printf("In addition some options are passed to amvp_app using\n");
     printf("environment variables.  The following variables can be set:\n\n");
     printf("    ACV_SERVER (when not set, defaults to %s)\n", DEFAULT_SERVER);
@@ -230,6 +225,8 @@ static ko_longopt_t longopts[] = {
     { "with_vendor", ko_required_argument, 424} ,
     { "with_contact", ko_required_argument, 425 } ,
     { "submit_evidence", ko_required_argument, 426 },
+    { "submit_security_policy", ko_required_argument, 427 },
+    { "for_cert_request", ko_required_argument, 428 },
     { NULL, 0, 0 }
 };
 
@@ -529,11 +526,22 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
             strcpy_s(cfg->ev_file, JSON_FILENAME_LENGTH + 1, opt.arg);
             break;
 
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L
-        case 500:
-            cfg->disable_fips = 1;
+        case 427:
+            cfg->submit_sp = 1;
+            if (!check_option_length(opt.arg, c, JSON_FILENAME_LENGTH)) {
+                return 1;
+            }
+            strcpy_s(cfg->sp_file, JSON_FILENAME_LENGTH + 1, opt.arg);
             break;
-#endif
+
+        case 428:
+            cfg->ingest_cert_info = 1;
+            if (!check_option_length(opt.arg, c, JSON_FILENAME_LENGTH)) {
+                return 1;
+            }
+            strcpy_s(cfg->mod_cert_req_file, JSON_FILENAME_LENGTH + 1, opt.arg);
+            break;
+
         case '?':
             printf(ANSI_COLOR_RED "unknown option: %s\n"ANSI_COLOR_RESET, *(argv + opt.ind - !(opt.pos > 0)));
             printf("%s\n", AMVP_APP_HELP_MSG);
@@ -559,17 +567,6 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
         return 1;
     }
 
-    //Many args do not need an alg specified. Todo: make cleaner
-    if (cfg->empty_alg && !cfg->post && !cfg->get && !cfg->put && !cfg->get_results && !cfg->post_resources && !cfg->create_module
-            && !cfg->get_expected && !cfg->manual_reg && !cfg->vector_upload && !cfg->mod_cert_req && !cfg->get_module
-            && !cfg->delete && !cfg->cancel_session && !cfg->submit_ev && !(cfg->resume_session && 
-            cfg->vector_req)) {
-        /* The user needs to select at least 1 algorithm */
-        printf(ANSI_COLOR_RED "Requires at least 1 Algorithm Test Suite\n"ANSI_COLOR_RESET);
-        printf("%s\n", AMVP_APP_HELP_MSG);
-        return 1;
-    }
-
     if (cfg->mod_cert_req && (!cfg->module_id || !cfg->vendor_id || !cfg->num_contacts)) {
         printf("Module cert request requires module module ID, vendor ID, and at least one contact ID to be provided\n");
         return 1;
@@ -577,6 +574,11 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
 
     if (!cfg->mod_cert_req && (cfg->module_id || cfg->vendor_id || cfg->num_contacts)) {
         printf("Warning: Module ID/Vendor ID/Contact ID provided, but not performing a cert request. These options will be ignored\n");
+    }
+
+    if ((cfg->submit_ev || cfg->submit_sp) && !cfg->ingest_cert_info) {
+        printf("Submitting evidence or security policy info requires specifying a cert request info file\n");
+        return 1;
     }
 
     printf("\n");
