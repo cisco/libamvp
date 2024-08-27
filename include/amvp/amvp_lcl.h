@@ -895,6 +895,17 @@
  */
 #define AMVP_SAVE_DEFAULT_PREFIX "testSession"
 
+#define AMVP_CERT_REQ_STATUS_MAX_LEN 32
+#define AMVP_CERT_REQ_STATUS_STR_INITIAL "Initial"
+#define AMVP_CERT_REQ_STATUS_STR_READY "Ready"
+#define AMVP_CERT_REQ_STATUS_STR_SUBMITTED "RequirementsSubmitted"
+#define AMVP_CERT_REQ_STATUS_STR_APPROVED "Approved"
+#define AMVP_CERT_REQ_STATUS_STR_ERROR "Error"
+
+#define AMVP_ANSI_COLOR_GREEN "\e[0;32m"
+#define AMVP_ANSI_COLOR_YELLOW "\x1b[33m"
+#define AMVP_ANSI_COLOR_RESET "\x1b[0m"
+
 #define AMVP_CFB1_BIT_MASK      0x80
 
 
@@ -1681,6 +1692,15 @@ typedef enum amvp_waiting_status {
     AMVP_WAITING_FOR_RESULTS,
 } AMVP_WAITING_STATUS;
 
+typedef enum amvp_cert_req_status {
+    AMVP_CERT_REQ_STATUS_UNKNOWN = 1,
+    AMVP_CERT_REQ_STATUS_INITIAL,
+    AMVP_CERT_REQ_STATUS_READY,
+    AMVP_CERT_REQ_STATUS_SUBMITTED,
+    AMVP_CERT_REQ_STATUS_APPROVED,
+    AMVP_CERT_REQ_STATUS_ERROR
+} AMVP_CERT_REQ_STATUS;
+
 typedef struct amvp_oe_dependencies_t {
     AMVP_DEPENDENCY *deps[LIBAMVP_DEPENDENCIES_MAX]; /* Array to pointers of linked dependencies */
     unsigned int count;
@@ -1760,7 +1780,7 @@ struct amvp_ctx_t {
 
     char *http_user_agent;   /* String containing info to be sent with HTTP requests, currently OE info */
     char *session_file_path; /* String containing the path of the testSession file after it is created when applicable */
-    
+
     AMVP_OPERATING_ENV op_env; /**< The Operating Environment resources available */
     AMVP_STRING_LIST *vsid_url_list;
     char *session_url;
@@ -1828,6 +1848,8 @@ AMVP_RESULT amvp_send_login(AMVP_CTX *ctx, char *login, int len);
 AMVP_RESULT amvp_send_module_creation(AMVP_CTX *ctx, char *module, int len);
 
 AMVP_RESULT amvp_send_evidence(AMVP_CTX *ctx, const char *url, char *ev, int ev_len);
+
+AMVP_RESULT amvp_send_security_policy(AMVP_CTX *ctx, const char *url, char *sp, int sp_len);
 
 AMVP_RESULT amvp_transport_put_validation(AMVP_CTX *ctx, const char *data, int data_len);
 

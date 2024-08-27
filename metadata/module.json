@@ -1,70 +1,66 @@
-[
 {
-    "amvVersion": "1.0"
-    },
-    {
     "schemaVersion": "initial",
     "moduleInfo": {
-      "name": "libamvp Sample Module",
-      "count": 1,
-      "description": "Sample Module for libamvp testing v1.0 ",
-      "embodiment": "Single Chip",
-      "type": "software",
-      "opEnvType": "Intel X86_64",
-      "submissionLevel": "Level 1",
-      "itar": false,
-      "overallSecurityLevel": 1
+        "name": "libamvp Sample Module",
+        "count": 1,
+        "description": "Sample Module for libamvp testing v1.0 ",
+        "embodiment": "Single Chip",
+        "type": "software",
+        "opEnvType": "Intel X86_64",
+        "submissionLevel": "Level 1",
+        "itar": false,
+        "overallSecurityLevel": 1
     },
-      "secLevels": [
-        {
-          "section": 1,
-          "level": 1
-        },
-        {
-          "section": 2,
-          "level": 1
-        },
-        {
-          "section": 3,
-          "level": 1
-        },
-        {
-          "section": 4,
-          "level": 1
-        },
-        {
-          "section": 5,
-          "level": 1
-        },
-        {
-          "section": 6,
-          "level": 1
-        },
-        {
-          "section": 7,
-          "level": 1
-        },
-        {
-          "section": 8,
-          "level": 1
-        },
-        {
-          "section": 9,
-          "level": 1
-        },
-        {
-          "section": 10,
-          "level": 1
-        },
-        {
-          "section": 11,
-          "level": 1
-        },
-        {
-          "section": 12,
-          "level": 1
-        }
-      ],
+        "secLevels": [
+            {
+                "section": 1,
+                "level": 1
+            },
+            {
+                "section": 2,
+                "level": 1
+            },
+            {
+                "section": 3,
+                "level": 1
+            },
+            {
+                "section": 4,
+                "level": 1
+            },
+            {
+                "section": 5,
+                "level": 1
+            },
+            {
+                "section": 6,
+                "level": 1
+            },
+            {
+                "section": 7,
+                "level": 1
+            },
+            {
+                "section": 8,
+                "level": 1
+            },
+            {
+                "section": 9,
+                "level": 1
+            },
+            {
+                "section": 10,
+                "level": 1
+            },
+            {
+                "section": 11,
+                "level": 1
+            },
+            {
+                "section": 12,
+                "level": 1
+            }
+        ],
     "implementsOtar": true,
     "hasNonApprovedMode": true,
     "requiresInitialization": true,
@@ -100,5 +96,4 @@
     "usesOtherCurve": true,
     "supportsBypassCapability": false,
     "hasOTPMemory": false
-    }
-  ]
+}
