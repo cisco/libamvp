@@ -13,94 +13,7 @@
 #include "app_lcl.h"
 #include "safe_lib.h"
 
-
-/* This is a public domain base64 implementation written by WEI Zhicheng. */
-enum { BASE64_OK = 0, BASE64_INVALID };
-
-#define BASE64_ENCODE_OUT_SIZE(s)    (((s) + 2) / 3 * 4)
-#define BASE64_DECODE_OUT_SIZE(s)    (((s)) / 4 * 3)
-
-#define BASE64_PAD    '='
-
-#define BASE64DE_FIRST    '+'
-#define BASE64DE_LAST    'z'
-
-/* ASCII order for BASE 64 decode, -1 in unused character */
-static const signed char base64de[] = {
-    /* '+', ',', '-', '.', '/', '0', '1', '2', */
-    62, -1, -1, -1, 63, 52, 53, 54,
-
-    /* '3', '4', '5', '6', '7', '8', '9', ':', */
-    55, 56, 57, 58, 59, 60, 61, -1,
-
-    /* ';', '<', '=', '>', '?', '@', 'A', 'B', */
-    -1, -1, -1, -1, -1, -1, 0,  1,
-
-    /* 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', */
-    2,  3,  4,  5,  6,  7,  8,  9,
-
-    /* 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', */
-    10, 11, 12, 13, 14, 15, 16, 17,
-
-    /* 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', */
-    18, 19, 20, 21, 22, 23, 24, 25,
-
-    /* '[', '\', ']', '^', '_', '`', 'a', 'b', */
-    -1, -1, -1, -1, -1, -1, 26, 27,
-
-    /* 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', */
-    28, 29, 30, 31, 32, 33, 34, 35,
-
-    /* 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', */
-    36, 37, 38, 39, 40, 41, 42, 43,
-
-    /* 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', */
-    44, 45, 46, 47, 48, 49, 50, 51,
-};
-
-static unsigned int
-base64_decode(const char *in, unsigned int inlen, unsigned char *out) {
-    unsigned int i, j;
-
-    for (i = j = 0; i < inlen; i++) {
-        int c;
-        int s = i % 4;             /* from 8/gcd(6, 8) */
-
-        if (in[i] == '=')
-            return j;
-
-        if (in[i] < BASE64DE_FIRST || in[i] > BASE64DE_LAST ||
-            (c = base64de[in[i] - BASE64DE_FIRST]) == -1)
-            return 0;
-
-        switch (s) {
-        case 0:
-            out[j] = ((unsigned int)c << 2) & 0xFF;
-            continue;
-        case 1:
-            out[j++] += ((unsigned int)c >> 4) & 0x3;
-
-            /* if not last char with padding */
-            if (i < (inlen - 3) || in[inlen - 2] != '=')
-                out[j] = ((unsigned int)c & 0xF) << 4;
-            continue;
-        case 2:
-            out[j++] += ((unsigned int)c >> 2) & 0xF;
-
-            /* if not last char with padding */
-            if (i < (inlen - 2) || in[inlen - 1] != '=')
-                out[j] =  ((unsigned int)c & 0x3) << 6;
-            continue;
-        case 3:
-            out[j++] += (unsigned char)c;
-            continue;;
-        default:
-            return 0;
-        }
-    }
-
-    return j;
-}
+#include "amvp/amvp.h"
 
 const int DIGITS_POWER[]
     //  0  1   2    3     4      5       6        7         8
@@ -110,7 +23,7 @@ const int DIGITS_POWER[]
 #define MAX_LEN 512
 
 #if OPENSSL_VERSION_NUMBER < 0x30000000L
-static int hmac_totp(const char *key,
+static int hmac_totp(const unsigned char *key,
                      const unsigned char *msg,
                      char *hash,
                      int hash_max,
@@ -132,7 +45,7 @@ end:
     return len;
 }
 #else
-static int hmac_totp(const char *key,
+static int hmac_totp(const unsigned char *key,
                      const unsigned char *msg,
                      char *hash,
                      int hash_max,
@@ -152,20 +65,14 @@ static AMVP_RESULT totp(char **token, int token_max) {
     int md_len;
     time_t t;
     unsigned char token_buff[T_LEN + 1] = {0};
-    char *new_seed = NULL;
+    unsigned char *new_seed = NULL;
     char *seed = NULL;
-    int seed_len = 0;
+    unsigned int seed_len = 0;
 
     seed = getenv("AMV_TOTP_SEED");
     if (!seed) {
         /* Not required to use 2-factor auth */
         return AMVP_SUCCESS;
-    }
-
-    new_seed = calloc(AMVP_TOTP_TOKEN_MAX, sizeof(char));
-    if (!new_seed) {
-        printf("Failed to malloc new_seed\n");
-        return AMVP_MALLOC_FAIL;
     }
 
     t = time(NULL);
@@ -182,7 +89,7 @@ static AMVP_RESULT totp(char **token, int token_max) {
     token_buff[7] = t & 0xff;
 
 #define MAX_SEED_LEN 64
-    seed_len = base64_decode(seed, strnlen_s(seed, MAX_SEED_LEN), (unsigned char *)new_seed);
+    new_seed = amvp_decode_base64(seed, &seed_len);
     if (seed_len  == 0) {
         printf("Failed to decode TOTP seed\n");
         free(new_seed);

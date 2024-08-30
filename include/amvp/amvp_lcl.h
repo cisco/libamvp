@@ -902,6 +902,10 @@
 #define AMVP_CERT_REQ_STATUS_STR_APPROVED "Approved"
 #define AMVP_CERT_REQ_STATUS_STR_ERROR "Error"
 
+#define AMVP_SP_STATUS_STR_PENDING "Pending"
+#define AMVP_SP_STATUS_STR_SUCCESS "Success"
+#define AMVP_SP_STATUS_STR_ERROR "Error"
+
 #define AMVP_ANSI_COLOR_GREEN "\e[0;32m"
 #define AMVP_ANSI_COLOR_YELLOW "\x1b[33m"
 #define AMVP_ANSI_COLOR_RESET "\x1b[0m"
@@ -1850,6 +1854,8 @@ AMVP_RESULT amvp_send_module_creation(AMVP_CTX *ctx, char *module, int len);
 AMVP_RESULT amvp_send_evidence(AMVP_CTX *ctx, const char *url, char *ev, int ev_len);
 
 AMVP_RESULT amvp_send_security_policy(AMVP_CTX *ctx, const char *url, char *sp, int sp_len);
+
+AMVP_RESULT amvp_get_security_policy_json(AMVP_CTX *ctx, const char *url);
 
 AMVP_RESULT amvp_transport_put_validation(AMVP_CTX *ctx, const char *data, int data_len);
 

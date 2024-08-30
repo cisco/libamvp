@@ -374,6 +374,22 @@ int main(int argc, char **argv) {
                 goto end;
             }
         }
+        if (cfg.get_sp) {
+            if (!cfg.save_to) {
+                printf("Error: Must use --save_to <file> to get security policy\n");
+            } else {
+                rv = amvp_set_get_save_file(ctx, cfg.save_file);
+                if (rv != AMVP_SUCCESS) {
+                    printf("Failed to set save file for getting security policy\n");
+                    goto end;
+                }
+                rv = amvp_get_security_policy(ctx);
+                if (rv != AMVP_SUCCESS) {
+                    printf("Unable to retrieve generated security policy\n");
+                    goto end;
+                }
+            }
+        }
         goto end;
     }
 

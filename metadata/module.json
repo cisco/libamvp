@@ -1,4 +1,4 @@
-{
+[ { "amvVersion": "1.0" }, {
     "schemaVersion": "initial",
     "moduleInfo": {
         "name": "libamvp Sample Module",
@@ -97,3 +97,4 @@
     "supportsBypassCapability": false,
     "hasOTPMemory": false
 }
+]

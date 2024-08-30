@@ -11,6 +11,7 @@ libamvp_la_SOURCES =  amvp.c \
                     amvp_transport.c \
                     amvp_util.c \
                     amvp_error.c \
+                    amvp_base64.c \
                     parson.c
 
 libamvp_la_LIBADD = $(SAFEC_LDFLAGS) $(LIBCURL_LDFLAGS)

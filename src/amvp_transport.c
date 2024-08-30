@@ -213,6 +213,8 @@ static long amvp_curl_http_get(AMVP_CTX *ctx, const char *url) {
     if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_SSL_VERIFYPEER, stopping"); goto end; }
     crv = curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYHOST, 0);
     if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_SSL_VERIFYHOST, stopping"); goto end; }
+    crv = curl_easy_setopt(hnd, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+    if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_HTTP_VERSION, stopping"); goto end; }
     if (ctx->cacerts_file) {
         crv = curl_easy_setopt(hnd, CURLOPT_CAINFO, ctx->cacerts_file);
         if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_CAINFO, stopping"); goto end; }
@@ -242,7 +244,6 @@ static long amvp_curl_http_get(AMVP_CTX *ctx, const char *url) {
         memzero_s(ctx->curl_buf, AMVP_CURL_BUF_MAX);
     }
 
-    //crv = curl_easy_setopt(hnd, CURLOPT_VERBOSE, 1L);
     /*
      * Send the HTTP GET request
      */
@@ -325,6 +326,8 @@ static long amvp_curl_http_post(AMVP_CTX *ctx, const char *url, const char *data
     if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_SSL_VERIFYPEER, stopping"); goto end; }
     crv = curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYHOST, 0);
     if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_SSL_VERIFYHOST, stopping"); goto end; }
+    crv = curl_easy_setopt(hnd, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+    if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_HTTP_VERSION, stopping"); goto end; }
 
     if (ctx->cacerts_file) {
         crv = curl_easy_setopt(hnd, CURLOPT_CAINFO, ctx->cacerts_file);
@@ -438,6 +441,8 @@ static long amvp_curl_http_put(AMVP_CTX *ctx, const char *url, const char *data,
     if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_SSL_VERIFYPEER, stopping"); goto end; }
     crv = curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYHOST, 0);
     if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_SSL_VERIFYHOST, stopping"); goto end; }
+    crv = curl_easy_setopt(hnd, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+    if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_HTTP_VERSION, stopping"); goto end; }
     if (ctx->cacerts_file) {
         crv = curl_easy_setopt(hnd, CURLOPT_CAINFO, ctx->cacerts_file);
         if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_CAINFO, stopping"); goto end; }
@@ -550,6 +555,8 @@ static long amvp_curl_http_delete(AMVP_CTX *ctx, const char *url) {
     if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_SSL_VERIFYPEER, stopping"); goto end; }
     crv = curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYHOST, 0);
     if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_SSL_VERIFYHOST, stopping"); goto end; }
+    crv = curl_easy_setopt(hnd, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+    if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_HTTP_VERSION, stopping"); goto end; }
     if (ctx->cacerts_file) {
         crv = curl_easy_setopt(hnd, CURLOPT_CAINFO, ctx->cacerts_file);
         if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_CAINFO, stopping"); goto end; }
@@ -704,6 +711,28 @@ AMVP_RESULT amvp_send_security_policy(AMVP_CTX *ctx,
     snprintf(full_url, AMVP_ATTR_URL_MAX, "%s/%s", url, AMVP_SP_URI);
 
     return amvp_transport_post(ctx, full_url, sp, sp_len);
+}
+
+AMVP_RESULT amvp_get_security_policy_json(AMVP_CTX *ctx,
+                                        const char *url) {
+    AMVP_RESULT rv = AMVP_SUCCESS;
+    char *full_url = NULL;
+    int url_len = strnlen_s(url, AMVP_ATTR_URL_MAX + 1);
+    if (url_len > AMVP_ATTR_URL_MAX - sizeof(AMVP_SP_URI)) {
+        AMVP_LOG_ERR("Invalid URL provided for getting security policy (too long)");
+        return AMVP_TRANSPORT_FAIL;
+    }
+
+    full_url = calloc(AMVP_ATTR_URL_MAX + 1, sizeof(char));
+    if (!full_url) {
+        AMVP_LOG_ERR("Failed to allocate memory while getting security policy");
+        return AMVP_TRANSPORT_FAIL;
+    }
+    snprintf(full_url, AMVP_ATTR_URL_MAX, "%s/%s", url, AMVP_SP_URI);
+
+    rv = amvp_transport_get(ctx, full_url, NULL);
+    free(full_url);
+    return rv;
 }
 
 /*
