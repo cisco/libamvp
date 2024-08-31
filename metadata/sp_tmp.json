@@ -1,0 +1,304 @@
+{
+    "securityPolicy":
+    {
+      "general": {
+        "overallDescription": "in labore dolore",
+        "securityLevels": {
+          "overall": 3,
+          "section1": 2,
+          "section2": 4,
+          "section3": 3,
+          "section4": 2,
+          "section5": 3,
+          "section6": 2,
+          "section7": 3,
+          "section8": 1,
+          "section9": 4,
+          "section10": 1,
+          "section11": 3,
+          "section12": 2
+        }
+      },
+       "cryptographicModuleSpecification":{},
+        "cryptographicModuleInterfaces": {
+          "portsAndInterfaces": {
+            "text": "sit adipisicing enim elit proident",
+            "portInterfaces": [
+              {
+                "port": "Lorem deserunt laboris",
+                "logicalInterface": "sunt dolor aliquip cupidatat",
+                "data": "quis dolore in"
+              },
+              {
+                "port": "veniam laboris",
+                "logicalInterface": "ex ut non deserunt",
+                "data": "Ut"
+              },
+              {
+                "port": "id officia dolor et non",
+                "logicalInterface": "adipisicing commodo",
+                "data": "laboris"
+              },
+              {
+                "port": "laborum",
+                "logicalInterface": "veniam",
+                "data": "fugiat"
+              }
+            ]
+          },
+          "trustChannelSpec": "ut irure non",
+          "controlInterfaceNotInhibited": "mollit voluptate in",
+          "additionalInformation": "tempor aliqua quis do minim"
+        },
+        "rolesServicesAuthentication":{
+          "authenticationMethods": {
+            "authenticationMethodsList": [
+            {
+              "name": "nulla",
+              "description": "sit",
+              "mechanism": "enim est ea voluptate minim",
+              "strengthEachAttempt": "deserunt non nisi",
+              "strengthPerMinute": "ut occaecat"
+            }
+            ],
+            "text": "Insert text here"
+          },
+          "roles": [
+            {
+              "name": "laboris elit officia amet qui",
+              "type": "enim exercitation",
+              "operatorType": "nostrud commodo in",
+              "authenticationMethods": "officia Lorem"
+            },
+            {
+              "name": "nulla",
+              "type": "occaecat commodo",
+              "operatorType": "nisi",
+              "authenticationMethods": "id Duis adipisicing Excepteur"
+            },
+            {
+              "name": "est tempor esse",
+              "type": "velit elit aute occaecat esse",
+              "operatorType": "eu reprehenderit nostrud ipsum nulla",
+              "authenticationMethods": "anim in officia"
+            },
+            {
+              "name": "dolore deserunt minim",
+              "type": "commodo consectetur Lorem incididunt",
+              "operatorType": "dolore irure ad in cillum",
+              "authenticationMethods": "quis veniam"
+            },
+            {
+              "name": "nisi",
+              "type": "in exercitation Lorem ex",
+              "operatorType": "est sed consequat",
+              "authenticationMethods": "est"
+            }
+          ],
+          "approvedServices": {
+            "approvedServicesList": [
+              {
+                "name": "nostrud quis exercitation in",
+                "description": "in sit",
+                "indicator": "fugiat exercitation",
+                "inputs": "officia fugiat",
+                "outputs": "ullamco enim nulla dolore ex",
+                "sfi": "ut",
+                "roles": "do est dolore pariatur",
+                "sspAccess": "officia fugiat sit ut enim"
+              },
+              {
+                "name": "deserunt",
+                "description": "cillum",
+                "indicator": "dolore Lorem ex tempor aliqua",
+                "inputs": "ut cupidatat sunt culpa exercitation",
+                "outputs": "mollit dolore reprehenderit incididunt aute",
+                "sfi": "ex officia do dolore",
+                "roles": "labore",
+                "sspAccess": "anim Excepteur"
+              },
+              {
+                "name": "sunt velit Duis magna ad",
+                "description": "in ipsum deserunt eu elit",
+                "indicator": "deserunt eiusmod in",
+                "inputs": "amet non minim",
+                "outputs": "in",
+                "sfi": "reprehenderit tempor aute elit amet",
+                "roles": "nulla",
+                "sspAccess": "laboris eiusmod Ut eu sunt"
+              }
+            ],
+            "text": "some text here"
+          },
+          "nonApprovedServices": [
+            {
+              "name": "laborum pariatur id",
+              "description": "est elit ipsum dolore veniam",
+              "algorithmsAccessed": "ut labore ullamco incididunt",
+              "role": "qui ea non ex"
+            },
+            {
+              "name": "dolor",
+              "description": "ea Ut sed quis",
+              "algorithmsAccessed": "laboris",
+              "role": "voluptate ad aliqua ea ex"
+            }
+          ],
+          "externalSoftwareFirmwareLoaded": "laboris non Ut est anim",
+          "bypassActionsAndStatus": "dolor irure occaecat",
+          "cryptographicOutputActionsAndStatus": "cupidatat"
+        },
+        "softwareFirmwareSecurity":{
+          "integrityTechniques": "sint pariatur aliquip fugiat",
+          "initiateOnDemand": "mollit anim",
+          "openSourceParameters": "anim veniam velit ad voluptate",
+          "additionalInformation": "I do not know latin"
+        },
+        "operationalEnvironment":{},
+        "physicalSecurity":{
+        },
+        "nonInvasiveSecurity":{
+        },
+        "sensitiveSecurityParameterManagement":{
+          "storageAreas": {
+            "storageAreaList": [
+              {
+                "name": "sed ut",
+                "description": "id proident ad",
+                "persistenceType": "aliqua"
+              },
+              {
+                "name": "ut Ut et",
+                "description": "ea dolore sit laborum voluptate",
+                "persistenceType": "in"
+              },
+              {
+                "name": "esse qui Lorem quis",
+                "description": "do laboris irure proident dolor",
+                "persistenceType": "amet"
+              },
+              {
+                "name": "esse id laborum",
+                "description": "consectetur deserunt tempor",
+                "persistenceType": "ad elit aliquip in et"
+              },
+              {
+                "name": "nostrud",
+                "description": "consectetur aute eiusmod",
+                "persistenceType": "deserunt magna"
+              }
+            ],
+            "text": "nulla aliquip reprehenderit anim"
+          },
+          "inputOutputMethods": {
+            "sspInputOutputList": [
+              {
+                "name": "adipisicing officia quis fugiat irure",
+                "from": "est Duis ut velit",
+                "to": "non do eu velit",
+                "formatType": "qui ut eu",
+                "distributionType": "officia",
+                "entryType": "magna occaecat eiusmod non sunt",
+                "SFIOrAlgorithm": "occaecat aliqua labore"
+              },
+              {
+                "name": "occaecat anim voluptate est",
+                "from": "do laboris minim exercitation",
+                "to": "in",
+                "formatType": "exercitation dolor",
+                "distributionType": "ex",
+                "entryType": "culpa commodo non",
+                "SFIOrAlgorithm": "consectetur nisi ut Lorem"
+              },
+              {
+                "name": "elit amet in sit",
+                "from": "sit magna",
+                "to": "dolore laboris irure Lorem veniam",
+                "formatType": "et deserunt est elit",
+                "distributionType": "do magna id dolor amet",
+                "entryType": "Excepteur ut",
+                "SFIOrAlgorithm": "velit reprehenderit voluptate mollit"
+              },
+              {
+                "name": "ex do eu anim",
+                "from": "minim",
+                "to": "ut nulla culpa elit",
+                "formatType": "aliquip",
+                "distributionType": "Duis deserunt eiusmod Lorem fugiat",
+                "entryType": "fugiat esse magna Ut veniam",
+                "SFIOrAlgorithm": "aute eiusmod consequat cillum"
+              }
+            ],
+            "text": "enim reprehenderit occaecat"
+          },
+          "sspZeroizationMethods": {
+            "sspZeroizationList": [
+              {
+                "method": "aliqua occaecat sunt",
+                "description": "eiusmod aliqua dolor quis",
+                "rationale": "est",
+                "operatorInitiationCapability": "incididunt sit aliqua"
+              },
+              {
+                "method": "Duis",
+                "description": "ex dolor anim nisi",
+                "rationale": "aute est dolore non",
+                "operatorInitiationCapability": "Lorem"
+              },
+              {
+                "method": "et",
+                "description": "ipsum",
+                "rationale": "eu ipsum Ut cupidatat",
+                "operatorInitiationCapability": "veniam nulla irure"
+              },
+              {
+                "method": "aute labore tempor quis",
+                "description": "pariatur quis",
+                "rationale": "esse ut",
+                "operatorInitiationCapability": "qui elit deserunt in veniam"
+              }
+            ]
+          },
+          "ssps": {
+            "sspList": [
+              {
+                "name": "anim aliqua voluptate Ut nostrud",
+                "description": "exercitation et cillum dolore",
+                "size": "dolor adipisicing incididunt",
+                "strength": "laborum ad Ut in",
+                "type": "officia enim",
+                "generatedBy": "sunt et adipisicing ad in",
+                "establishedBy": "irure",
+                "usedBy": "quis amet",
+                "inputOutput": "Excepteur ea Ut dolor nisi",
+                "storage": "cupidatat",
+                "temporaryStorageDuration": "eiusmod cupidatat ut proident",
+                "zeroization": "do",
+                "category": "qui adipisicing voluptate",
+                "relatedSSPs": "in"
+              }
+            ],
+            "text": "dolor minim"
+          },
+          "transitions": "deserunt velit",
+          "text": "exercitation"
+        },
+        "selfTests":{
+        },
+        "lifeCycleAssurance":{
+          "installationInitializationAndStartupProcedures": "elit dolor eu officia",
+          "administratorGuidance": "mollit voluptate magna",
+          "nonAdminstratorGuidance": "magna qui veniam ad",
+          "designAndRules": "nisi in",
+          "maintenanceRequirements": "Lorem",
+          "endOfLife": "esse enim",
+          "additionalInformation": "id ut"
+        },
+        "mitigationOfOtherAttacks":{
+          "attacks": "Duis",
+          "mitigationEffectiveness": "amet labore commodo",
+          "guidanceAndConstraints": "mollit pariatur",
+          "additionalInformation": "dolor"
+        }
+    }
+}

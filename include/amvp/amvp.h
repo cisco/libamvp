@@ -3153,6 +3153,16 @@ AMVP_RESULT amvp_bin_to_hexstr(const unsigned char *src, int src_len, char *dest
 AMVP_RESULT amvp_hexstr_to_bin(const char *src, unsigned char *dest, int dest_max, int *converted_len);
 
 /**
+ * @brief amvp_decode_base64 converts a base64 encoded string into a byte buffer
+ *
+ * @param val the base64 string to decode
+ * @param dest location to store output of decoded buffer
+ *
+ * @return the pointer to the buffer of the decoded string
+ */
+unsigned char* amvp_decode_base64(const char *val, unsigned int *output_len);
+
+/**
  * @brief amvp_lookup_error_string() is a utility that returns a more descriptive string for an AMVP_RESULT
  *        error code
  *
@@ -3206,6 +3216,7 @@ AMVP_RESULT amvp_create_module(AMVP_CTX *ctx, char *filename);
 AMVP_RESULT amvp_get_module_request(AMVP_CTX *ctx, char *filename);
 AMVP_RESULT amvp_submit_evidence(AMVP_CTX *ctx, const char *filename);
 AMVP_RESULT amvp_submit_security_policy(AMVP_CTX *ctx, const char *filename);
+AMVP_RESULT amvp_get_security_policy(AMVP_CTX *ctx);
 AMVP_RESULT amvp_read_cert_req_info_file(AMVP_CTX *ctx, const char *filename);
 
 AMVP_RESULT amvp_retrieve_docs(AMVP_CTX *ctx, char *vsid_url);

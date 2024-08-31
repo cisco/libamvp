@@ -227,6 +227,7 @@ static ko_longopt_t longopts[] = {
     { "submit_evidence", ko_required_argument, 426 },
     { "submit_security_policy", ko_required_argument, 427 },
     { "for_cert_request", ko_required_argument, 428 },
+    { "get_security_policy", ko_no_argument, 429 } ,
     { NULL, 0, 0 }
 };
 
@@ -540,6 +541,10 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
                 return 1;
             }
             strcpy_s(cfg->mod_cert_req_file, JSON_FILENAME_LENGTH + 1, opt.arg);
+            break;
+
+        case 429:
+            cfg->get_sp = 1;
             break;
 
         case '?':

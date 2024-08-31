@@ -2023,10 +2023,6 @@ AMVP_RESULT amvp_set_get_save_file(AMVP_CTX *ctx, char *filename) {
         AMVP_LOG_ERR("No filename given");
         return AMVP_MISSING_ARG;
     }
-    if (ctx->action != AMVP_ACTION_GET) {
-        AMVP_LOG_ERR("Session must be marked as get only to set a get save file");
-        return AMVP_UNSUPPORTED_OP;
-    }
     int filenameLen = 0;
     filenameLen = strnlen_s(filename, AMVP_JSON_FILENAME_MAX + 1);
     if (filenameLen > AMVP_JSON_FILENAME_MAX || filenameLen <= 0) {
@@ -2968,6 +2964,7 @@ AMVP_RESULT amvp_read_cert_req_info_file(AMVP_CTX *ctx, const char *filename) {
 
     rv = AMVP_SUCCESS;
 end:
+    if (val) json_value_free(val);
     return rv;
 }
 
@@ -3099,7 +3096,7 @@ static AMVP_RESULT amvp_handle_cert_request_approval(AMVP_CTX *ctx, JSON_Object 
     AMVP_RESULT rv = AMVP_INTERNAL_ERR;
     const char *cert_id = NULL;
 
-    cert_id = json_object_get_string(json, "certificate");
+    cert_id = json_object_get_string(json, "validationCertificateNumber");
     if (!cert_id) {
         AMVP_LOG_ERR("Cert request in approved state, but missing certificate number. Contact service provider.");
         goto err;
@@ -3244,7 +3241,7 @@ AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx) {
     }
     strcpy_s(ctx->jwt_token, AMVP_JWT_TOKEN_MAX + 1, token);
 
-    AMVP_LOG_STATUS("Cert request succesfully created. Checking status...");
+    AMVP_LOG_STATUS("Cert request %d succesfully created. Checking status...", id);
 
     url = calloc(AMVP_ATTR_URL_MAX + 1, sizeof(char));
     snprintf(url, AMVP_ATTR_URL_MAX +1, "%s/%d", "/amvp/v1/certRequests", id);
@@ -3426,6 +3423,144 @@ end:
     if (val) json_value_free(val);
     if (tmp) json_value_free(tmp);
     if (file) free(file);
+    return rv;
+}
+
+typedef enum amvp_sp_status {
+    AMVP_SP_STATUS_UNKNOWN = 0,
+    AMVP_SP_STATUS_PENDING,
+    AMVP_SP_STATUS_SUCCESS,
+    AMVP_SP_STATUS_ERROR
+} AMVP_SP_STATUS;
+
+static AMVP_SP_STATUS amvp_get_sp_request_status(const char *str) {
+    int diff = 1;
+    size_t len = 0;
+
+    len = strnlen_s(str, AMVP_CERT_REQ_STATUS_MAX_LEN + 1);
+    if (len > AMVP_CERT_REQ_STATUS_MAX_LEN) {
+        return AMVP_SP_STATUS_UNKNOWN;
+    }
+
+    strncmp_s(AMVP_SP_STATUS_STR_PENDING, sizeof(AMVP_SP_STATUS_STR_PENDING) - 1, str, len, &diff);
+    if (!diff) return AMVP_SP_STATUS_PENDING;
+    strncmp_s(AMVP_SP_STATUS_STR_SUCCESS, sizeof(AMVP_SP_STATUS_STR_SUCCESS) - 1, str, len, &diff);
+    if (!diff) return AMVP_SP_STATUS_SUCCESS;
+    strncmp_s(AMVP_SP_STATUS_STR_ERROR, sizeof(AMVP_SP_STATUS_STR_ERROR) - 1, str, len, &diff);
+    if (!diff) return AMVP_SP_STATUS_ERROR;
+
+    return AMVP_SP_STATUS_UNKNOWN;
+}
+
+AMVP_RESULT amvp_get_security_policy(AMVP_CTX *ctx) {
+    AMVP_RESULT rv = AMVP_INTERNAL_ERR;
+    AMVP_SP_STATUS status = AMVP_SP_STATUS_UNKNOWN;
+    JSON_Value *val = NULL;
+    JSON_Object *obj = NULL;
+    const char *status_str = NULL, *sp_str = NULL;
+    unsigned char *sp_buffer = NULL;
+    unsigned int sp_buffer_len = 0;
+    FILE *fp = NULL;
+
+    if (!ctx) {
+        return AMVP_NO_CTX;
+    }
+
+    if (!ctx->save_filename) {
+        AMVP_LOG_ERR("Save file location must be set to get security policy");
+        return AMVP_MISSING_ARG;
+    }
+
+    if (!ctx->jwt_token || !ctx->session_url) {
+        AMVP_LOG_ERR("Must ingest cert session file in order to get security policy");
+        return AMVP_MISSING_ARG;
+    }
+
+    rv = amvp_get_security_policy_json(ctx, ctx->session_url);
+    if (rv == AMVP_PROTOCOL_RSP_ERR) {
+        rv = amvp_handle_protocol_error(ctx, ctx->error);
+        if (rv == AMVP_RETRY_OPERATION) {
+            rv = amvp_get_security_policy_json(ctx, ctx->session_url);
+        }
+    }
+    if (rv != AMVP_SUCCESS) {
+        AMVP_LOG_ERR("Failed to get SP JSON payload from server");
+        return AMVP_TRANSPORT_FAIL;
+    }
+
+    val = json_parse_string(ctx->curl_buf);
+    if (!val) {
+        AMVP_LOG_ERR("Unable to parse JSON from server response when getting security policy");
+        return AMVP_JSON_ERR;
+    }
+
+    obj = amvp_get_obj_from_rsp(ctx, val);
+    if (!obj) {
+        AMVP_LOG_ERR("Unrecognized JSON format found when getting security policy");
+        return AMVP_JSON_ERR;
+    }
+
+    status_str = json_object_get_string(obj, "status");
+    if (!status_str) {
+        AMVP_LOG_ERR("No status value found when getting security policy\n");
+        return AMVP_JSON_ERR;
+    }
+
+    status = amvp_get_sp_request_status(status_str);
+    switch (status) {
+    case AMVP_SP_STATUS_PENDING:
+        AMVP_LOG_STATUS("Security policy not yet generated. Please ensure all needed info has been submitted and try again later.");
+        break;
+    case AMVP_SP_STATUS_SUCCESS:
+        AMVP_LOG_STATUS("Security policy ready. Saving...");
+        sp_str = json_object_get_string(obj, "content");
+        if (!sp_str) {
+            AMVP_LOG_ERR("Server indicated security policy was ready, but content is missing!");
+            goto err;
+        }
+
+        sp_buffer = amvp_decode_base64(sp_str, &sp_buffer_len);
+        if (!sp_buffer) {
+            AMVP_LOG_ERR("Error decoding base64 while getting security policy");
+            goto err;
+        }
+
+#if 0 // Realistically, eventually should set a max length for SP file 
+        if (sp_buffer_len > 100000000) { //100,000,000b = 100MB
+            AMVP_LOG_ERR("Security policy is suspiciously large");
+            goto err;
+        }
+#endif
+
+        fp = fopen(ctx->save_filename, "w");
+        if (fp == NULL) {
+            AMVP_LOG_ERR("Failed to intialize file output for security policy");
+            goto err;
+        }
+
+        if (fwrite((const void *)sp_buffer, sp_buffer_len, 1, fp) == EOF) {
+            AMVP_LOG_ERR("Failiure writing security policy to file");
+            goto err;
+        }
+
+        if (fclose(fp) == EOF) {
+            AMVP_LOG_ERR("Failed to finalize security policy file - cannot confirm integrity");
+        }
+
+        AMVP_LOG_STATUS("Security policy saved to file %s", ctx->save_filename);
+
+        break;
+    case AMVP_SP_STATUS_UNKNOWN:
+    case AMVP_SP_STATUS_ERROR:
+    default:
+        AMVP_LOG_ERR("Error occured while getting security policy");
+        goto err;
+    }
+
+    rv = AMVP_SUCCESS;
+err:
+    if (val) json_value_free(val);
+    if (sp_buffer) free(sp_buffer);
     return rv;
 }
 

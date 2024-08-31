@@ -21,6 +21,7 @@ void amvp_free_protocol_err(AMVP_PROTOCOL_ERR *err) {
     AMVP_PROTOCOL_ERR_LIST *current = NULL, *tmp = NULL;
     int i = 0;
     current = err->errors;
+    if (err->category_desc) free((void *)err->category_desc);
     while(current) {
         tmp = current->next;
         for (i = 0; i < current->desc_count; i++) {
