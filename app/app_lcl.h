@@ -75,8 +75,12 @@ typedef struct app_config {
     char sp_file[JSON_FILENAME_LENGTH + 1];
     char post_resources_filename[JSON_FILENAME_LENGTH + 1];
     char contact_ids[AMVP_MAX_CONTACTS_PER_CERT_REQ][AMVP_CONTACT_STR_MAX_LEN + 1];
+    char acv_certs[AMVP_MAX_ACV_CERTS_PER_CERT_REQ][AMVP_CERT_STR_MAX_LEN + 1];
+    char esv_certs[AMVP_MAX_ESV_CERTS_PER_CERT_REQ][AMVP_CERT_STR_MAX_LEN + 1];
 
     int num_contacts;
+    int num_acv_certs;
+    int num_esv_certs;
     int mod_cert_req;
     int ingest_cert_info;
     int post_resources;

@@ -630,6 +630,7 @@ AMVP_RESULT amvp_free_test_session(AMVP_CTX *ctx) {
     if (ctx->mod_cert_req_file) { free(ctx->mod_cert_req_file); }
     if (ctx->jwt_token) { free(ctx->jwt_token); }
     if (ctx->tmp_jwt) { free(ctx->tmp_jwt); }
+    if (ctx->error) { amvp_free_protocol_err(ctx->error); ctx->error = NULL; }
     if (ctx->vs_list) {
         vs_entry = ctx->vs_list;
         while (vs_entry) {
@@ -647,6 +648,16 @@ AMVP_RESULT amvp_free_test_session(AMVP_CTX *ctx) {
     if (ctx->cert_req_info.contact_count > 0) {
         for (i = 0; i < ctx->cert_req_info.contact_count; i++) {
             free(ctx->cert_req_info.contact_id[i]);
+        }
+    }
+    if (ctx->cert_req_info.acv_cert_count > 0) {
+        for (i = 0; i < ctx->cert_req_info.acv_cert_count; i++) {
+            free(ctx->cert_req_info.acv_cert[i]);
+        }
+    }
+    if (ctx->cert_req_info.esv_cert_count > 0) {
+        for (i = 0; i < ctx->cert_req_info.esv_cert_count; i++) {
+            free(ctx->cert_req_info.esv_cert[i]);
         }
     }
     if (ctx->caps_list) {
@@ -2117,6 +2128,78 @@ AMVP_RESULT amvp_cert_req_add_contact(AMVP_CTX *ctx, const char *contact_id) {
     return AMVP_SUCCESS;
 }
 
+AMVP_RESULT amvp_cert_req_add_sub_cert(AMVP_CTX *ctx, const char *cert_id, AMVP_CERT_TYPE type) {
+    int len = 0;
+
+    if (!ctx) {
+        return AMVP_NO_CTX;
+    }
+
+    if (!cert_id) {
+        return AMVP_MISSING_ARG;
+    }
+
+    len = strnlen_s(cert_id, AMVP_CERT_STR_MAX_LEN + 1);
+    if (!len || len > AMVP_CONTACT_STR_MAX_LEN) {
+        AMVP_LOG_ERR("Provided cert ID string is too long or empty");
+        return AMVP_INVALID_ARG;
+    }
+
+    if (ctx->action != AMVP_ACTION_CERT_REQ) {
+        AMVP_LOG_ERR("Session must be marked as a certify request to add contact info");
+        return AMVP_UNSUPPORTED_OP;
+    }
+
+    switch (type) {
+        case AMVP_CERT_TYPE_ACV:
+            if (ctx->cert_req_info.acv_cert_count >= AMVP_MAX_ACV_CERTS_PER_CERT_REQ) {
+                AMVP_LOG_ERR("Already at maximum number of alg certs per cert request");
+                return AMVP_UNSUPPORTED_OP;
+            }
+
+            ctx->cert_req_info.acv_cert[ctx->cert_req_info.acv_cert_count] = calloc(len + 1, sizeof(char));
+            if (!ctx->cert_req_info.acv_cert[ctx->cert_req_info.acv_cert_count]) {
+                AMVP_LOG_ERR("Error allocating memory for contact ID in cert request");
+                return AMVP_MALLOC_FAIL;
+            }
+
+            if (strncpy_s(ctx->cert_req_info.acv_cert[ctx->cert_req_info.acv_cert_count], len + 1, cert_id, len)) {
+                AMVP_LOG_ERR("Error copying contact ID string into cert request");
+                free(ctx->cert_req_info.acv_cert[ctx->cert_req_info.acv_cert_count]);
+                return AMVP_INTERNAL_ERR;
+            }
+
+            ctx->cert_req_info.acv_cert_count++;
+            break;
+        case AMVP_CERT_TYPE_ESV:
+            if (ctx->cert_req_info.esv_cert_count >= AMVP_MAX_ESV_CERTS_PER_CERT_REQ) {
+                AMVP_LOG_ERR("Already at maximum number of esv certs per cert request");
+                return AMVP_UNSUPPORTED_OP;
+            }
+            ctx->cert_req_info.esv_cert[ctx->cert_req_info.esv_cert_count] = calloc(len + 1, sizeof(char));
+            if (!ctx->cert_req_info.esv_cert[ctx->cert_req_info.esv_cert_count]) {
+                AMVP_LOG_ERR("Error allocating memory for contact ID in cert request");
+                return AMVP_MALLOC_FAIL;
+            }
+
+            if (strncpy_s(ctx->cert_req_info.esv_cert[ctx->cert_req_info.esv_cert_count], len + 1, cert_id, len)) {
+                AMVP_LOG_ERR("Error copying contact ID string into cert request");
+                free(ctx->cert_req_info.esv_cert[ctx->cert_req_info.esv_cert_count]);
+                return AMVP_INTERNAL_ERR;
+            }
+
+            ctx->cert_req_info.esv_cert_count++;
+            break;
+        case AMVP_CERT_TYPE_AMV:
+        case AMVP_CERT_TYPE_NONE:
+        case AMVP_CERT_TYPE_MAX:
+            AMVP_LOG_ERR("Sub certs can only be set for ACV or ESV certs");
+            return AMVP_INVALID_ARG;
+    }
+
+    return AMVP_SUCCESS;
+}
+
 /*
 AMVP_RESULT amvp_mark_as_cert_req(AMVP_CTX *ctx, char *filename) {
     if (!ctx) {
@@ -3096,7 +3179,7 @@ static AMVP_RESULT amvp_handle_cert_request_approval(AMVP_CTX *ctx, JSON_Object 
     AMVP_RESULT rv = AMVP_INTERNAL_ERR;
     const char *cert_id = NULL;
 
-    cert_id = json_object_get_string(json, "validationCertificateNumber");
+    cert_id = json_object_get_string(json, "validationCertificate");
     if (!cert_id) {
         AMVP_LOG_ERR("Cert request in approved state, but missing certificate number. Contact service provider.");
         goto err;
@@ -3210,6 +3293,8 @@ AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx) {
     amvp_create_array(&tmp_obj, &arr_val, &submission_arr);
     json_array_append_value(submission_arr, cert_submission_val);
     reg = json_serialize_to_string(arr_val, &reg_len);
+
+    AMVP_LOG_VERBOSE("Cert request payload:\n%s", reg);
 
     /* Send it */
     AMVP_LOG_STATUS("Sending module cert request...");
