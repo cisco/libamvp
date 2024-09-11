@@ -28,6 +28,18 @@ extern "C"
 #define AMVP_CONTACT_STR_MAX_LEN 16
 #define AMVP_MAX_MODULE_NAME_LEN 128
 
+#define AMVP_MAX_ACV_CERTS_PER_CERT_REQ 5
+#define AMVP_MAX_ESV_CERTS_PER_CERT_REQ 5
+#define AMVP_CERT_STR_MAX_LEN 16
+
+typedef enum amvp_cert_type {
+    AMVP_CERT_TYPE_NONE = 0,
+    AMVP_CERT_TYPE_ACV,
+    AMVP_CERT_TYPE_ESV,
+    AMVP_CERT_TYPE_AMV,
+    AMVP_CERT_TYPE_MAX
+} AMVP_CERT_TYPE;
+
 /**
  * @enum AMVP_LOG_LVL
  * @brief This enum defines the different log levels for
@@ -3212,6 +3224,7 @@ AMVP_SUB_KAS amvp_get_kas_alg(AMVP_CIPHER cipher);
 AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx);
 AMVP_RESULT amvp_mark_as_cert_req(AMVP_CTX *ctx, int module_id, int vendor_id);
 AMVP_RESULT amvp_cert_req_add_contact(AMVP_CTX *ctx, const char *contact_id);
+AMVP_RESULT amvp_cert_req_add_sub_cert(AMVP_CTX *ctx, const char *cert_id, AMVP_CERT_TYPE type);
 AMVP_RESULT amvp_create_module(AMVP_CTX *ctx, char *filename);
 AMVP_RESULT amvp_get_module_request(AMVP_CTX *ctx, char *filename);
 AMVP_RESULT amvp_submit_evidence(AMVP_CTX *ctx, const char *filename);

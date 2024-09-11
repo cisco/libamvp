@@ -55,26 +55,6 @@ static void print_usage(int code) {
         printf("suite. Algorithm suites are enabled or disabled at build time depending on the\n");
         printf("capabilities of the provided cryptographic library.\n\n");
     }
-    printf("Algorithm Test Suites:\n");
-    printf("Note: not all suites are supported by all supported modules\n");
-    printf("      --all_algs (or -a, Enable all of the suites supported by the crypto module)\n");
-    printf("      --aes\n");
-    printf("      --tdes\n");
-    printf("      --hash\n");
-    printf("      --cmac\n");
-    printf("      --hmac\n");
-    printf("      --kdf\n");
-    printf("      --dsa\n");
-    printf("      --kas_ffc\n");
-    printf("      --safe_primes\n");
-    printf("      --rsa\n");
-    printf("      --ecdsa\n");
-    printf("      --drbg\n");
-    printf("      --kas_ecc\n");
-    printf("      --kas_ifc\n");
-    printf("      --kda\n");
-    printf("      --kts_ifc\n");
-    printf("\n");
 
     if (code >= AMVP_LOG_LVL_VERBOSE) {
         printf("libamvp generates a file containing information that can be used for various tasks regarding\n");
@@ -157,6 +137,8 @@ static void print_usage(int code) {
     printf("      --check_module_request <module_info_file>\n");
     printf("To request module certificate using a predefined request file:\n");
     printf("      --module_cert_req --with_module <module_id_number> --with_vendor <vendor_id_number> --with-contact <CMVP contact ID> ...\n");
+    printf("Optionally, the following fields can also be added to module_cert_req:\n");
+    printf("      --with_acv_cert <CAVP algorithm certificate ID> --with_esv_cert <ESVP certificate ID>\n");
     printf("\n");
     printf("To post all resources a predefined resource json file:\n");
     printf("      --post_resources <resource_file>\n");
@@ -228,6 +210,8 @@ static ko_longopt_t longopts[] = {
     { "submit_security_policy", ko_required_argument, 427 },
     { "for_cert_request", ko_required_argument, 428 },
     { "get_security_policy", ko_no_argument, 429 } ,
+    { "with_acv_cert", ko_required_argument, 430 },
+    { "with_esv_cert", ko_required_argument, 431 },
     { NULL, 0, 0 }
 };
 
@@ -545,6 +529,30 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
 
         case 429:
             cfg->get_sp = 1;
+            break;
+
+        case 430:
+            if (cfg->num_acv_certs >= AMVP_MAX_ACV_CERTS_PER_CERT_REQ) {
+                printf("Too many algorithm certs provided for cert req\n");
+                return 1;
+            }
+            if (!check_option_length(opt.arg, c, AMVP_CERT_STR_MAX_LEN)) {
+                return 1;
+            }
+            strcpy_s(cfg->acv_certs[cfg->num_acv_certs], AMVP_CERT_STR_MAX_LEN + 1, opt.arg);
+            cfg->num_acv_certs++;
+            break;
+
+        case 431:
+            if (cfg->num_esv_certs >= AMVP_MAX_ESV_CERTS_PER_CERT_REQ) {
+                printf("Too many algorithm certs provided for cert req\n");
+                return 1;
+            }
+            if (!check_option_length(opt.arg, c, AMVP_CERT_STR_MAX_LEN)) {
+                return 1;
+            }
+            strcpy_s(cfg->esv_certs[cfg->num_esv_certs], AMVP_CERT_STR_MAX_LEN + 1, opt.arg);
+            cfg->num_esv_certs++;
             break;
 
         case '?':

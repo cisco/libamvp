@@ -342,6 +342,14 @@ int main(int argc, char **argv) {
         for (diff = 0; diff < cfg.num_contacts; diff++) {
             amvp_cert_req_add_contact(ctx, cfg.contact_ids[diff]);
         }
+
+        for (diff = 0; diff < cfg.num_acv_certs; diff++) {
+            amvp_cert_req_add_sub_cert(ctx, cfg.acv_certs[diff], AMVP_CERT_TYPE_ACV);
+        }
+
+        for (diff = 0; diff < cfg.num_esv_certs; diff++) {
+            amvp_cert_req_add_sub_cert(ctx, cfg.esv_certs[diff], AMVP_CERT_TYPE_ESV);
+        }
     }
 
     if (cfg.create_module) {

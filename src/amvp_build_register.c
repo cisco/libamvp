@@ -52,6 +52,22 @@ AMVP_RESULT amvp_build_registration_json(AMVP_CTX *ctx, JSON_Value **reg) {
         json_array_append_string(req_arr, ctx->cert_req_info.contact_id[i]);
     }
 
+    if (ctx->cert_req_info.acv_cert_count > 0) {
+        json_object_set_value(cap_obj, "algorithmCertificates", json_value_init_array());
+        req_arr = json_object_get_array(cap_obj, "algorithmCertificates");
+        for (i = 0; i < ctx->cert_req_info.acv_cert_count; i++) {
+            json_array_append_string(req_arr, ctx->cert_req_info.acv_cert[i]);
+        }
+    }
+
+    if (ctx->cert_req_info.esv_cert_count > 0) {
+        json_object_set_value(cap_obj, "entropyCertificates", json_value_init_array());
+        req_arr = json_object_get_array(cap_obj, "entropyCertificates");
+        for (i = 0; i < ctx->cert_req_info.esv_cert_count; i++) {
+            json_array_append_string(req_arr, ctx->cert_req_info.esv_cert[i]);
+        }
+    }
+
     *reg = val;
 
     return AMVP_SUCCESS;

@@ -1748,8 +1748,12 @@ typedef struct amvp_fips_t {
 typedef struct amvp_cert_req_t {
     int module_id;
     int vendor_id;
-    int contact_count; 
+    int contact_count;
+    int acv_cert_count;
+    int esv_cert_count; 
     char *contact_id[AMVP_MAX_CONTACTS_PER_CERT_REQ];
+    char *acv_cert[AMVP_MAX_ACV_CERTS_PER_CERT_REQ];
+    char *esv_cert[AMVP_MAX_ESV_CERTS_PER_CERT_REQ];
 } AMVP_CERT_REQ;
 
 typedef enum amvp_action {
