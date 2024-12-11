@@ -826,6 +826,7 @@ AMVP_DRBG_CAP_GROUP *amvp_create_drbg_group(AMVP_DRBG_MODE_LIST *mode, int group
     return grp;
 }
 
+#ifdef AMVP_OLD_JSON_FORMAT
 /*
  * Creates a JSON amvp array which consists of
  * [{preamble}, {object}]
@@ -866,6 +867,28 @@ AMVP_RESULT amvp_create_array(JSON_Object **obj, JSON_Value **val, JSON_Array **
     *arry = reg_arry;
     return AMVP_SUCCESS;
 }
+#else
+AMVP_RESULT amvp_create_response_obj(JSON_Object **obj, JSON_Value **val) {
+    JSON_Value *tval = NULL;
+    JSON_Object *tobj = NULL;
+
+    tval = json_value_init_object();
+    tobj = json_value_get_object(tval);
+    if (!tobj) {
+        return AMVP_JSON_ERR;
+    }
+
+    json_object_set_string(tobj, "amvVersion", AMVP_VERSION);
+    *obj = tobj;
+    *val = tval;
+    return AMVP_SUCCESS;
+}
+
+AMVP_RESULT amvp_add_version_to_obj(JSON_Object *obj) {
+    json_object_set_string(obj, "amvVersion", AMVP_VERSION);
+    return AMVP_SUCCESS;
+}
+#endif
 
 /*
  * This function returns a string that describes the error
@@ -1035,9 +1058,12 @@ JSON_Object *amvp_get_obj_from_rsp(AMVP_CTX *ctx, JSON_Value *arry_val) {
         AMVP_LOG_ERR("Missing arguments");
         return NULL;
     }
+#ifdef AMVP_OLD_JSON_FORMAT
     reg_array = json_value_get_array(arry_val);
-
     obj = json_array_get_object(reg_array, 1);
+#else
+    obj = json_value_get_object(arry_val);
+#endif
     return obj;
 }
 
