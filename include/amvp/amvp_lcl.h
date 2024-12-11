@@ -1929,7 +1929,12 @@ const char *amvp_lookup_rsa_randpq_name(int value);
 
 int amvp_lookup_rsa_randpq_index(const char *value);
 
+#ifdef AMVP_OLD_JSON_FORMAT
 AMVP_RESULT amvp_create_array(JSON_Object **obj, JSON_Value **val, JSON_Array **arry);
+#else
+AMVP_RESULT amvp_create_response_obj(JSON_Object **obj, JSON_Value **val);
+AMVP_RESULT amvp_add_version_to_obj(JSON_Object *obj);
+#endif
 
 AMVP_RESULT is_valid_tf_param(int value);
 

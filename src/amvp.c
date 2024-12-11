@@ -2308,6 +2308,7 @@ int amvp_get_vector_set_count(AMVP_CTX *ctx) {
  * authentications using a TOTP.
  */
 static AMVP_RESULT amvp_build_login(AMVP_CTX *ctx, char **login, int *login_len, int refresh) {
+#ifdef AMVP_OLD_JSON_FORMAT
     AMVP_RESULT rv = AMVP_SUCCESS;
     JSON_Value *reg_arry_val = NULL;
     JSON_Value *ver_val = NULL;
@@ -2364,6 +2365,48 @@ err:
     if (token) free(token);
     if (reg_arry_val) json_value_free(reg_arry_val);
     return rv;
+#else
+    AMVP_RESULT rv = AMVP_SUCCESS;
+    JSON_Value *val = NULL;
+    JSON_Object *obj = NULL;
+    char *token = NULL;
+
+    if (!login_len) return AMVP_INVALID_ARG;
+
+    val = json_value_init_object();
+    obj = json_value_get_object(val);
+
+    json_object_set_string(obj, AMVP_PROTOCOL_VERSION_STR, AMVP_VERSION);
+
+    if (ctx->totp_cb) {
+        token = calloc(AMVP_TOTP_TOKEN_MAX + 1, sizeof(char));
+        if (!token) return AMVP_MALLOC_FAIL;
+
+        rv = ctx->totp_cb(&token, AMVP_TOTP_TOKEN_MAX);
+        if (rv != AMVP_SUCCESS) {
+            AMVP_LOG_ERR("Error occured in application callback while generating TOTP");
+            rv = AMVP_TOTP_FAIL;
+            goto err;
+        }
+        if (strnlen_s(token, AMVP_TOTP_TOKEN_MAX + 1) > AMVP_TOTP_TOKEN_MAX) {
+            AMVP_LOG_ERR("totp cb generated a token that is too long");
+            json_value_free(val);
+            val = NULL;
+            rv = AMVP_TOTP_FAIL;
+            goto err;
+        }
+        json_object_set_string(obj, "passcode", token);
+    }
+
+    if (refresh) {
+        json_object_set_string(obj, "accessToken", ctx->jwt_token);
+    }
+
+err:
+    *login = json_serialize_to_string(val, login_len);
+    if (token) free(token);
+    return rv;
+#endif
 }
 
 /*
@@ -3252,8 +3295,8 @@ end:
  */
 AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx) {
     AMVP_RESULT rv = AMVP_SUCCESS;
-    char *module_name = NULL, *reg = NULL, *file = NULL, *url = NULL;
-    const char *token = NULL;
+    char *module_name = NULL, *reg = NULL, *file = NULL;
+    const char *token = NULL, *url = NULL;
     int reg_len = 0, id = 0, i = 0, retry_period = 0, retry = 1;
     unsigned int time_waited_so_far = 0;
     JSON_Value *arr_val = NULL, *cert_submission_val = NULL, *cert_rsp_val = NULL, *cert_info_val = NULL,
@@ -3290,9 +3333,14 @@ AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx) {
         goto end;
     }
     /* create an array with amvVersion header, append request as the second object in the array */
+#ifdef AMVP_OLD_JSON_FORMAT
     amvp_create_array(&tmp_obj, &arr_val, &submission_arr);
     json_array_append_value(submission_arr, cert_submission_val);
     reg = json_serialize_to_string(arr_val, &reg_len);
+#else
+    amvp_add_version_to_obj(json_value_get_object(cert_submission_val));
+    reg = json_serialize_to_string(cert_submission_val, &reg_len);
+#endif
 
     AMVP_LOG_VERBOSE("Cert request payload:\n%s", reg);
 
@@ -3312,7 +3360,13 @@ AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx) {
         goto end;
     }
 
-    id = json_object_get_number(tmp_obj, "certRequestId");
+    url = json_object_get_string(tmp_obj, "url");
+    if (!url) {
+        AMVP_LOG_ERR("Server response missing URL for cert request session.");
+        rv = AMVP_JSON_ERR;
+        goto end;
+    }
+    sscanf(url, "/amvp/v1/certRequests/%d", &id);
 
     token = json_object_get_string(tmp_obj, "accessToken");
     if (!ctx->jwt_token) {
@@ -3326,10 +3380,7 @@ AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx) {
     }
     strcpy_s(ctx->jwt_token, AMVP_JWT_TOKEN_MAX + 1, token);
 
-    AMVP_LOG_STATUS("Cert request %d succesfully created. Checking status...", id);
-
-    url = calloc(AMVP_ATTR_URL_MAX + 1, sizeof(char));
-    snprintf(url, AMVP_ATTR_URL_MAX +1, "%s/%d", "/amvp/v1/certRequests", id);
+    AMVP_LOG_STATUS("Cert request %d successfully created. Checking status...", id);
 
     while (retry) {
         rv = amvp_transport_get(ctx, url, NULL);
@@ -3413,11 +3464,14 @@ end:
     if (reg) json_free_serialized_string(reg);
     if (file) free(file);
     if (module_name) free(module_name);
-    if (url) free(url);
     if (output_file_val) json_value_free(output_file_val); //Also frees the header and body vals
     if (cert_info_val) json_value_free(cert_info_val);
     if (cert_rsp_val) json_value_free(cert_rsp_val);
+#ifdef AMVP_OLD_JSON_FORMAT
     if (arr_val) json_value_free(arr_val); //Also frees submission_val
+#else
+    if (cert_submission_val) json_value_free(cert_submission_val);
+#endif
     return rv;
 }
 
@@ -3452,13 +3506,24 @@ AMVP_RESULT amvp_submit_security_policy(AMVP_CTX *ctx, const char *filename) {
         goto end;
     }
 
+#ifdef AMVP_OLD_JSON_FORMAT
     rv = amvp_create_array(&submission_obj, &submission, &submission_arr);
     if (rv != AMVP_SUCCESS) {
         AMVP_LOG_ERR("Error preparing security policy for submission");
         goto end;
     }
-
     json_array_append_value(submission_arr, val);
+
+#else
+    submission = val;
+    submission_obj = json_value_get_object(submission);
+    rv = amvp_add_version_to_obj(submission_obj);
+    if (rv != AMVP_SUCCESS) {
+        AMVP_LOG_ERR("Unable to add amvVersion to SP submission");
+        goto end;
+    }
+#endif
+
     sp = json_serialize_to_string_pretty(submission, &sp_len);
 
     AMVP_LOG_STATUS("Successfully read security policy file. Submitting...");
@@ -3680,13 +3745,23 @@ AMVP_RESULT amvp_submit_evidence(AMVP_CTX *ctx, const char *filename) {
         goto end;
     }
 
+#ifdef AMVP_OLD_JSON_FORMAT
     rv = amvp_create_array(&submission_obj, &submission, &submission_arr);
     if (rv != AMVP_SUCCESS) {
         AMVP_LOG_ERR("Error preparing evidence for submission");
         goto end;
     }
-
     json_array_append_value(submission_arr, val);
+#else
+    submission = val;
+    submission_obj = json_value_get_object(submission);
+    rv = amvp_add_version_to_obj(submission_obj);
+    if (rv != AMVP_SUCCESS) {
+        AMVP_LOG_ERR("Unable to add amvVersion to SP submission");
+        goto end;
+    }
+#endif
+
     ev = json_serialize_to_string_pretty(submission, &ev_len);
 
     AMVP_LOG_STATUS("Successfully read evidence file. Submitting...");
@@ -4449,7 +4524,11 @@ static AMVP_RESULT amvp_dispatch_ie_set(AMVP_CTX *ctx, JSON_Object *obj) {
     /*
      * Create AMVP array for response
      */
+#ifdef AMVP_OLD_JSON_FORMAT
     rv = amvp_create_array(&reg_obj, &reg_arry_val, &reg_arry);
+#else
+    rv = amvp_create_response_obj(&reg_obj, &reg_arry_val);
+#endif
     if (rv != AMVP_SUCCESS) {
         AMVP_LOG_ERR("Failed to create JSON response struct. ");
         return rv;
@@ -4933,8 +5012,12 @@ AMVP_RESULT amvp_post_data(AMVP_CTX *ctx, char *filename) {
     post_val = json_parse_string(json_result);
     json_free_serialized_string(json_result);
 
+#ifdef AMVP_OLD_JSON_FORMAT
     rv = amvp_create_array(&reg_obj, &reg_arry_val, &reg_arry);
     json_array_append_value(reg_arry, post_val);
+#else
+    rv = amvp_create_response_obj(&reg_obj, &reg_arry_val);
+#endif
 
     json_result = json_serialize_to_string_pretty(reg_arry_val, &len);
     AMVP_LOG_STATUS("\nPOST Data: %s, %s\n\n", path, json_result);
@@ -5487,12 +5570,21 @@ AMVP_RESULT amvp_put_data_from_file(AMVP_CTX *ctx, const char *put_filename) {
     json_free_serialized_string(json_result);
     json_result = NULL;
 
+#ifdef AMVP_OLD_JSON_FORMAT
     rv = amvp_create_array(&reg_obj, &reg_arry_val, &reg_arry);
     if (rv != AMVP_SUCCESS) {
         AMVP_LOG_STATUS("Failed to create array");
         goto end;
     }
     json_array_append_value(reg_arry, put_val);
+#else
+    rv = amvp_create_response_obj(&reg_obj, &reg_arry_val);
+    if (rv != AMVP_SUCCESS) {
+        AMVP_LOG_STATUS("Failed to create payload");
+        goto end;
+    }
+#endif
+
     json_result = json_serialize_to_string_pretty(reg_arry_val, &len);
 
     rv = amvp_transport_put(ctx, test_session_url, json_result, len);
@@ -5562,12 +5654,21 @@ static AMVP_RESULT amvp_put_data_from_ctx(AMVP_CTX *ctx) {
     json_free_serialized_string(json_result);
     json_result = NULL;
 
+#ifdef AMVP_OLD_JSON_FORMAT
     rv = amvp_create_array(&reg_obj, &reg_arry_val, &reg_arry);
     if (rv != AMVP_SUCCESS) {
         AMVP_LOG_STATUS("Failed to create array");
         goto end;
     }
     json_array_append_value(reg_arry, put_val);
+#else
+    rv = amvp_create_response_obj(&reg_obj, &reg_arry_val);
+    if (rv != AMVP_SUCCESS) {
+        AMVP_LOG_STATUS("Failed to create payload");
+        goto end;
+    }
+#endif
+
     json_result = json_serialize_to_string_pretty(reg_arry_val, &len);
 
     rv = amvp_transport_put(ctx, ctx->session_url, json_result, len);

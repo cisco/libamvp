@@ -61,7 +61,7 @@ static void setup_session_parameters(void) {
     key_file = getenv("AMV_KEY_FILE");
 
     printf("Using the following parameters:\n\n");
-    printf("    AMV_SERVER:     [Redacted for demo]\n");
+    printf("    AMV_SERVER:     %s\n", server);
     printf("    AMV_PORT:       %d\n", port);
     printf("    AMV_URI_PREFIX: %s\n", path_segment);
     if (ca_chain_file) printf("    AMV_CA_FILE:    [Redacted for demo]\n");
