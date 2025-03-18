@@ -75,8 +75,6 @@
 
 #define AMVP_BIT2BYTE(x) ((x + 7) >> 3) /**< Convert bit length (x, of type integer) into byte length */
 
-#define AMVP_ALG_MAX AMVP_CIPHER_END - 1  /* Used by alg_tbl[] */
-
 #define AMVP_CAP_MAX AMVP_ALG_MAX * 2 /* Arbitrary limit to the number of capability objects that
                                          can be registered via file */
 /********************************************************
@@ -724,7 +722,7 @@
 /*
  * END PBKDF
  */
- 
+
  /**
  * Accepted length ranges for TLS 1.2 KDF
  */
@@ -896,15 +894,18 @@
 #define AMVP_SAVE_DEFAULT_PREFIX "testSession"
 
 #define AMVP_CERT_REQ_STATUS_MAX_LEN 32
-#define AMVP_CERT_REQ_STATUS_STR_INITIAL "Initial"
-#define AMVP_CERT_REQ_STATUS_STR_READY "Ready"
-#define AMVP_CERT_REQ_STATUS_STR_SUBMITTED "RequirementsSubmitted"
-#define AMVP_CERT_REQ_STATUS_STR_APPROVED "Approved"
-#define AMVP_CERT_REQ_STATUS_STR_ERROR "Error"
+#define AMVP_CERT_REQ_STATUS_STR_INITIAL "initial"
+#define AMVP_CERT_REQ_STATUS_STR_READY "ready"
+#define AMVP_CERT_REQ_STATUS_STR_SUBMITTED "requirementsSubmitted"
+#define AMVP_CERT_REQ_STATUS_STR_APPROVED "approved"
+#define AMVP_CERT_REQ_STATUS_STR_ERROR "error"
 
-#define AMVP_SP_STATUS_STR_PENDING "Pending"
-#define AMVP_SP_STATUS_STR_SUCCESS "Success"
-#define AMVP_SP_STATUS_STR_ERROR "Error"
+#define AMVP_SP_STATUS_STR_PENDING "pending"
+#define AMVP_SP_STATUS_STR_PROCESSING "processing"
+#define AMVP_SP_STATUS_STR_WAITING_GENERATION "pendingGeneration"
+#define AMVP_SP_STATUS_STR_SUBMITTED "submitted"
+#define AMVP_SP_STATUS_STR_SUCCESS "success"
+#define AMVP_SP_STATUS_STR_ERROR "error"
 
 #define AMVP_ANSI_COLOR_GREEN "\e[0;32m"
 #define AMVP_ANSI_COLOR_YELLOW "\x1b[33m"
@@ -942,30 +943,6 @@
 
 typedef struct amvp_alg_handler_t AMVP_ALG_HANDLER;
 
-struct amvp_alg_handler_t {
-    AMVP_CIPHER cipher;
-
-    AMVP_RESULT (*handler) (AMVP_CTX *ctx, JSON_Object *obj);
-
-    const char *name;
-    const char *mode; /** < Should be NULL unless using an asymmetric alg */
-    const char *revision;
-    union {
-        AMVP_SUB_AES      aes;
-        AMVP_SUB_TDES     tdes;
-        AMVP_SUB_CMAC     cmac;
-        AMVP_SUB_KMAC     kmac;
-        AMVP_SUB_KDF      kdf;
-        AMVP_SUB_DSA      dsa;
-        AMVP_SUB_RSA      rsa;
-        AMVP_SUB_ECDSA    ecdsa;
-        AMVP_SUB_DRBG     drbg;
-        AMVP_SUB_HMAC     hmac;
-        AMVP_SUB_HASH     hash;
-        AMVP_SUB_KAS      kas;
-    } alg;
-};
-
 typedef struct amvp_vs_list_t {
     int vs_id;
     struct amvp_vs_list_t *next;
@@ -974,27 +951,6 @@ typedef struct amvp_vs_list_t {
 struct amvp_result_desc_t {
     AMVP_RESULT rv;
     const char *desc;
-};
-
-struct amvp_hash_alg_info {
-    AMVP_HASH_ALG id;
-    const char *name;
-};
-
-struct amvp_ec_curve_info {
-    AMVP_EC_CURVE id;
-    const char *name;
-};
-
-/* This is used when we need a table of acceptable ciphers for specific situations */
-struct amvp_function_info {
-    AMVP_CIPHER cipher;
-    const char *name;
-};
-
-struct amvp_alt_revision_info {
-    AMVP_REVISION revision;
-    const char *name;
 };
 
 /*
@@ -1095,508 +1051,6 @@ typedef struct amvp_json_domain_obj_t {
     int increment;
     struct amvp_sl_list_t *values;
 } AMVP_JSON_DOMAIN_OBJ;
-
-typedef struct amvp_prereq_alg_val {
-    AMVP_PREREQ_ALG alg;
-    char *val;
-} AMVP_PREREQ_ALG_VAL;
-
-typedef struct amvp_prereq_list {
-    AMVP_PREREQ_ALG_VAL prereq_alg_val;
-    struct amvp_prereq_list *next;
-} AMVP_PREREQ_LIST;
-
-typedef struct amvp_sym_cipher_capability {
-    AMVP_CONFORMANCE conformance;
-    AMVP_SYM_CIPH_DIR direction;
-    AMVP_SYM_CIPH_KO keying_option;
-    AMVP_SYM_CIPH_IVGEN_SRC ivgen_source;
-    AMVP_SYM_CIPH_IVGEN_MODE ivgen_mode;
-    AMVP_SYM_CIPH_SALT_SRC salt_source;
-    int perform_ctr_tests;
-    unsigned int ctr_incr;
-    unsigned int ctr_ovrflw;
-    unsigned int dulen_matches_paylen;
-    AMVP_SL_LIST *keylen;
-    AMVP_SL_LIST *ptlen;
-    AMVP_SL_LIST *tweak;
-    AMVP_SL_LIST *ivlen;
-    AMVP_SL_LIST *aadlen;
-    AMVP_SL_LIST *taglen;
-
-    //Support domains for most lengths - APIs should check
-    //and allow either/or SL_LIST or domain for not but not both
-    AMVP_JSON_DOMAIN_OBJ payload_len;
-    AMVP_JSON_DOMAIN_OBJ iv_len;
-    AMVP_JSON_DOMAIN_OBJ aad_len;
-    AMVP_JSON_DOMAIN_OBJ tweak_len;
-    AMVP_JSON_DOMAIN_OBJ du_len;
-
-    int kw_mode;
-} AMVP_SYM_CIPHER_CAP;
-
-typedef struct amvp_hash_capability {
-    int in_bit;   /* defaults to false */
-    int in_empty; /* defaults to false */
-    int out_bit; /**< 1 for true, 0 for false
-                      Defaults to false.
-                      Only for AMVP_HASH_SHAKE_* */
-    AMVP_JSON_DOMAIN_OBJ out_len; /**< Required for AMVP_HASH_SHAKE_* */
-    AMVP_JSON_DOMAIN_OBJ msg_length;
-} AMVP_HASH_CAP;
-
-typedef struct amvp_kdf135_snmp_capability {
-    AMVP_SL_LIST *pass_lens;
-    AMVP_NAME_LIST *eng_ids;
-} AMVP_KDF135_SNMP_CAP;
-
-typedef struct amvp_kdf108_mode_params {
-    const char *kdf_mode;
-    AMVP_NAME_LIST *mac_mode;
-    AMVP_JSON_DOMAIN_OBJ supported_lens;
-    AMVP_NAME_LIST *data_order;
-    AMVP_SL_LIST *counter_lens;
-    int empty_iv_support;
-    int requires_empty_iv;
-} AMVP_KDF108_MODE_PARAMS;
-
-typedef struct amvp_kdf108_capability {
-    AMVP_KDF108_MODE_PARAMS counter_mode;
-    AMVP_KDF108_MODE_PARAMS feedback_mode;
-    AMVP_KDF108_MODE_PARAMS dpi_mode;
-} AMVP_KDF108_CAP;
-
-typedef struct amvp_kdf135_ssh_capability {
-    int method[4];
-    int sha;
-} AMVP_KDF135_SSH_CAP;
-
-typedef struct amvp_kdf135_srtp_capability {
-    int supports_zero_kdr;
-    int kdr_exp[AMVP_KDF135_SRTP_KDR_MAX];
-    AMVP_SL_LIST *aes_keylens;
-} AMVP_KDF135_SRTP_CAP;
-
-typedef struct amvp_kdf135_ikev2_capability {
-    AMVP_NAME_LIST *hash_algs;
-    AMVP_JSON_DOMAIN_OBJ init_nonce_len_domain;
-    AMVP_JSON_DOMAIN_OBJ respond_nonce_len_domain;
-    AMVP_JSON_DOMAIN_OBJ dh_secret_len;
-    AMVP_JSON_DOMAIN_OBJ key_material_len;
-} AMVP_KDF135_IKEV2_CAP;
-
-typedef struct amvp_kdf135_ikev1_capability {
-    AMVP_NAME_LIST *hash_algs;
-    char auth_method[AMVP_AUTH_METHOD_STR_MAX_PLUS];
-    AMVP_JSON_DOMAIN_OBJ init_nonce_len_domain;
-    AMVP_JSON_DOMAIN_OBJ respond_nonce_len_domain;
-    AMVP_JSON_DOMAIN_OBJ dh_secret_len;
-    AMVP_JSON_DOMAIN_OBJ psk_len;
-} AMVP_KDF135_IKEV1_CAP;
-
-
-typedef struct amvp_kdf135_x942_capability {
-    AMVP_KDF_X942_TYPE type;
-    AMVP_JSON_DOMAIN_OBJ key_len;
-    AMVP_JSON_DOMAIN_OBJ other_len;
-    AMVP_JSON_DOMAIN_OBJ supp_len;
-    AMVP_JSON_DOMAIN_OBJ zz_len;
-    AMVP_NAME_LIST *hash_algs;
-    AMVP_NAME_LIST *oids;
-} AMVP_KDF135_X942_CAP;
-
-typedef struct amvp_kdf135_x963_capability {
-    AMVP_NAME_LIST *hash_algs;
-    AMVP_SL_LIST *shared_info_lengths;
-    AMVP_SL_LIST *field_sizes;
-    AMVP_SL_LIST *key_data_lengths;
-} AMVP_KDF135_X963_CAP;
-
-typedef struct amvp_pbkdf_capability {
-    AMVP_NAME_LIST *hmac_algs;
-    AMVP_JSON_DOMAIN_OBJ iteration_count_domain;
-    AMVP_JSON_DOMAIN_OBJ key_len_domain;
-    AMVP_JSON_DOMAIN_OBJ password_len_domain;
-    AMVP_JSON_DOMAIN_OBJ salt_len_domain;
-} AMVP_PBKDF_CAP;
-
-typedef struct amvp_kdf_tls12_capability {
-    AMVP_NAME_LIST *hash_algs;
-} AMVP_KDF_TLS12_CAP;
-
-typedef struct amvp_kdf_tls13_capability {
-    AMVP_NAME_LIST *hmac_algs;
-    AMVP_PARAM_LIST *running_mode;
-} AMVP_KDF_TLS13_CAP;
-
-typedef struct amvp_hmac_capability {
-    AMVP_JSON_DOMAIN_OBJ key_len; // 8-524288
-    AMVP_JSON_DOMAIN_OBJ mac_len; // 32-512
-} AMVP_HMAC_CAP;
-
-typedef struct amvp_cmac_capability {
-    AMVP_JSON_DOMAIN_OBJ mac_len;
-    AMVP_JSON_DOMAIN_OBJ msg_len;
-    int direction_gen;
-    int direction_ver;
-    AMVP_SL_LIST *key_len;       // 128,192,256
-    AMVP_SL_LIST *keying_option;
-} AMVP_CMAC_CAP;
-
-typedef struct amvp_kmac_capability {
-    AMVP_JSON_DOMAIN_OBJ mac_len;
-    AMVP_JSON_DOMAIN_OBJ msg_len;
-    AMVP_JSON_DOMAIN_OBJ key_len;
-    AMVP_XOF_SUPPORT_OPTION xof;
-    int hex_customization; // boolean
-} AMVP_KMAC_CAP;
-
-typedef struct amvp_drbg_cap_mode {
-    int der_func_enabled;
-    int entropy_input_len;      //":"112",
-    int entropy_len_max;
-    int entropy_len_min;
-    int entropy_len_step;
-    int nonce_len;              //":"56",
-    int nonce_len_max;
-    int nonce_len_min;
-    int nonce_len_step;
-    int perso_string_len;       //":"0",
-    int perso_len_max;
-    int perso_len_min;
-    int perso_len_step;
-    int additional_input_len;   //":"0",
-    int additional_in_len_max;
-    int additional_in_len_min;
-    int additional_in_len_step;
-    int returned_bits_len;      //":"256"
-} AMVP_DRBG_CAP_GROUP;
-
-typedef struct amvp_drbg_group_list_t {
-    int id;
-    AMVP_DRBG_CAP_GROUP *group;
-    struct amvp_drbg_group_list_t *next;
-} AMVP_DRBG_GROUP_LIST;
-
-typedef struct amvp_drbg_mode_list_t {
-    AMVP_DRBG_MODE mode;
-    AMVP_DRBG_GROUP_LIST *groups;
-    struct amvp_drbg_mode_list_t *next;
-} AMVP_DRBG_MODE_LIST;
-
-typedef struct amvp_drbg_capability {
-    AMVP_CIPHER cipher;
-    AMVP_PREREQ_LIST *prereq_vals;
-    int pred_resist_enabled;    // boolean
-    int reseed_implemented;     // boolean
-    AMVP_DRBG_MODE_LIST *drbg_cap_mode;
-} AMVP_DRBG_CAP;
-
-struct amvp_drbg_mode_name_t {
-    AMVP_DRBG_MODE mode;
-    const char *name;
-};
-
-typedef struct amvp_rsa_hash_pair_list {
-    const char *name;
-    int salt;
-    struct amvp_rsa_hash_pair_list *next;
-} AMVP_RSA_HASH_PAIR_LIST;
-
-typedef struct amvp_rsa_mode_caps_list {
-    unsigned int modulo; // 2048, 3072, 4096 -- defined as macros
-    int salt;   // only valid for siggen mode
-    AMVP_NAME_LIST *hash_algs;
-    AMVP_RSA_HASH_PAIR_LIST *hash_pair;
-    AMVP_NAME_LIST *prime_tests;
-    struct amvp_rsa_mode_caps_list *next;
-} AMVP_RSA_MODE_CAPS_LIST;
-
-typedef struct amvp_rsa_keygen_capability_t {
-    int key_format_crt;                     // if false, key format is assumed to be standard
-    AMVP_RSA_PUB_EXP_MODE pub_exp_mode;
-    char *fixed_pub_exp;               // hex value of e
-    AMVP_RSA_KEYGEN_MODE rand_pq;      // as defined in FIPS186-4
-    const char *rand_pq_str;
-    int info_gen_by_server;                  // boolean
-    AMVP_RSA_MODE_CAPS_LIST *mode_capabilities;
-    struct amvp_rsa_keygen_capability_t *next; // to support multiple randPQ values
-} AMVP_RSA_KEYGEN_CAP;
-
-typedef struct amvp_rsa_prim_capability_t {
-    unsigned int prim_type;
-    int key_format_crt;                     // if false, key format is assumed to be standard
-    AMVP_RSA_PUB_EXP_MODE pub_exp_mode;
-    char *fixed_pub_exp;               // hex value of e
-    struct amvp_rsa_prim_capability_t *next; // to support multiple randPQ values
-} AMVP_RSA_PRIM_CAP;
-
-
-typedef struct amvp_curve_hash_compatibility_list_t {
-    AMVP_EC_CURVE curve;
-    AMVP_HASH_ALG algs[AMVP_HASH_ALG_MAX]; //flags for all supported hash algs for curve, use arr so we can memcmp
-    struct amvp_curve_hash_compatibility_list_t *next;
-} AMVP_CURVE_ALG_COMPAT_LIST;
-
-typedef struct amvp_ecdsa_capability_t {
-    //Contains registered curves and hash algs to be used specifically for each curve
-    AMVP_CURVE_ALG_COMPAT_LIST *curves;
-    AMVP_NAME_LIST *secret_gen_modes;
-    //For backwards compatibility, this contains hash algs that will be used with ALL registered curves (HASH_ALG = array index)
-    int hash_algs[AMVP_HASH_ALG_MAX + 1];
-    AMVP_ECDSA_COMPONENT_MODE component;
-} AMVP_ECDSA_CAP;
-
-typedef struct amvp_rsa_sig_capability_t {
-    const char *sig_type_str;
-    unsigned int sig_type;
-    int pub_exp_mode;                           // for sigVer only
-    char *fixed_pub_exp;                        // hex value of e
-    AMVP_RSA_MODE_CAPS_LIST *mode_capabilities; //holds modRSASigGen (int) and hashSigGen (list)
-    struct amvp_rsa_sig_capability_t *next;
-} AMVP_RSA_SIG_CAP;
-
-
-typedef struct amvp_dsa_attrs {
-    unsigned int modulo;
-    int sha;
-    struct amvp_dsa_attrs *next;
-} AMVP_DSA_ATTRS;
-
-#define AMVP_DSA_MAX_MODES 5
-typedef struct amvp_dsa_cap_mode_t {
-    AMVP_DSA_MODE cap_mode;
-    int defined;
-    int gen_pq_prob;
-    int gen_pq_prov;
-    int gen_g_unv;
-    int gen_g_can;
-    AMVP_DSA_ATTRS *dsa_attrs;
-} AMVP_DSA_CAP_MODE;
-
-typedef struct amvp_dsa_capability {
-    AMVP_CIPHER cipher;
-    AMVP_DSA_CAP_MODE *dsa_cap_mode;
-} AMVP_DSA_CAP;
-
-typedef struct amvp_kas_ecc_mac {
-    int alg;
-    int curve;
-    AMVP_PARAM_LIST *key;
-    int nonce;
-    int maclen;
-    struct amvp_kas_ecc_mac *next;
-} AMVP_KAS_ECC_MAC;
-
-typedef struct amvp_kas_ecc_pset {
-    unsigned int set;
-    int curve;
-    AMVP_PARAM_LIST *sha;
-    AMVP_KAS_ECC_MAC *mac;
-    struct amvp_kas_ecc_pset *next;
-} AMVP_KAS_ECC_PSET;
-
-typedef struct amvp_kas_ecc_scheme {
-    AMVP_KAS_ECC_SCHEMES scheme;
-    AMVP_KAS_ECC_SET kdf;
-    AMVP_PARAM_LIST *role;
-    AMVP_KAS_ECC_PSET *pset;
-    struct amvp_kas_ecc_scheme *next;
-} AMVP_KAS_ECC_SCHEME;
-
-
-typedef struct amvp_kas_ecc_cap_mode_t {
-    AMVP_KAS_ECC_MODE cap_mode;
-    AMVP_PREREQ_LIST *prereq_vals;
-    AMVP_PARAM_LIST *curve;    /* CDH mode only */
-    AMVP_REVISION revision; /* Empty if default is used */
-    AMVP_PARAM_LIST *function;
-    AMVP_KAS_ECC_SCHEME *scheme; /* other modes use schemes */
-    int hash;     /* only a single sha for KAS-ECC-SSC */
-} AMVP_KAS_ECC_CAP_MODE;
-
-typedef struct amvp_kas_ecc_capability_t {
-    AMVP_CIPHER cipher;
-    AMVP_KAS_ECC_CAP_MODE *kas_ecc_mode;
-} AMVP_KAS_ECC_CAP;
-
-typedef struct amvp_kas_ffc_mac {
-    int alg;
-    int curve;
-    AMVP_PARAM_LIST *key;
-    int nonce;
-    int maclen;
-    struct amvp_kas_ffc_mac *next;
-} AMVP_KAS_FFC_MAC;
-
-typedef struct amvp_kas_ffc_pset {
-    unsigned int set;
-    AMVP_PARAM_LIST *sha;
-    AMVP_KAS_FFC_MAC *mac;
-    struct amvp_kas_ffc_pset *next;
-} AMVP_KAS_FFC_PSET;
-
-typedef struct amvp_kas_ffc_scheme {
-    AMVP_KAS_FFC_SCHEMES scheme;
-    AMVP_KAS_FFC_SET kdf;
-    AMVP_PARAM_LIST *role;
-    AMVP_KAS_FFC_PSET *pset;
-    struct amvp_kas_ffc_scheme *next;
-} AMVP_KAS_FFC_SCHEME;
-
-
-typedef struct amvp_kas_ffc_cap_mode_t {
-    AMVP_KAS_FFC_MODE cap_mode;
-    AMVP_PREREQ_LIST *prereq_vals;
-    AMVP_PARAM_LIST *function;
-    AMVP_PARAM_LIST *genmeth;
-    int hash;
-    AMVP_KAS_FFC_SCHEME *scheme; /* other modes use schemes */
-} AMVP_KAS_FFC_CAP_MODE;
-
-typedef struct amvp_kas_ffc_capability_t {
-    AMVP_CIPHER cipher;
-    AMVP_KAS_FFC_CAP_MODE *kas_ffc_mode;
-} AMVP_KAS_FFC_CAP;
-
-typedef struct amvp_kas_ifc_capability_t {
-    AMVP_CIPHER cipher;
-    int hash;
-    char *fixed_pub_exp;
-    AMVP_PARAM_LIST *kas1_roles;
-    AMVP_PARAM_LIST *kas2_roles;
-    AMVP_PARAM_LIST *keygen_method;
-    AMVP_SL_LIST *modulo;
-} AMVP_KAS_IFC_CAP;
-
-
-
-typedef struct amvp_safe_primes_cap_mode_t {
-    AMVP_PARAM_LIST *genmeth;
-} AMVP_SAFE_PRIMES_CAP_MODE;
-
-typedef struct amvp_safe_primes_capability_t {
-    AMVP_CIPHER cipher;
-    AMVP_SAFE_PRIMES_CAP_MODE *mode;
-} AMVP_SAFE_PRIMES_CAP;
-
-typedef struct amvp_kda_onestep_capability_t {
-    AMVP_CIPHER cipher;
-    AMVP_REVISION revision;
-    AMVP_NAME_LIST *aux_functions;
-    AMVP_NAME_LIST *mac_salt_methods;
-    AMVP_PARAM_LIST *patterns;
-    char *literal_pattern_candidate; //optional - only filled if "literal" pattern is used - hex only
-    AMVP_PARAM_LIST *encodings;
-    AMVP_JSON_DOMAIN_OBJ z;
-    int l;
-} AMVP_KDA_ONESTEP_CAP;
-
-typedef struct amvp_kda_twostep_capability_t {
-    AMVP_CIPHER cipher;
-    AMVP_REVISION revision;
-    AMVP_NAME_LIST *mac_salt_methods;
-    AMVP_PARAM_LIST *patterns;
-    char *literal_pattern_candidate; //optional - only filled if "literal" pattern is used - hex only
-    AMVP_PARAM_LIST *encodings;
-    AMVP_JSON_DOMAIN_OBJ z;
-    int l;
-    int perform_multi_expansion_tests; /* 56Cr2 only */
-    int use_hybrid_shared_secret; /* 56Cr2 only */
-    AMVP_JSON_DOMAIN_OBJ aux_secret_len; /* 56Cr2 only */
-    AMVP_KDF108_CAP kdf_params; /* All of the KDF108 params get stored in here to avoid duplicate code */
-} AMVP_KDA_TWOSTEP_CAP;
-
-typedef struct amvp_kda_hkdf_t {
-    AMVP_CIPHER cipher;
-    AMVP_PARAM_LIST *patterns;
-    AMVP_REVISION revision;
-    char *literal_pattern_candidate; //optional - only filled if "literal" pattern is used - hex only
-    AMVP_PARAM_LIST *encodings;
-    AMVP_NAME_LIST *hmac_algs;
-    AMVP_NAME_LIST *mac_salt_methods;
-    AMVP_JSON_DOMAIN_OBJ z;
-    int l;
-    int perform_multi_expansion_tests; /* 56Cr2 only */
-    int use_hybrid_shared_secret; /* 56Cr2 only */
-    AMVP_JSON_DOMAIN_OBJ aux_secret_len; /* 56Cr2 only */
-} AMVP_KDA_HKDF_CAP;
-
-typedef struct amvp_kts_ifc_macs_t {
-    AMVP_CIPHER cipher;
-    int key_length;
-    int mac_length;
-    struct amvp_kts_ifc_macs_t *next;
-} AMVP_KTS_IFC_MACS;
-
-typedef struct amvp_kts_ifc_schemes_t {
-    AMVP_KTS_IFC_SCHEME_TYPE scheme;
-    int l;
-    AMVP_PARAM_LIST *roles;
-    AMVP_KTS_IFC_MACS *macs;  /* not yet supported */
-    AMVP_PARAM_LIST *hash;
-    int null_assoc_data;
-    char *assoc_data_pattern;
-    char *encodings;      /* may need to change to SL_LIST */
-    struct amvp_kts_ifc_schemes_t *next;
-} AMVP_KTS_IFC_SCHEMES;
-
-
-typedef struct amvp_kts_ifc_capability_t {
-    AMVP_CIPHER cipher;
-    char *fixed_pub_exp;
-    char *iut_id;
-    AMVP_PARAM_LIST *functions;
-    AMVP_KTS_IFC_SCHEMES *schemes;
-    AMVP_PARAM_LIST *keygen_method;
-    AMVP_SL_LIST *modulo;
-} AMVP_KTS_IFC_CAP;
-
-typedef struct amvp_caps_list_t {
-    AMVP_CIPHER cipher;
-    AMVP_CAP_TYPE cap_type;
-    int has_prereq;    /* used to indicate algorithm can have prereqs */
-    AMVP_PREREQ_LIST *prereq_vals;
-    union {
-        AMVP_SYM_CIPHER_CAP *sym_cap;
-        AMVP_HASH_CAP *hash_cap;
-        AMVP_DRBG_CAP *drbg_cap;
-        AMVP_DSA_CAP *dsa_cap;
-        AMVP_HMAC_CAP *hmac_cap;
-        AMVP_CMAC_CAP *cmac_cap;
-        AMVP_KMAC_CAP *kmac_cap;
-        AMVP_RSA_KEYGEN_CAP *rsa_keygen_cap;
-        AMVP_RSA_SIG_CAP *rsa_siggen_cap;
-        AMVP_RSA_SIG_CAP *rsa_sigver_cap;
-        AMVP_RSA_PRIM_CAP *rsa_prim_cap;
-        AMVP_ECDSA_CAP *ecdsa_keygen_cap;
-        AMVP_ECDSA_CAP *ecdsa_keyver_cap;
-        AMVP_ECDSA_CAP *ecdsa_siggen_cap;
-        AMVP_ECDSA_CAP *ecdsa_sigver_cap;
-        AMVP_KDF135_SNMP_CAP *kdf135_snmp_cap;
-        AMVP_KDF135_SSH_CAP *kdf135_ssh_cap;
-        AMVP_KDF135_SRTP_CAP *kdf135_srtp_cap;
-        AMVP_KDF135_IKEV2_CAP *kdf135_ikev2_cap;
-        AMVP_KDF135_IKEV1_CAP *kdf135_ikev1_cap;
-        AMVP_KDF135_X942_CAP *kdf135_x942_cap;
-        AMVP_KDF135_X963_CAP *kdf135_x963_cap;
-        AMVP_KDF108_CAP *kdf108_cap;
-        AMVP_PBKDF_CAP *pbkdf_cap;
-        AMVP_KDF_TLS12_CAP *kdf_tls12_cap;
-        AMVP_KDF_TLS13_CAP *kdf_tls13_cap;
-        AMVP_KAS_ECC_CAP *kas_ecc_cap;
-        AMVP_KAS_FFC_CAP *kas_ffc_cap;
-        AMVP_KAS_IFC_CAP *kas_ifc_cap;
-        AMVP_KDA_ONESTEP_CAP *kda_onestep_cap;
-        AMVP_KDA_TWOSTEP_CAP *kda_twostep_cap;
-        AMVP_KDA_HKDF_CAP *kda_hkdf_cap;
-        AMVP_KTS_IFC_CAP *kts_ifc_cap;
-        AMVP_SAFE_PRIMES_CAP *safe_primes_keygen_cap;
-        AMVP_SAFE_PRIMES_CAP *safe_primes_keyver_cap;
-    } cap;
-
-    struct amvp_caps_list_t *next;
-} AMVP_CAPS_LIST;
 
 typedef struct amvp_vendor_address_t {
     char *street_1;
@@ -1821,11 +1275,6 @@ struct amvp_ctx_t {
     int use_tmp_jwt; /* 1 if the tmp_jwt should be used */
     JSON_Value *registration; /* The capability registration string sent when creating a test session */
 
-    /* crypto module capabilities list */
-    AMVP_CAPS_LIST *caps_list;
-    /* Maintain a count of the number of registered vector sets so we can evaluate cost. This can be >= caps_list size */
-    int vs_count;
-
     /* application callbacks */
     AMVP_RESULT (*test_progress_cb) (char *msg, AMVP_LOG_LVL level);
 
@@ -1845,8 +1294,6 @@ struct amvp_ctx_t {
     AMVP_PROTOCOL_ERR *error; /**< Object to store info related to protocol error. Should be freed and set null when handled */
 };
 
-AMVP_RESULT amvp_check_test_results(AMVP_CTX *ctx);
-
 AMVP_RESULT amvp_process_tests(AMVP_CTX *ctx);
 
 AMVP_RESULT amvp_send_test_session_registration(AMVP_CTX *ctx, char *reg, int len);
@@ -1855,7 +1302,9 @@ AMVP_RESULT amvp_send_login(AMVP_CTX *ctx, char *login, int len);
 
 AMVP_RESULT amvp_send_module_creation(AMVP_CTX *ctx, char *module, int len);
 
-AMVP_RESULT amvp_send_evidence(AMVP_CTX *ctx, const char *url, char *ev, int ev_len);
+AMVP_RESULT amvp_send_evidence(AMVP_CTX *ctx, AMVP_EVIDENCE_TYPE type, const char *url, char *ev, int ev_len);
+
+AMVP_RESULT amvp_request_security_policy_generation(AMVP_CTX *ctx, const char *url, char *data);
 
 AMVP_RESULT amvp_send_security_policy(AMVP_CTX *ctx, const char *url, char *sp, int sp_len);
 
@@ -1901,34 +1350,6 @@ AMVP_RESULT amvp_notify_large(AMVP_CTX *ctx,
                               char *large_url,
                               unsigned int data_len);
 
-/*
- * AMVP utility functions used internally
- */
-AMVP_CAPS_LIST *amvp_locate_cap_entry(AMVP_CTX *ctx, AMVP_CIPHER cipher);
-
-const char *amvp_lookup_cipher_name(AMVP_CIPHER alg);
-
-AMVP_CIPHER amvp_lookup_cipher_index(const char *algorithm);
-
-AMVP_CIPHER amvp_lookup_cipher_w_mode_index(const char *algorithm,
-                                            const char *mode);
-
-const char *amvp_lookup_cipher_mode_str(AMVP_CIPHER cipher);
-
-const char *amvp_lookup_cipher_revision(AMVP_CIPHER alg);
-const char *amvp_lookup_alt_revision_string(AMVP_REVISION rev);
-
-AMVP_DRBG_MODE amvp_lookup_drbg_mode_index(const char *mode);
-
-AMVP_DRBG_MODE_LIST *amvp_locate_drbg_mode_entry(AMVP_CAPS_LIST *cap, AMVP_DRBG_MODE mode);
-AMVP_DRBG_MODE_LIST *amvp_create_drbg_mode_entry(AMVP_CAPS_LIST *cap, AMVP_DRBG_MODE mode);
-AMVP_DRBG_CAP_GROUP *amvp_locate_drbg_group_entry(AMVP_DRBG_MODE_LIST *mode, int group);
-AMVP_DRBG_CAP_GROUP *amvp_create_drbg_group(AMVP_DRBG_MODE_LIST *mode, int group);
-
-const char *amvp_lookup_rsa_randpq_name(int value);
-
-int amvp_lookup_rsa_randpq_index(const char *value);
-
 #ifdef AMVP_OLD_JSON_FORMAT
 AMVP_RESULT amvp_create_array(JSON_Object **obj, JSON_Value **val, JSON_Array **arry);
 #else
@@ -1937,17 +1358,6 @@ AMVP_RESULT amvp_add_version_to_obj(JSON_Object *obj);
 #endif
 
 AMVP_RESULT is_valid_tf_param(int value);
-
-const char *amvp_lookup_rsa_prime_test_name(AMVP_RSA_PRIME_TEST_TYPE type);
-AMVP_RESULT is_valid_prime_test(const char *value);
-
-AMVP_RESULT is_valid_rsa_mod(int value);
-
-AMVP_HASH_ALG amvp_lookup_hash_alg(const char *name);
-const char *amvp_lookup_hash_alg_name(AMVP_HASH_ALG id);
-
-AMVP_EC_CURVE amvp_lookup_ec_curve(AMVP_CIPHER cipher, const char *name);
-const char *amvp_lookup_ec_curve_name(AMVP_CIPHER cipher, AMVP_EC_CURVE id);
 
 AMVP_RESULT amvp_refresh(AMVP_CTX *ctx);
 
@@ -1987,14 +1397,7 @@ int amvp_is_in_name_list(AMVP_NAME_LIST *list, const char *string);
 AMVP_RESULT amvp_append_str_list(AMVP_STRING_LIST **list, const char *string);
 int amvp_lookup_str_list(AMVP_STRING_LIST **list, const char *string);
 int amvp_lookup_param_list(AMVP_PARAM_LIST *list, int value);
-const char* amvp_lookup_aux_function_alg_str(AMVP_CIPHER alg);
-AMVP_CIPHER amvp_lookup_aux_function_alg_tbl(const char *str);
 int amvp_is_domain_already_set(AMVP_JSON_DOMAIN_OBJ *domain);
-
-/* These functions are used for KDF108, but twostep uses KDF108 so we share them */
-AMVP_KDF108_MAC_MODE_VAL read_mac_mode(const char *str);
-AMVP_KDF108_FIXED_DATA_ORDER_VAL read_ctr_location(const char *str);
-AMVP_KDF108_MODE read_mode(const char *str);
 
 AMVP_RESULT amvp_json_serialize_to_file_pretty_a(const JSON_Value *value, const char *filename);
 AMVP_RESULT amvp_json_serialize_to_file_pretty_w(const JSON_Value *value, const char *filename);

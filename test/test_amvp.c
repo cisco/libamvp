@@ -705,25 +705,6 @@ Test(PROCESS_TESTS, upload_vectors_from_file, .init = setup_full_ctx, .fini = te
 }
 
 /*
- * Test amvp_put_data_from_file
- */
-Test(PROCESS_TESTS, put_data_from_file, .init = setup_full_ctx, .fini = teardown) {
-
-    rv = amvp_put_data_from_file(NULL, "test");
-    cr_assert(rv == AMVP_NO_CTX);
-
-    rv = amvp_put_data_from_file(ctx, NULL);
-    cr_assert(rv == AMVP_MISSING_ARG);
-
-    rv = amvp_put_data_from_file(ctx, "json/put.json");
-#ifdef AMVP_OFFLINE
-    cr_assert(rv == AMVP_TRANSPORT_FAIL);
-#else
-    cr_assert(rv == AMVP_MISSING_ARG);
-#endif
-}
-
-/*
  * Test amvp_mark_as_sample
  */
 Test(PROCESS_TESTS, mark_as_sample, .init = setup_full_ctx, .fini = teardown) {
@@ -732,21 +713,6 @@ Test(PROCESS_TESTS, mark_as_sample, .init = setup_full_ctx, .fini = teardown) {
     cr_assert(rv == AMVP_NO_CTX);
 
     rv = amvp_mark_as_sample(ctx);
-    cr_assert(rv == AMVP_SUCCESS);
-}
-
-/*
- * Test amvp_mark_as_post_only
- */
-Test(PROCESS_TESTS, mark_as_post_only, .init = setup_full_ctx, .fini = teardown) {
-
-    rv = amvp_mark_as_post_only(NULL, "test");
-    cr_assert(rv == AMVP_NO_CTX);
-
-    rv = amvp_mark_as_post_only(ctx, NULL);
-    cr_assert(rv == AMVP_MISSING_ARG);
-
-    rv = amvp_mark_as_post_only(ctx, "test");
     cr_assert(rv == AMVP_SUCCESS);
 }
 
@@ -836,21 +802,6 @@ Test(PROCESS_TESTS, get_vector_set_count, .init = setup_full_ctx, .fini = teardo
     cr_assert(count > 0);
     cr_assert(count < 10000); /* An arbitrarily large number that should never be reached */
 
-}
-
-/*
- * Test amvp_mark_as_put_after_test
- */
-Test(PROCESS_TESTS, mark_as_put_after_test, .init = setup_full_ctx, .fini = teardown) {
-
-    rv = amvp_mark_as_put_after_test(NULL, "test");
-    cr_assert(rv == AMVP_NO_CTX);
-
-    rv = amvp_mark_as_put_after_test(ctx, NULL);
-    cr_assert(rv == AMVP_MISSING_ARG);
-
-    rv = amvp_mark_as_put_after_test(ctx, "test");
-    cr_assert(rv == AMVP_SUCCESS);
 }
 
 /*

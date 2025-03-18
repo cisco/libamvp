@@ -74,41 +74,14 @@ static void print_usage(int code) {
     printf("To register manually using a JSON file instead of application settings use:\n");
     printf("      --manual_registration <file>\n");
     printf("\n");
-    printf("To retreive and output the JSON form of the currently registered capabilities:\n");
-    printf("      --get_registration\n");
-    printf("\n");
     printf("To register and save the vector/evidence to file:\n");
     printf("      --request <file>\n");
     printf("      -r <file>\n");
-    printf("\n");
-    printf("To process saved vectors/evidence and write results/responses to file:\n");
-    printf("      --request <file>\n");
-    printf("      --response <file>\n");
-    printf("      OR\n");
-    printf("      -r <file>\n");
-    printf("      -p <file>\n");
-    printf("\n");
-    printf("To upload responses from file:\n");
-    printf("      --upload <file>\n");
-    printf("      -u <file>\n");
-    printf("\n");
-    printf("To process kat vectors from a JSON file use:\n");
-    printf("      --kat <file>\n");
-    printf("\n");
-    printf("Note: --resume_session and --get_results use the test session info file created automatically by the library as input\n");
-    printf("\n");
-    printf("To resume a previous test session that was interupted:\n");
-    printf("      --resume_session <session_file>\n");
-    printf("            Note: this does not save your arguments from your initial run and you MUST include them\n");
-    printf("            again (e.x. --aes,  --request and --fips_validation)\n");
     printf("\n");
     printf("To cancel a test session that was previously initiated:\n");
     printf("      --cancel_session <session_file>\n");
     printf("            Note: This will request the server to halt all processing and delete all info related to the\n");
     printf("            test session - It is not recoverable\n");
-    printf("To get the results of a previous test session:\n");
-    printf("      --get_results <session_file>\n");
-    printf("\n");
     printf("To GET status of request, such as validation or metadata:\n");
     printf("      --get <request string URL including ID>\n");
     printf("\n");
@@ -120,12 +93,6 @@ static void print_usage(int code) {
     printf("\n");
     printf("To request to DELETE a resource you have created on the server:\n");
     printf("      --delete <url>\n");
-    printf("If you are running a sample registration (querying for correct answers\n");
-    printf("in addition to the normal registration flow) use:\n");
-    printf("      --sample\n");
-    printf("\n");
-    printf("To get the expected results of a sample test session:\n");
-    printf("      --get_expected_results <session_file>\n");
     printf("\n");
     printf("Some other options may support outputting to log OR saving to a file. To save to a file:\n");
     printf("      --save_to <file>\n");
@@ -179,26 +146,16 @@ static ko_longopt_t longopts[] = {
     { "error", ko_no_argument, 306 },
     { "verbose", ko_no_argument, 307 },
     { "none", ko_no_argument, 308 },
-    { "sample", ko_no_argument, 309 },
     { "manual_registration", ko_required_argument, 400 },
-    { "kat", ko_required_argument, 401 },
     { "fips_validation", ko_required_argument, 402 },
-    { "request", ko_required_argument, 403 },
-    { "response", ko_required_argument, 404 },
-    { "upload", ko_required_argument, 405 },
     { "get", ko_required_argument, 406 },
     { "post", ko_required_argument, 407 },
     { "put", ko_required_argument, 408 },
-    { "get_results", ko_required_argument, 409},
     { "certnum", ko_required_argument, 410 },
-    { "resume_session", ko_required_argument, 411 },
-    { "get_expected_results", ko_required_argument, 412 },
     { "save_to", ko_required_argument, 413 },
     { "delete", ko_required_argument, 414 },
     { "cancel_session", ko_required_argument, 415 },
-    { "cost", ko_no_argument, 416 },
     { "debug", ko_no_argument, 417 },
-    { "get_registration", ko_no_argument, 418 },
     { "module_cert_req", ko_no_argument, 419 },
     { "post_resources", ko_required_argument, 420 },
     { "create_module", ko_required_argument, 421 },
@@ -206,12 +163,14 @@ static ko_longopt_t longopts[] = {
     { "with_module", ko_required_argument, 423 },
     { "with_vendor", ko_required_argument, 424} ,
     { "with_contact", ko_required_argument, 425 } ,
-    { "submit_evidence", ko_required_argument, 426 },
+    { "submit_ft_evidence", ko_required_argument, 426 },
     { "submit_security_policy", ko_required_argument, 427 },
     { "for_cert_request", ko_required_argument, 428 },
     { "get_security_policy", ko_no_argument, 429 } ,
     { "with_acv_cert", ko_required_argument, 430 },
     { "with_esv_cert", ko_required_argument, 431 },
+    { "submit_sc_evidence", ko_required_argument, 432 },
+    { "finalize", ko_no_argument, 433 },
     { NULL, 0, 0 }
 };
 
@@ -275,7 +234,7 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
                 } else {
                     print_usage(0);
                 }
-            } else { 
+            } else {
                 print_usage(0);
             }
             return 1;
@@ -297,9 +256,6 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
         case 308:
             cfg->level = AMVP_LOG_LVL_NONE;
             break;
-        case 309:
-            cfg->sample = 1;
-            break;
 
         case 400:
             cfg->manual_reg = 1;
@@ -309,48 +265,12 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
             strcpy_s(cfg->reg_file, JSON_FILENAME_LENGTH + 1, opt.arg);
             break;
 
-        case 401:
-            cfg->kat = 1;
-            if (!check_option_length(opt.arg, c, JSON_FILENAME_LENGTH)) {
-                return 1;
-            }
-            strcpy_s(cfg->kat_file, JSON_FILENAME_LENGTH + 1, opt.arg);
-            break;
-
         case 402:
             cfg->fips_validation = 1;
             if (!check_option_length(opt.arg, c, JSON_FILENAME_LENGTH)) {
                 return 1;
             }
             strcpy_s(cfg->validation_metadata_file, JSON_FILENAME_LENGTH + 1, opt.arg);
-            break;
-
-        case 'r':
-        case 403:
-            cfg->vector_req = 1;
-            if (!check_option_length(opt.arg, c, JSON_FILENAME_LENGTH)) {
-                return 1;
-            }
-            strcpy_s(cfg->vector_req_file, JSON_FILENAME_LENGTH + 1, opt.arg);
-            break;
-
-        case 'p':
-        case 404:
-            cfg->vector_rsp = 1;
-            if (!check_option_length(opt.arg, c, JSON_FILENAME_LENGTH)) {
-                return 1;
-            }
-
-            strcpy_s(cfg->vector_rsp_file, JSON_FILENAME_LENGTH + 1, opt.arg);
-            break;
-
-        case 'u':
-        case 405:
-            cfg->vector_upload = 1;
-            if (!check_option_length(opt.arg, c, JSON_FILENAME_LENGTH)) {
-                return 1;
-            }
-            strcpy_s(cfg->vector_upload_file, JSON_FILENAME_LENGTH + 1, opt.arg);
             break;
 
         case 406:
@@ -377,35 +297,11 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
             strcpy_s(cfg->put_filename, JSON_FILENAME_LENGTH + 1, opt.arg);
             break;
 
-        case 409:
-            cfg->get_results = 1;
-            if (!check_option_length(opt.arg, c, JSON_FILENAME_LENGTH)) {
-                return 1;
-            }
-            strcpy_s(cfg->session_file, JSON_FILENAME_LENGTH + 1, opt.arg);
-            break;
-
         case 410:
             if (!check_option_length(opt.arg, c, JSON_STRING_LENGTH)) {
                 return 1;
             }
             strcpy_s(value, JSON_STRING_LENGTH, opt.arg);
-            break;
-
-        case 411:
-            cfg->resume_session = 1;
-            if (!check_option_length(opt.arg, c, JSON_FILENAME_LENGTH)) {
-                return 1;
-            }
-            strcpy_s(cfg->session_file, JSON_FILENAME_LENGTH + 1, opt.arg);
-            break;
-
-        case 412:
-            cfg->get_expected = 1;
-            if (!check_option_length(opt.arg, c, JSON_FILENAME_LENGTH)) {
-                return 1;
-            }
-            strcpy_s(cfg->session_file, JSON_FILENAME_LENGTH + 1, opt.arg);
             break;
 
         case 's':
@@ -433,16 +329,8 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
             strcpy_s(cfg->session_file, JSON_FILENAME_LENGTH + 1, opt.arg);
             break;
 
-        case 416:
-            cfg->get_cost = 1;
-            break;
-
         case 417:
             cfg->level = AMVP_LOG_LVL_DEBUG;
-            break;
-
-        case 418:
-            cfg->get_reg = 1;
             break;
 
         case 419:
@@ -504,7 +392,7 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
             break;
 
         case 426:
-            cfg->submit_ev = 1;
+            cfg->submit_ft_ev = 1;
             if (!check_option_length(opt.arg, c, JSON_FILENAME_LENGTH)) {
                 return 1;
             }
@@ -555,6 +443,18 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
             cfg->num_esv_certs++;
             break;
 
+        case 432:
+            cfg->submit_sc_ev = 1;
+            if (!check_option_length(opt.arg, c, JSON_FILENAME_LENGTH)) {
+                return 1;
+            }
+            strcpy_s(cfg->ev_file, JSON_FILENAME_LENGTH + 1, opt.arg);
+            break;
+
+        case 433:
+            cfg->finalize = 1;
+            break;
+
         case '?':
             printf(ANSI_COLOR_RED "unknown option: %s\n"ANSI_COLOR_RESET, *(argv + opt.ind - !(opt.pos > 0)));
             printf("%s\n", AMVP_APP_HELP_MSG);
@@ -589,7 +489,7 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
         printf("Warning: Module ID/Vendor ID/Contact ID provided, but not performing a cert request. These options will be ignored\n");
     }
 
-    if ((cfg->submit_ev || cfg->submit_sp) && !cfg->ingest_cert_info) {
+    if ((cfg->submit_ft_ev || cfg->submit_sc_ev || cfg->submit_sp) && !cfg->ingest_cert_info) {
         printf("Submitting evidence or security policy info requires specifying a cert request info file\n");
         return 1;
     }

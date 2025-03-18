@@ -88,9 +88,6 @@ EXPORTS
   amvp_mark_as_request_only
   amvp_mark_as_get_only
   amvp_set_get_save_file
-  amvp_mark_as_post_only
-  amvp_mark_as_put_after_test
-  amvp_run
   amvp_oe_ingest_metadata
   amvp_oe_set_fips_validation_metadata
   amvp_oe_module_new
@@ -102,8 +99,6 @@ EXPORTS
   amvp_get_current_registration
   amvp_load_kat_filename
   amvp_upload_vectors_from_file
-  amvp_run_vectors_from_file
-  amvp_put_data_from_file
   amvp_get_results_from_server
   amvp_resume_test_session
   amvp_get_expected_results
