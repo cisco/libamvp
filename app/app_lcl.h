@@ -86,9 +86,11 @@ typedef struct app_config {
     int post_resources;
     int create_module;
     int get_module;
-    int submit_ev;
+    int submit_ft_ev;
+    int submit_sc_ev;
     int submit_sp;
     int get_sp;
+    int finalize;
     int module_id;
     int vendor_id;
     int testall; /* So the app can check whether the user indicated to test all possible algorithms */

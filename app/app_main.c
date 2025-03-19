@@ -61,7 +61,8 @@ static void setup_session_parameters(void) {
     key_file = getenv("AMV_KEY_FILE");
 
     printf("Using the following parameters:\n\n");
-    printf("    AMV_SERVER:     %s\n", server);
+  //  printf("    AMV_SERVER:     %s\n", server);
+    printf("    AMV_SERVER:     [Redacted for demo]\n");
     printf("    AMV_PORT:       %d\n", port);
     printf("    AMV_URI_PREFIX: %s\n", path_segment);
     if (ca_chain_file) printf("    AMV_CA_FILE:    [Redacted for demo]\n");
@@ -174,10 +175,6 @@ int main(int argc, char **argv) {
         goto end;
     }
 
-    if (cfg.sample) {
-        amvp_mark_as_sample(ctx);
-    }
-
     if (cfg.get) {
         rv = amvp_mark_as_get_only(ctx, cfg.get_string);
         if (rv != AMVP_SUCCESS) {
@@ -191,10 +188,6 @@ int main(int argc, char **argv) {
         }
     }
 
-    if (cfg.post) {
-        amvp_mark_as_post_only(ctx, cfg.post_filename);
-    }
-
     if (cfg.delete) {
         amvp_mark_as_delete_only(ctx, cfg.delete_url);
     }
@@ -206,61 +199,6 @@ int main(int argc, char **argv) {
     if (!cfg.vector_req && cfg.vector_rsp) {
         printf("Offline vector processing requires both options, --vector_req and --vector_rsp\n");
         goto end;
-    }
-
-    if (cfg.manual_reg) {
-        /*
-         * Using a JSON to register allows us to skip the
-         * "amvp_enable_*" API calls... could reduce the
-         * size of this file if you choose to use this capability.
-         */
-        rv = amvp_set_json_filename(ctx, cfg.reg_file);
-        if (rv != AMVP_SUCCESS) {
-            printf("Failed to set json file within AMVP ctx (rv=%d)\n", rv);
-            goto end;
-        }
-    } //else {
-       // if (cfg.hash) { if (enable_hash(ctx)) goto end; }
-  //  }
-
-    if (cfg.get_cost) {
-        diff = amvp_get_vector_set_count(ctx);
-        if (diff < 0) {
-            printf("Unable to get expected vector set count with given test session context.\n\n");
-        } else {
-            printf("The given test session context is expected to generate %d vector sets.\n\n", diff);
-        }
-        goto end;
-    }
-
-    if (cfg.get_reg) {
-        char *reg = NULL;
-        reg = amvp_get_current_registration(ctx, NULL);
-        if (!reg) {
-            printf("Error occured while getting current registration.\n");
-            goto end;
-        }
-        if (cfg.save_to) {
-            if (save_string_to_file((const char *)reg, (const char *)&cfg.save_file)) {
-                printf("Error occured while saving registration to file. Exiting...\n");
-            } else {
-                printf("Succesfully saved registration to given file. Exiting...\n");
-            }
-        } else {
-            printf("%s\n", reg);
-            printf("Completed output of current registration. Exiting...\n");
-        }
-        if (reg) free(reg);
-        goto end;
-    }
-    if (cfg.kat) {
-       rv = amvp_load_kat_filename(ctx, cfg.kat_file);
-       goto end;
-    }
-
-    if (cfg.vector_req && cfg.vector_rsp) {
-       rv = amvp_run_vectors_from_file(ctx, cfg.vector_req_file, cfg.vector_rsp_file);
-       goto end;
     }
 
     strncmp_s(DEFAULT_SERVER, DEFAULT_SERVER_LEN, server, DEFAULT_SERVER_LEN, &diff);
@@ -290,45 +228,11 @@ int main(int argc, char **argv) {
         }
     }
 
-    if (cfg.vector_upload) {
-       rv = amvp_upload_vectors_from_file(ctx, cfg.vector_upload_file, cfg.fips_validation);
-       goto end;
-    }
-
-    /* PUT without algorithms submits put_filename for validation using save JWT and testSession ID */
-    if (cfg.empty_alg && cfg.put) {
-         rv = amvp_put_data_from_file(ctx, cfg.put_filename);
-         goto end;
-    }
-    /* PUT with alg testing will submit put_filename with module/oe information */
-    if (!cfg.empty_alg && cfg.put) {
-        amvp_mark_as_put_after_test(ctx, cfg.put_filename);
-    }
-
-    if (cfg.get_results) {
-        rv = amvp_get_results_from_server(ctx, cfg.session_file);
-        goto end;
-    }
-
-    if (cfg.resume_session) {
-        rv = amvp_resume_test_session(ctx, cfg.session_file, cfg.fips_validation);
-        goto end;
-    }
-
     if (cfg.cancel_session) {
         if (cfg.save_to) {
             rv = amvp_cancel_test_session(ctx, cfg.session_file, cfg.save_file);
         } else {
             rv = amvp_cancel_test_session(ctx, cfg.session_file, NULL);
-        }
-        goto end;
-    }
-
-    if (cfg.get_expected) {
-        if (cfg.save_to) {
-            rv = amvp_get_expected_results(ctx, cfg.session_file, cfg.save_file);
-        } else {
-            rv = amvp_get_expected_results(ctx, cfg.session_file, NULL);
         }
         goto end;
     }
@@ -368,10 +272,17 @@ int main(int argc, char **argv) {
             printf("Error reading cert request info file; ensure it exists and is properly formatted\n");
             goto end;
         }
-        if (cfg.submit_ev) {
-            rv = amvp_submit_evidence(ctx, cfg.ev_file);
+        if (cfg.submit_ft_ev) {
+            rv = amvp_submit_evidence(ctx, cfg.ev_file, AMVP_EVIDENCE_TYPE_FUNCTIONAL_TEST);
             if (rv != AMVP_SUCCESS) {
-                printf("Error submitting evidence for module cert request\n");
+                printf("Error submitting functional evidence for module cert request\n");
+                goto end;
+            }
+        }
+        if (cfg.submit_sc_ev) {
+            rv = amvp_submit_evidence(ctx, cfg.ev_file, AMVP_EVIDENCE_TYPE_SOURCE_CODE);
+            if (rv != AMVP_SUCCESS) {
+                printf("Error submitting source code evidence for module cert request\n");
                 goto end;
             }
         }
@@ -397,6 +308,10 @@ int main(int argc, char **argv) {
                     goto end;
                 }
             }
+        }
+        if (cfg.finalize) {
+            amvp_finalize_cert_request(ctx);
+            goto end;
         }
         goto end;
     }

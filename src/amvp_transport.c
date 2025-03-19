@@ -358,7 +358,7 @@ static long amvp_curl_http_post(AMVP_CTX *ctx, const char *url, const char *data
         memzero_s(ctx->curl_buf, AMVP_CURL_BUF_MAX);
     }
     //crv = curl_easy_setopt(hnd, CURLOPT_VERBOSE, 1L);
-    
+
     /*
      * Send the HTTP POST request
      */
@@ -475,7 +475,7 @@ static long amvp_curl_http_put(AMVP_CTX *ctx, const char *url, const char *data,
         printf("\nHTTP PUT:\n\n%s\n", data);
     }
     //crv = curl_easy_setopt(hnd, CURLOPT_VERBOSE, 1L);
-    
+
     /*
      * Send the HTTP PUT request
      */
@@ -669,14 +669,34 @@ AMVP_RESULT amvp_send_test_session_registration(AMVP_CTX *ctx,
 #endif
 }
 
-#define AMVP_EVIDENCE_URI "evidence"
+#define AMVP_FT_EVIDENCE_URI "evidence"
+#define AMVP_SC_EVIDENCE_URI "sourceCode"
 AMVP_RESULT amvp_send_evidence(AMVP_CTX *ctx,
+                                        AMVP_EVIDENCE_TYPE type,
                                         const char *url,
                                         char *ev,
                                         int ev_len) {
     char *full_url = NULL;
+    const char *type_endpoint = NULL;
+    size_t type_len = 0;
+
+    switch (type) {
+    case AMVP_EVIDENCE_TYPE_FUNCTIONAL_TEST:
+        type_endpoint = AMVP_FT_EVIDENCE_URI;
+        break;
+    case AMVP_EVIDENCE_TYPE_SOURCE_CODE:
+        type_endpoint = AMVP_SC_EVIDENCE_URI;
+        break;
+    case AMVP_EVIDENCE_TYPE_NA:
+    case AMVP_EVIDENCE_TYPE_MAX:
+    default:
+        AMVP_LOG_ERR("Cannot create evidence URL with given type");
+    }
+
+    type_len = strnlen_s(type_endpoint, AMVP_ATTR_URL_MAX);
+
     int url_len = strnlen_s(url, AMVP_ATTR_URL_MAX + 1);
-    if (url_len > AMVP_ATTR_URL_MAX - sizeof(AMVP_EVIDENCE_URI)) {
+    if (url_len > AMVP_ATTR_URL_MAX - type_len) {
         AMVP_LOG_ERR("Invalid URL provided for submitting evidence (too long)");
         return AMVP_TRANSPORT_FAIL;
     }
@@ -686,31 +706,56 @@ AMVP_RESULT amvp_send_evidence(AMVP_CTX *ctx,
         AMVP_LOG_ERR("Failed to allocate memory while sending evidence file");
         return AMVP_TRANSPORT_FAIL;
     }
-    snprintf(full_url, AMVP_ATTR_URL_MAX, "%s/%s", url, AMVP_EVIDENCE_URI);
+    snprintf(full_url, AMVP_ATTR_URL_MAX, "%s/%s", url, type_endpoint);
 
     return amvp_transport_post(ctx, full_url, ev, ev_len);
 }
 
 #define AMVP_SP_URI "securityPolicy"
+
+static char* generate_sp_url(const char *url) {
+    char *full_url = NULL;
+    int url_len = strnlen_s(url, AMVP_ATTR_URL_MAX + 1);
+
+    if (url_len > AMVP_ATTR_URL_MAX - sizeof(AMVP_SP_URI)) {
+        return NULL;
+    }
+
+    full_url = calloc(AMVP_ATTR_URL_MAX + 1, sizeof(char));
+    if (!full_url) {
+        return NULL;
+    }
+    snprintf(full_url, AMVP_ATTR_URL_MAX, "%s/%s", url, AMVP_SP_URI);
+
+    return full_url;
+}
 AMVP_RESULT amvp_send_security_policy(AMVP_CTX *ctx,
                                         const char *url,
                                         char *sp,
                                         int sp_len) {
     char *full_url = NULL;
-    int url_len = strnlen_s(url, AMVP_ATTR_URL_MAX + 1);
-    if (url_len > AMVP_ATTR_URL_MAX - sizeof(AMVP_SP_URI)) {
-        AMVP_LOG_ERR("Invalid URL provided for submitting security policy (too long)");
-        return AMVP_TRANSPORT_FAIL;
-    }
 
-    full_url = calloc(AMVP_ATTR_URL_MAX + 1, sizeof(char));
+    full_url = generate_sp_url(url);
     if (!full_url) {
-        AMVP_LOG_ERR("Failed to allocate memory while sending security policy file");
+        AMVP_LOG_ERR("Error occured while creating URL for SP operation");
         return AMVP_TRANSPORT_FAIL;
     }
-    snprintf(full_url, AMVP_ATTR_URL_MAX, "%s/%s", url, AMVP_SP_URI);
 
     return amvp_transport_post(ctx, full_url, sp, sp_len);
+}
+
+AMVP_RESULT amvp_request_security_policy_generation(AMVP_CTX *ctx,
+                                                    const char *url,
+                                                    char *data) {
+    char *full_url = NULL;
+
+    full_url = generate_sp_url(url);
+    if (!full_url) {
+        AMVP_LOG_ERR("Error occured while creating URL for SP operation");
+        return AMVP_TRANSPORT_FAIL;
+    }
+
+    return amvp_transport_put(ctx, full_url, data, strnlen_s(data, AMVP_ATTR_URL_MAX));
 }
 
 AMVP_RESULT amvp_get_security_policy_json(AMVP_CTX *ctx,
@@ -1093,7 +1138,9 @@ static AMVP_RESULT inspect_http_code(AMVP_CTX *ctx, int code) {
     AMVP_RESULT result = AMVP_TRANSPORT_FAIL; /* Generic failure */
     JSON_Value *root_value = NULL;
     const JSON_Object *obj = NULL;
+#ifdef AMVP_OLD_JSON_FORMAT
     const JSON_Array *arr = NULL;
+#endif
     const char *err_str = NULL;
     char *tmp_err_str = NULL;
 
@@ -1119,7 +1166,7 @@ static AMVP_RESULT inspect_http_code(AMVP_CTX *ctx, int code) {
         char *diff = NULL;
 
         root_value = json_parse_string(ctx->curl_buf);
-
+#ifdef AMVP_OLD_JSON_FORMAT
         arr = json_value_get_array(root_value);
         if (!arr) {
             AMVP_LOG_ERR("HTTP body doesn't contain top-level JSON Array");
@@ -1130,6 +1177,13 @@ static AMVP_RESULT inspect_http_code(AMVP_CTX *ctx, int code) {
             AMVP_LOG_ERR("HTTP body doesn't contain expected array elements");
             goto end;
         }
+#else
+    obj = json_value_get_object(root_value);
+    if (!obj) {
+        AMVP_LOG_ERR("HTTP body doesn't contain expected top-level object");
+        goto end;
+    }
+#endif
         err_str = json_object_get_string(obj, "error");
         if (!err_str) {
             AMVP_LOG_ERR("JSON object doesn't contain 'error'");
@@ -1712,8 +1766,8 @@ void amvp_http_user_agent_handler(AMVP_CTX *ctx) {
                 free(buildLabBuffer);
             }
         }
-    } 
-    
+    }
+
     SYSTEM_INFO sysInfo;
     GetNativeSystemInfo(&sysInfo);
     if (!sysInfo.dwOemId) {
