@@ -218,7 +218,7 @@ if test "x$disable_lib_detection" = "xno"; then
         else
             LDFLAGS="$LDFLAGS -Lsrc/.libs"
         fi
-        AC_CHECK_LIB([amvp], [amvp_create_test_session], [],
+        AC_CHECK_LIB([amvp], [amvp_init_cert_request], [],
                 [AC_MSG_FAILURE([Cannot find libamvp library])], [])
     fi
 

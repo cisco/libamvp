@@ -11895,9 +11895,9 @@ fi
         else
             LDFLAGS="$LDFLAGS -Lsrc/.libs"
         fi
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for amvp_create_test_session in -lamvp" >&5
-printf %s "checking for amvp_create_test_session in -lamvp... " >&6; }
-if test ${ac_cv_lib_amvp_amvp_create_test_session+y}
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for amvp_init_cert_request in -lamvp" >&5
+printf %s "checking for amvp_init_cert_request in -lamvp... " >&6; }
+if test ${ac_cv_lib_amvp_amvp_init_cert_request+y}
 then :
   printf %s "(cached) " >&6
 else $as_nop
@@ -11909,28 +11909,28 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* Override any GCC internal prototype to avoid an error.
    Use char because int might match the return type of a GCC
    builtin and then its argument prototype would still apply.  */
-char amvp_create_test_session ();
+char amvp_init_cert_request ();
 int
 main (void)
 {
-return amvp_create_test_session ();
+return amvp_init_cert_request ();
   ;
   return 0;
 }
 _ACEOF
 if ac_fn_c_try_link "$LINENO"
 then :
-  ac_cv_lib_amvp_amvp_create_test_session=yes
+  ac_cv_lib_amvp_amvp_init_cert_request=yes
 else $as_nop
-  ac_cv_lib_amvp_amvp_create_test_session=no
+  ac_cv_lib_amvp_amvp_init_cert_request=no
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_amvp_amvp_create_test_session" >&5
-printf "%s\n" "$ac_cv_lib_amvp_amvp_create_test_session" >&6; }
-if test "x$ac_cv_lib_amvp_amvp_create_test_session" = xyes
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_amvp_amvp_init_cert_request" >&5
+printf "%s\n" "$ac_cv_lib_amvp_amvp_init_cert_request" >&6; }
+if test "x$ac_cv_lib_amvp_amvp_init_cert_request" = xyes
 then :
   printf "%s\n" "#define HAVE_LIBAMVP 1" >>confdefs.h
 

@@ -32,7 +32,7 @@ void setup_empty_ctx(AMVP_CTX **ctx) {
     AMVP_RESULT rv = AMVP_SUCCESS;
     AMVP_LOG_LVL level = AMVP_LOG_LVL_STATUS;
     
-    rv = amvp_create_test_session(ctx, &progress, level);
+    rv = amvp_init_cert_request(ctx, &progress, level);
     cr_assert(rv == AMVP_SUCCESS);
     
     return;

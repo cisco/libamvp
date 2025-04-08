@@ -122,7 +122,7 @@ int main(int argc, char **argv) {
      * We begin the libamvp usage flow here.
      * First, we create a test session context.
      */
-    rv = amvp_create_test_session(&ctx, &progress, cfg.level);
+    rv = amvp_init_cert_request(&ctx, &progress, cfg.level);
     if (rv != AMVP_SUCCESS) {
         printf("Failed to create AMVP context: %s\n", amvp_lookup_error_string(rv));
         goto end;
@@ -192,15 +192,6 @@ int main(int argc, char **argv) {
         amvp_mark_as_delete_only(ctx, cfg.delete_url);
     }
 
-    if (cfg.vector_req && !cfg.vector_rsp) {
-        amvp_mark_as_request_only(ctx, cfg.vector_req_file);
-    }
-
-    if (!cfg.vector_req && cfg.vector_rsp) {
-        printf("Offline vector processing requires both options, --vector_req and --vector_rsp\n");
-        goto end;
-    }
-
     strncmp_s(DEFAULT_SERVER, DEFAULT_SERVER_LEN, server, DEFAULT_SERVER_LEN, &diff);
     if (!diff) {
          printf("Warning: No server set, using default. Please define AMV_SERVER in your environment.\n");
@@ -226,19 +217,6 @@ int main(int argc, char **argv) {
             printf("Failed to set metadata for FIPS validation\n");
             goto end;
         }
-    }
-
-    if (cfg.cancel_session) {
-        if (cfg.save_to) {
-            rv = amvp_cancel_test_session(ctx, cfg.session_file, cfg.save_file);
-        } else {
-            rv = amvp_cancel_test_session(ctx, cfg.session_file, NULL);
-        }
-        goto end;
-    }
-
-    if (cfg.post_resources) {
-        rv = amvp_mark_as_post_resources(ctx, cfg.post_resources_filename);
     }
 
     if (cfg.mod_cert_req) {
@@ -271,6 +249,13 @@ int main(int argc, char **argv) {
         if (rv != AMVP_SUCCESS) {
             printf("Error reading cert request info file; ensure it exists and is properly formatted\n");
             goto end;
+        }
+        if (cfg.check_status) {
+            rv = amvp_check_cert_req_status(ctx);
+            if (rv != AMVP_SUCCESS) {
+                printf("Error checking cert request status\n");
+                goto end;
+            }
         }
         if (cfg.submit_ft_ev) {
             rv = amvp_submit_evidence(ctx, cfg.ev_file, AMVP_EVIDENCE_TYPE_FUNCTIONAL_TEST);
@@ -316,11 +301,7 @@ int main(int argc, char **argv) {
         goto end;
     }
 
-    /*
-     * Run the test session.
-     * Perform a FIPS validation on this test session if specified.
-     */
-    amvp_run(ctx, cfg.fips_validation);
+    amvp_mod_cert_req(ctx);
 
 end:
     /*

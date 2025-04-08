@@ -17,7 +17,7 @@ Test(CreateSession, properly) {
     AMVP_RESULT rv;
     AMVP_LOG_LVL level = AMVP_LOG_LVL_STATUS;
 
-    rv = amvp_create_test_session(&ctx, &progress, level);
+    rv = amvp_init_cert_request(&ctx, &progress, level);
     cr_assert(rv == AMVP_SUCCESS);
 
     teardown_ctx(&ctx);
@@ -27,7 +27,7 @@ Test(CreateSession, null_ctx) {
     AMVP_RESULT rv;
     AMVP_LOG_LVL level = AMVP_LOG_LVL_STATUS;
 
-    rv = amvp_create_test_session(NULL, &progress, level);
+    rv = amvp_init_cert_request(NULL, &progress, level);
     cr_assert(rv == AMVP_INVALID_ARG);
 
     teardown_ctx(&ctx);
@@ -39,7 +39,7 @@ Test(SetupSessionParams, proper_ctx_params) {
     char *server = "127.0.0.1";
     int port = 443;
 
-    rv = amvp_create_test_session(&ctx, &progress, level);
+    rv = amvp_init_cert_request(&ctx, &progress, level);
     cr_assert(rv == AMVP_SUCCESS);
 
     /*
@@ -61,7 +61,7 @@ Test(SetupSessionParams, null_server_param) {
     char *server = NULL;
     int port = 443;
 
-    rv = amvp_create_test_session(&ctx, &progress, level);
+    rv = amvp_init_cert_request(&ctx, &progress, level);
     cr_assert(rv == AMVP_SUCCESS);
 
     /*

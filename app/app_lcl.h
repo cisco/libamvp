@@ -73,7 +73,6 @@ typedef struct app_config {
     char get_module_file[JSON_FILENAME_LENGTH + 1];
     char ev_file[JSON_FILENAME_LENGTH + 1];
     char sp_file[JSON_FILENAME_LENGTH + 1];
-    char post_resources_filename[JSON_FILENAME_LENGTH + 1];
     char contact_ids[AMVP_MAX_CONTACTS_PER_CERT_REQ][AMVP_CONTACT_STR_MAX_LEN + 1];
     char acv_certs[AMVP_MAX_ACV_CERTS_PER_CERT_REQ][AMVP_CERT_STR_MAX_LEN + 1];
     char esv_certs[AMVP_MAX_ESV_CERTS_PER_CERT_REQ][AMVP_CERT_STR_MAX_LEN + 1];
@@ -83,7 +82,6 @@ typedef struct app_config {
     int num_esv_certs;
     int mod_cert_req;
     int ingest_cert_info;
-    int post_resources;
     int create_module;
     int get_module;
     int submit_ft_ev;
@@ -91,6 +89,7 @@ typedef struct app_config {
     int submit_sp;
     int get_sp;
     int finalize;
+    int check_status;
     int module_id;
     int vendor_id;
     int testall; /* So the app can check whether the user indicated to test all possible algorithms */

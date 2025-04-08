@@ -56,32 +56,6 @@ static void print_usage(int code) {
         printf("capabilities of the provided cryptographic library.\n\n");
     }
 
-    if (code >= AMVP_LOG_LVL_VERBOSE) {
-        printf("libamvp generates a file containing information that can be used for various tasks regarding\n");
-        printf("a test session. By default, this is usually placed in the folder of the executable utilizing\n");
-        printf("libamvp, though this can be different on some OS. The name, by default, is\n");
-        printf("testSession_(ID number).json. The path and prefix can be controlled using ACV_SESSION_SAVE_PATH\n");
-        printf("and ACV_SESSION_SAVE_PREFIX in your environment, respectively. Any tasks listed below that use\n");
-        printf("<session_file> are in reference to this file.\n");
-        printf("\n");
-    }
-    printf("Perform a FIPS Validation for this testSession:\n");
-    printf("      --fips_validation <full metadata file>\n");
-    printf("\n");
-    printf("To specify a cert number associated with all prerequistes:\n");
-    printf("      --certnum <string>\n");
-    printf("\n");
-    printf("To register manually using a JSON file instead of application settings use:\n");
-    printf("      --manual_registration <file>\n");
-    printf("\n");
-    printf("To register and save the vector/evidence to file:\n");
-    printf("      --request <file>\n");
-    printf("      -r <file>\n");
-    printf("\n");
-    printf("To cancel a test session that was previously initiated:\n");
-    printf("      --cancel_session <session_file>\n");
-    printf("            Note: This will request the server to halt all processing and delete all info related to the\n");
-    printf("            test session - It is not recoverable\n");
     printf("To GET status of request, such as validation or metadata:\n");
     printf("      --get <request string URL including ID>\n");
     printf("\n");
@@ -106,31 +80,30 @@ static void print_usage(int code) {
     printf("      --module_cert_req --with_module <module_id_number> --with_vendor <vendor_id_number> --with-contact <CMVP contact ID> ...\n");
     printf("Optionally, the following fields can also be added to module_cert_req:\n");
     printf("      --with_acv_cert <CAVP algorithm certificate ID> --with_esv_cert <ESVP certificate ID>\n");
+    printf("These options can also be used independently with --for_cert_request to add certs to an existing request.\n");
     printf("\n");
-    printf("To post all resources a predefined resource json file:\n");
-    printf("      --post_resources <resource_file>\n");
-    printf("\n");
+
     printf("In addition some options are passed to amvp_app using\n");
     printf("environment variables.  The following variables can be set:\n\n");
-    printf("    ACV_SERVER (when not set, defaults to %s)\n", DEFAULT_SERVER);
-    printf("    ACV_PORT (when not set, defaults to %d)\n", DEFAULT_PORT);
-    printf("    ACV_URI_PREFIX (when not set, defaults to %s)\n", DEFAULT_URI_PREFIX);
-    printf("    ACV_TOTP_SEED (when not set, client will not use Two-factor authentication)\n");
-    printf("    ACV_CA_FILE\n");
-    printf("    ACV_CERT_FILE\n");
-    printf("    ACV_KEY_FILE\n");
+    printf("    AMV_SERVER (when not set, defaults to %s)\n", DEFAULT_SERVER);
+    printf("    AMV_PORT (when not set, defaults to %d)\n", DEFAULT_PORT);
+    printf("    AMV_URI_PREFIX (when not set, defaults to %s)\n", DEFAULT_URI_PREFIX);
+    printf("    AMV_TOTP_SEED (when not set, client will not use Two-factor authentication)\n");
+    printf("    AMV_CA_FILE\n");
+    printf("    AMV_CERT_FILE\n");
+    printf("    AMV_KEY_FILE\n");
     printf("The CA certificates, cert and key should be PEM encoded. There should be no\n");
     printf("password on the key file.\n\n");
     printf("Some options can be passed to the library itself with environment variables:\n\n");
-    printf("    ACV_SESSION_SAVE_PATH (Location where test session info files are saved)\n");
-    printf("    ACV_SESSION_SAVE_PREFIX (Determines file name of info file, followed by ID number\n");
+    printf("    AMV_SESSION_SAVE_PATH (Location where test session info files are saved)\n");
+    printf("    AMV_SESSION_SAVE_PREFIX (Determines file name of info file, followed by ID number\n");
     printf("    The following are used by the library for an HTTP user-agent string, only when\n");
     printf("    the information cannot be automatically collected:\n");
-    printf("        ACV_OE_OSNAME\n");
-    printf("        ACV_OE_OSVERSION\n");
-    printf("        ACV_OE_ARCHITECTURE\n");
-    printf("        ACV_OE_PROCESSOR\n");
-    printf("        ACV_OE_COMPILER\n\n");
+    printf("        AMV_OE_OSNAME\n");
+    printf("        AMV_OE_OSVERSION\n");
+    printf("        AMV_OE_ARCHITECTURE\n");
+    printf("        AMV_OE_PROCESSOR\n");
+    printf("        AMV_OE_COMPILER\n\n");
 }
 
 static void print_version_info(void) {
@@ -157,7 +130,6 @@ static ko_longopt_t longopts[] = {
     { "cancel_session", ko_required_argument, 415 },
     { "debug", ko_no_argument, 417 },
     { "module_cert_req", ko_no_argument, 419 },
-    { "post_resources", ko_required_argument, 420 },
     { "create_module", ko_required_argument, 421 },
     { "check_module_request", ko_required_argument, 422 },
     { "with_module", ko_required_argument, 423 },
@@ -171,6 +143,7 @@ static ko_longopt_t longopts[] = {
     { "with_esv_cert", ko_required_argument, 431 },
     { "submit_sc_evidence", ko_required_argument, 432 },
     { "finalize", ko_no_argument, 433 },
+    { "check_cert_req_status", ko_no_argument, 434 },
     { NULL, 0, 0 }
 };
 
@@ -337,14 +310,6 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
             cfg->mod_cert_req = 1;
             break;
 
-        case 420:
-            cfg->post_resources = 1;
-            if (!check_option_length(opt.arg, c, JSON_FILENAME_LENGTH)) {
-                return 1;
-            }
-            strcpy_s(cfg->post_resources_filename, JSON_FILENAME_LENGTH + 1, opt.arg);
-            break;
-
         case 421:
             cfg->create_module = 1;
             if (!check_option_length(opt.arg, c, JSON_FILENAME_LENGTH)) {
@@ -453,6 +418,10 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
 
         case 433:
             cfg->finalize = 1;
+            break;
+
+        case 434:
+            cfg->check_status = 1;
             break;
 
         case '?':

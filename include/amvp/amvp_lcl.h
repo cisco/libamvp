@@ -13,7 +13,7 @@
 #include "parson.h"
 #include "amvp_error.h"
 
-#define AMVP_VERSION    "1.0"
+#define AMVP_VERSION    "0.1"
 #define AMVP_LIBRARY_VERSION_NUMBER "0.1.0"
 #define AMVP_LIBRARY_VERSION    "libamvp_oss-0.1.0"
 
@@ -67,7 +67,7 @@
 #define AMVP_REQ_FILENAME_MAX_LEN 32 /* Arbitrary */
 #define AMVP_REQ_FILENAME_DEFAULT "request"
 
-#define AMVP_CERT_REQUEST_FILENAME_MAX_LEN 32 /* Arbitrary */
+#define AMVP_CERT_REQUEST_FILENAME_MAX_LEN 64 /* Arbitrary */
 #define AMVP_CERT_REQUEST_FILENAME_DEFAULT "certification_session"
 
 #define AMVP_REQ_STATUS_STR_INITIAL "initial"
@@ -897,19 +897,22 @@
 #define AMVP_CERT_REQ_STATUS_STR_INITIAL "initial"
 #define AMVP_CERT_REQ_STATUS_STR_READY "ready"
 #define AMVP_CERT_REQ_STATUS_STR_SUBMITTED "requirementsSubmitted"
+#define AMVP_CERT_REQ_STATUS_STR_IN_REVIEW "inReview"
 #define AMVP_CERT_REQ_STATUS_STR_APPROVED "approved"
+#define AMVP_CERT_REQ_STATUS_STR_REJECTED "rejected"
 #define AMVP_CERT_REQ_STATUS_STR_ERROR "error"
 
-#define AMVP_SP_STATUS_STR_PENDING "pending"
-#define AMVP_SP_STATUS_STR_PROCESSING "processing"
+#define AMVP_SP_STATUS_STR_UNSUBMITTED "acceptingSubmissions"
+#define AMVP_SP_STATUS_STR_PROCESSING "processingSubmission"
 #define AMVP_SP_STATUS_STR_WAITING_GENERATION "pendingGeneration"
-#define AMVP_SP_STATUS_STR_SUBMITTED "submitted"
+#define AMVP_SP_STATUS_STR_GENERATING "processingGeneration"
 #define AMVP_SP_STATUS_STR_SUCCESS "success"
 #define AMVP_SP_STATUS_STR_ERROR "error"
 
 #define AMVP_ANSI_COLOR_GREEN "\e[0;32m"
 #define AMVP_ANSI_COLOR_YELLOW "\x1b[33m"
 #define AMVP_ANSI_COLOR_RESET "\x1b[0m"
+#define AMVP_ANSI_COLOR_RED "\x1b[31m"
 
 #define AMVP_CFB1_BIT_MASK      0x80
 
@@ -918,7 +921,7 @@
 //char cannot exist in any string for http user agent for parsing reasons
 #define AMVP_USER_AGENT_DELIMITER ';'
 #define AMVP_USER_AGENT_CHAR_REPLACEMENT '_';
-
+#define AMVP_MAX_FILE_PAYLOAD_SIZE 1024 * 1024 * 64 /**< 64 MB */
 /*
  * Max lengths for different values in the HTTP user-agent string, arbitrarily selected
  */
@@ -935,11 +938,11 @@
  * If library cannot detect hardware or software info for HTTP user-agent string, we can check for them
  * in environmental variables, which are defined here
  */
-#define AMVP_USER_AGENT_OSNAME_ENV "ACV_OE_OSNAME"
-#define AMVP_USER_AGENT_OSVER_ENV "ACV_OE_OSVERSION"
-#define AMVP_USER_AGENT_ARCH_ENV "ACV_OE_ARCHITECTURE"
-#define AMVP_USER_AGENT_PROC_ENV "ACV_OE_PROCESSOR"
-#define AMVP_USER_AGENT_COMP_ENV "ACV_OE_COMPILER"
+#define AMVP_USER_AGENT_OSNAME_ENV "AMV_OE_OSNAME"
+#define AMVP_USER_AGENT_OSVER_ENV "AMV_OE_OSVERSION"
+#define AMVP_USER_AGENT_ARCH_ENV "AMV_OE_ARCHITECTURE"
+#define AMVP_USER_AGENT_PROC_ENV "AMV_OE_PROCESSOR"
+#define AMVP_USER_AGENT_COMP_ENV "AMV_OE_COMPILER"
 
 typedef struct amvp_alg_handler_t AMVP_ALG_HANDLER;
 
@@ -1155,7 +1158,9 @@ typedef enum amvp_cert_req_status {
     AMVP_CERT_REQ_STATUS_INITIAL,
     AMVP_CERT_REQ_STATUS_READY,
     AMVP_CERT_REQ_STATUS_SUBMITTED,
+    AMVP_CERT_REQ_STATUS_IN_REVIEW,
     AMVP_CERT_REQ_STATUS_APPROVED,
+    AMVP_CERT_REQ_STATUS_REJECTED,
     AMVP_CERT_REQ_STATUS_ERROR
 } AMVP_CERT_REQ_STATUS;
 
@@ -1246,7 +1251,7 @@ struct amvp_ctx_t {
     AMVP_OPERATING_ENV op_env; /**< The Operating Environment resources available */
     AMVP_STRING_LIST *vsid_url_list;
     char *session_url;
-    int session_passed;
+    int session_file_has_te_list;
 
     AMVP_ACTION action;
 
@@ -1262,8 +1267,6 @@ struct amvp_ctx_t {
     char *delete_string;    /* string used for delete request */
     char *save_filename;    /* string used for file to save certain HTTP requests to */
     char *mod_cert_req_file;    /* string used for file to save certain HTTP requests to */
-    int post_resources;
-    char *post_resources_filename;    /* string used for file to save certain HTTP requests to */
 
     AMVP_CERT_REQ cert_req_info; /* Stores info related to a cert request */
     AMVP_FIPS fips; /* Information related to a FIPS validation */
@@ -1350,12 +1353,8 @@ AMVP_RESULT amvp_notify_large(AMVP_CTX *ctx,
                               char *large_url,
                               unsigned int data_len);
 
-#ifdef AMVP_OLD_JSON_FORMAT
-AMVP_RESULT amvp_create_array(JSON_Object **obj, JSON_Value **val, JSON_Array **arry);
-#else
 AMVP_RESULT amvp_create_response_obj(JSON_Object **obj, JSON_Value **val);
 AMVP_RESULT amvp_add_version_to_obj(JSON_Object *obj);
-#endif
 
 AMVP_RESULT is_valid_tf_param(int value);
 
@@ -1399,6 +1398,12 @@ int amvp_lookup_str_list(AMVP_STRING_LIST **list, const char *string);
 int amvp_lookup_param_list(AMVP_PARAM_LIST *list, int value);
 int amvp_is_domain_already_set(AMVP_JSON_DOMAIN_OBJ *domain);
 
+void amvp_free_sl(AMVP_SL_LIST *list);
+void amvp_free_nl(AMVP_NAME_LIST *list);
+
+AMVP_RESULT amvp_retry_handler(AMVP_CTX *ctx, int *retry_period, unsigned int *waited_so_far, int modifier, AMVP_WAITING_STATUS situation);
+AMVP_RESULT amvp_handle_protocol_error(AMVP_CTX *ctx, AMVP_PROTOCOL_ERR *err);
+AMVP_RESULT amvp_save_cert_req_info_file(AMVP_CTX *ctx, JSON_Object *contents);
 AMVP_RESULT amvp_json_serialize_to_file_pretty_a(const JSON_Value *value, const char *filename);
 AMVP_RESULT amvp_json_serialize_to_file_pretty_w(const JSON_Value *value, const char *filename);
 int amvp_get_request_status(AMVP_CTX *ctx, char **output);
