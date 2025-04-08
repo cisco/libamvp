@@ -26,8 +26,39 @@ This document will be updated as more details are worked out and finalized on th
 Libamvp is a client-side AMVP library implementation, and also includes
 an example application (amvp_app) which utilizes the library.
 
-We request that users limit issue reports and discussion at this time as many protocol and
-implementation details are still in active and early development.
+This project is intended to be a reference implementation for the AMVP protocol. It is heavily
+under construction and based upon the work done for libacvp. We will happily accept issue reports
+and code contributions at this time. We also encourage developers to use this project
+as a basis for ports to languages of their preference.
+
+More information will be added as more details are finalized.
+
+## Contributing
+
+There is much work to do and we are happy to accept the following contributions at this time:
+
+* Code readability improvements
+* Code functionality improvements
+* User experience improvements
+* Removal of dead code
+* Removal of hard coded values/reorganization of hard defined strings/variables
+* Autoconf build fixes/improvements
+* Windows build uplift (not tested/maintained to date)
+* Addition of logo upload functionality to security policy generation
+* Unit test fixes/removals/additions (not tested/maintained to date)
+* Improved handling of TOTP seed (support for multiple TOTP seeds; caching which seeds have been
+  recently used)
+* etc
+
+We welcome any of the above changes to be included in a pull request, into the main branch. We
+reserve the right to reject changes for any reason. We will also consider substantial changes to
+usage flow if they are well justified.
+
+We will also consider well-documented PRs for feature additions. Please consider the scope of this
+project as a reference implementation; we will happily accept general features to help users
+interact with the server as they develop their own AMVP clients, but specialized, niche, or very
+complex features will not be considered. Thank you for your understanding.
+
 
 ## Dependencies
 * autotools
@@ -50,7 +81,7 @@ including the header files.
 
 ## Building
 
-`--prefix<path to install dir>` can be used with any configure options to specify where you would
+`--prefix=<path to install dir>` can be used with any configure options to specify where you would
 like the library and application to install to. 
 
 `configure` searches for an OpenSSL install and a libcurl install. They can be provided manually if not found.
@@ -58,4 +89,4 @@ The build system will be updated with fixes soon, and this document will be upda
 
 ## Running
 
-This section will be updated with details as more protocol details are finalized.
+This section will be updated with details as soon as possible.
