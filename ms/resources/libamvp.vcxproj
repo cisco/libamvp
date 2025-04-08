@@ -187,58 +187,58 @@
     <Link>
       <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;libcurl.lib;safeclib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>Source.def</ModuleDefinitionFile>
-      <AdditionalLibraryDirectories>$(ACV_LIB_PATHS)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(AMV_LIB_PATHS)</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <DebugInformationFormat>None</DebugInformationFormat>
       <PreprocessorDefinitions>__STDC_WANT_SECURE_LIB__=0;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ACV_INC_PATHS)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(AMV_INC_PATHS)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='shared|x64'">
     <Link>
       <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;libcurl.lib;safeclib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>Source.def</ModuleDefinitionFile>
-      <AdditionalLibraryDirectories>$(ACV_LIB_PATHS)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(AMV_LIB_PATHS)</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <DebugInformationFormat>None</DebugInformationFormat>
       <PreprocessorDefinitions>__STDC_WANT_SECURE_LIB__=0;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ACV_INC_PATHS)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(AMV_INC_PATHS)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='shared_no_safec|Win32'">
     <Link>
       <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;libcurl.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>Source.def</ModuleDefinitionFile>
-      <AdditionalLibraryDirectories>$(ACV_LIB_PATHS)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(AMV_LIB_PATHS)</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
       <PreprocessorDefinitions>__STDC_WANT_SECURE_LIB__=0;WIN32;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Optimization>Disabled</Optimization>
       <DebugInformationFormat>None</DebugInformationFormat>
-      <AdditionalIncludeDirectories>$(ACV_INC_PATHS)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(AMV_INC_PATHS)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='shared_no_safec|x64'">
     <Link>
       <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;libcurl.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>Source.def</ModuleDefinitionFile>
-      <AdditionalLibraryDirectories>$(ACV_LIB_PATHS)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(AMV_LIB_PATHS)</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
       <PreprocessorDefinitions>__STDC_WANT_SECURE_LIB__=0;WIN32;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Optimization>Disabled</Optimization>
       <DebugInformationFormat>None</DebugInformationFormat>
-      <AdditionalIncludeDirectories>$(ACV_INC_PATHS)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(AMV_INC_PATHS)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='static|Win32'">
     <Lib>
-      <AdditionalDependencies>$(ACV_STATIC_LIB_DEPENDENCIES);libcurl_a.lib;safeclib.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(ACV_LIB_PATHS)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>$(AMV_STATIC_LIB_DEPENDENCIES);libcurl_a.lib;safeclib.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(AMV_LIB_PATHS)</AdditionalLibraryDirectories>
     </Lib>
     <Link>
       <ModuleDefinitionFile>Source.def</ModuleDefinitionFile>
@@ -247,13 +247,13 @@
       <Optimization>Disabled</Optimization>
       <DebugInformationFormat>None</DebugInformationFormat>
       <PreprocessorDefinitions>__STDC_WANT_SECURE_LIB__=0;CURL_STATICLIB;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ACV_INC_PATHS)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(AMV_INC_PATHS)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='static|x64'">
     <Lib>
-      <AdditionalDependencies>$(ACV_STATIC_LIB_DEPENDENCIES);libcurl_a.lib;safeclib.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(ACV_LIB_PATHS)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>$(AMV_STATIC_LIB_DEPENDENCIES);libcurl_a.lib;safeclib.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(AMV_LIB_PATHS)</AdditionalLibraryDirectories>
     </Lib>
     <Link>
       <ModuleDefinitionFile>Source.def</ModuleDefinitionFile>
@@ -262,13 +262,13 @@
       <Optimization>Disabled</Optimization>
       <DebugInformationFormat>None</DebugInformationFormat>
       <PreprocessorDefinitions>__STDC_WANT_SECURE_LIB__=0;CURL_STATICLIB;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ACV_INC_PATHS)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(AMV_INC_PATHS)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='static_no_safec|Win32'">
     <Lib>
-      <AdditionalDependencies>$(ACV_STATIC_LIB_DEPENDENCIES);libcurl_a.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(ACV_LIB_PATHS)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>$(AMV_STATIC_LIB_DEPENDENCIES);libcurl_a.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(AMV_LIB_PATHS)</AdditionalLibraryDirectories>
     </Lib>
     <Link>
       <ModuleDefinitionFile>Source.def</ModuleDefinitionFile>
@@ -277,13 +277,13 @@
       <Optimization>Disabled</Optimization>
       <DebugInformationFormat>None</DebugInformationFormat>
       <PreprocessorDefinitions>__STDC_WANT_SECURE_LIB__=0;CURL_STATICLIB;WIN32;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ACV_INC_PATHS)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(AMV_INC_PATHS)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='static_no_safec|x64'">
     <Lib>
-      <AdditionalDependencies>$(ACV_STATIC_LIB_DEPENDENCIES);libcurl_a.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(ACV_LIB_PATHS)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>$(AMV_STATIC_LIB_DEPENDENCIES);libcurl_a.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(AMV_LIB_PATHS)</AdditionalLibraryDirectories>
     </Lib>
     <Link>
       <ModuleDefinitionFile>Source.def</ModuleDefinitionFile>
@@ -292,19 +292,19 @@
       <Optimization>Disabled</Optimization>
       <DebugInformationFormat>None</DebugInformationFormat>
       <PreprocessorDefinitions>__STDC_WANT_SECURE_LIB__=0;CURL_STATICLIB;WIN32;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ACV_INC_PATHS)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(AMV_INC_PATHS)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='static_offline|Win32'">
     <Lib>
-      <AdditionalDependencies>$(ACV_STATIC_LIB_DEPENDENCIES);safeclib.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(ACV_LIB_PATHS)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>$(AMV_STATIC_LIB_DEPENDENCIES);safeclib.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(AMV_LIB_PATHS)</AdditionalLibraryDirectories>
     </Lib>
     <ClCompile>
       <PreprocessorDefinitions>__STDC_WANT_SECURE_LIB__=0;CURL_STATICLIB;AMVP_OFFLINE</PreprocessorDefinitions>
       <Optimization>Disabled</Optimization>
       <DebugInformationFormat>None</DebugInformationFormat>
-      <AdditionalIncludeDirectories>$(ACV_INC_PATHS)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(AMV_INC_PATHS)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <ModuleDefinitionFile>Source.def</ModuleDefinitionFile>
@@ -312,14 +312,14 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='static_offline|x64'">
     <Lib>
-      <AdditionalDependencies>$(ACV_STATIC_LIB_DEPENDENCIES);safeclib.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(ACV_LIB_PATHS)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>$(AMV_STATIC_LIB_DEPENDENCIES);safeclib.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(AMV_LIB_PATHS)</AdditionalLibraryDirectories>
     </Lib>
     <ClCompile>
       <PreprocessorDefinitions>__STDC_WANT_SECURE_LIB__=0;CURL_STATICLIB;AMVP_OFFLINE</PreprocessorDefinitions>
       <Optimization>Disabled</Optimization>
       <DebugInformationFormat>None</DebugInformationFormat>
-      <AdditionalIncludeDirectories>$(ACV_INC_PATHS)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(AMV_INC_PATHS)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <ModuleDefinitionFile>Source.def</ModuleDefinitionFile>
@@ -330,14 +330,14 @@
       <PreprocessorDefinitions>__STDC_WANT_SECURE_LIB__=0;CURL_STATICLIB;WIN32;AMVP_OFFLINE</PreprocessorDefinitions>
       <Optimization>Disabled</Optimization>
       <DebugInformationFormat>None</DebugInformationFormat>
-      <AdditionalIncludeDirectories>$(ACV_INC_PATHS)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(AMV_INC_PATHS)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <ModuleDefinitionFile>Source.def</ModuleDefinitionFile>
     </Link>
     <Lib>
-      <AdditionalDependencies>$(ACV_STATIC_LIB_DEPENDENCIES);</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(ACV_LIB_PATHS)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>$(AMV_STATIC_LIB_DEPENDENCIES);</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(AMV_LIB_PATHS)</AdditionalLibraryDirectories>
     </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='static_offline_no_safec|x64'">
@@ -345,14 +345,14 @@
       <PreprocessorDefinitions>__STDC_WANT_SECURE_LIB__=0;CURL_STATICLIB;WIN32;AMVP_OFFLINE</PreprocessorDefinitions>
       <Optimization>Disabled</Optimization>
       <DebugInformationFormat>None</DebugInformationFormat>
-      <AdditionalIncludeDirectories>$(ACV_INC_PATHS)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(AMV_INC_PATHS)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <ModuleDefinitionFile>Source.def</ModuleDefinitionFile>
     </Link>
     <Lib>
-      <AdditionalDependencies>$(ACV_STATIC_LIB_DEPENDENCIES);</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(ACV_LIB_PATHS)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>$(AMV_STATIC_LIB_DEPENDENCIES);</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(AMV_LIB_PATHS)</AdditionalLibraryDirectories>
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>

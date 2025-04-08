@@ -63,9 +63,6 @@ AMVP_PROTOCOL_ERR *amvp_parse_protocol_error(const char *buf) {
     int value = 0, success = 0, count = 0, count2 = 0, i = 0, j = 0;
     const char *tmp = NULL;
 
-    char *diff = NULL, *check_err = NULL;
-    int check_len = 0;
-
     if (!buf) {
         return NULL;
     }
@@ -110,31 +107,6 @@ AMVP_PROTOCOL_ERR *amvp_parse_protocol_error(const char *buf) {
     for (i = 0; i < count; i++) {
         obj = json_array_get_object(arr, i);
 
-#if 1
-    /* Temp workaround: check only for JWT refresh */
-    if (value == 1) {
-        tmp = json_array_get_string(json_object_get_array(obj, "messages"), 0);
-        if (!tmp) {
-            goto err;
-        }
-        check_len = strnlen_s(tmp, AMVP_ERR_DESC_STR_MAX);
-        check_err = calloc(check_len + 1, sizeof(char));
-        if (!check_err) {
-            goto err;
-        }
-        strncpy_s(check_err, check_len + 1, tmp, check_len);
-        strstr_s(check_err, check_len, "JWT expired", 11, &diff);
-        if (diff) {
-            err_obj->errors = calloc(1, sizeof(AMVP_PROTOCOL_ERR_LIST));
-            if (!err_obj->errors) {
-                goto err;
-            }
-            err_obj->errors->code = AMVP_ERR_CODE_AUTH_EXPIRED_JWT;
-            success = 1;
-        }
-    }
-
-#else
         if (!obj) { goto err; }
         if (!json_object_has_value_of_type(obj, AMVP_ERR_CODE_STR, JSONNumber)) {
             goto err;
@@ -170,8 +142,6 @@ AMVP_PROTOCOL_ERR *amvp_parse_protocol_error(const char *buf) {
         }
     }
     success = 1;
-#endif
-    }
 err:
     if (val) json_value_free(val);
     if (!success && err_obj) {
@@ -192,36 +162,10 @@ int amvp_is_protocol_error_message(const char *buf) {
         goto err;
     }
 
-#ifdef AMVP_OLD_JSON_FORMAT
-    arr = json_value_get_array(val);
-    if (!arr) {
-        goto err;
-    }
-
-    if (json_array_get_count(arr) != AMVP_ERR_MSG_ARR_SIZE) {
-        goto err;
-    }
-
-    /* Check that obj 1 is the amvVersion */
-    obj = json_array_get_object(arr, 0);
-    if (!obj) {
-        goto err;
-    }
-
-    if (!json_object_has_value(obj, AMVP_PROTOCOL_VERSION_STR)) {
-        goto err;
-    }
-
-    obj = json_array_get_object(arr, 1);
-    if (!obj) {
-        goto err;
-    }
-#else
     obj = json_value_get_object(val);
     if (!obj) {
         goto err;
     }
-#endif
 
     /* Check that the object has a "category", description", and "errors" */
     if (!json_object_has_value(obj, AMVP_ERR_CATEGORY_STR)) { goto err; }

@@ -169,37 +169,37 @@ static AMVP_RESULT dummy_totp_overflow(char **token, int token_max) {
  * This test sets up a new test session with good params
  */
 Test(CREATE_CTX, good) {
-    rv = amvp_create_test_session(&ctx, &progress, AMVP_LOG_LVL_STATUS);
+    rv = amvp_init_cert_request(&ctx, &progress, AMVP_LOG_LVL_STATUS);
     cr_assert(rv == AMVP_SUCCESS);
     teardown_ctx(&ctx);
     ctx = NULL;
     
-    rv = amvp_create_test_session(&ctx, &progress, AMVP_LOG_LVL_ERR);
+    rv = amvp_init_cert_request(&ctx, &progress, AMVP_LOG_LVL_ERR);
     cr_assert(rv == AMVP_SUCCESS);
     teardown_ctx(&ctx);
     ctx = NULL;
     
-    rv = amvp_create_test_session(&ctx, &progress, AMVP_LOG_LVL_WARN);
+    rv = amvp_init_cert_request(&ctx, &progress, AMVP_LOG_LVL_WARN);
     cr_assert(rv == AMVP_SUCCESS);
     teardown_ctx(&ctx);
     ctx = NULL;
     
-    rv = amvp_create_test_session(&ctx, &progress, AMVP_LOG_LVL_INFO);
+    rv = amvp_init_cert_request(&ctx, &progress, AMVP_LOG_LVL_INFO);
     cr_assert(rv == AMVP_SUCCESS);
     teardown_ctx(&ctx);
     ctx = NULL;
     
-    rv = amvp_create_test_session(&ctx, &progress, AMVP_LOG_LVL_VERBOSE);
+    rv = amvp_init_cert_request(&ctx, &progress, AMVP_LOG_LVL_VERBOSE);
     cr_assert(rv == AMVP_SUCCESS);
     teardown_ctx(&ctx);
     ctx = NULL;
 
-    rv = amvp_create_test_session(&ctx, &progress, 0);
+    rv = amvp_init_cert_request(&ctx, &progress, 0);
     cr_assert(rv == AMVP_SUCCESS);
     teardown_ctx(&ctx);
     ctx = NULL;
 
-    rv = amvp_create_test_session(&ctx, NULL, AMVP_LOG_LVL_VERBOSE);
+    rv = amvp_init_cert_request(&ctx, NULL, AMVP_LOG_LVL_VERBOSE);
     cr_assert(rv == AMVP_SUCCESS);
     teardown_ctx(&ctx);
     ctx = NULL;
@@ -211,10 +211,10 @@ Test(CREATE_CTX, good) {
 Test(CREATE_CTX, dup_ctx) {
     AMVP_CTX *ctx = NULL;
 
-    rv = amvp_create_test_session(&ctx, &progress, AMVP_LOG_LVL_VERBOSE);
+    rv = amvp_init_cert_request(&ctx, &progress, AMVP_LOG_LVL_VERBOSE);
     cr_assert(rv == AMVP_SUCCESS);
     
-    rv = amvp_create_test_session(&ctx, &progress, AMVP_LOG_LVL_VERBOSE);
+    rv = amvp_init_cert_request(&ctx, &progress, AMVP_LOG_LVL_VERBOSE);
     cr_assert(rv == AMVP_CTX_NOT_EMPTY);
     
     teardown_ctx(&ctx);
@@ -225,7 +225,7 @@ Test(CREATE_CTX, dup_ctx) {
  * This test sets up a new test session with null ctx
  */
 Test(CREATE_CTX, null_ctx) {
-    rv = amvp_create_test_session(NULL, &progress, AMVP_LOG_LVL_STATUS);
+    rv = amvp_init_cert_request(NULL, &progress, AMVP_LOG_LVL_STATUS);
     cr_assert(rv == AMVP_INVALID_ARG);
     cr_assert(ctx == NULL);
 }

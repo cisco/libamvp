@@ -1,5 +1,5 @@
 {
-    "amvVersion": "1.0",
+    "amvVersion": "0.1",
     "schemaVersion": "initial",
     "moduleInfo": {
         "name": "Cisco Example AMVP Cryptographic Module",

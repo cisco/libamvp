@@ -62,16 +62,8 @@ typedef enum amvp_user_agent_env_type {
 
 typedef enum amvp_net_action {
     AMVP_NET_GET = 1, /**< Generic (get) */
-    AMVP_NET_GET_VS, /**< Vector Set (get) */
-    AMVP_NET_GET_DOCS, /**< SP and DC (get) */
-    AMVP_NET_GET_VS_RESULT, /**< Vector Set result (get) */
-    AMVP_NET_GET_VS_SAMPLE, /**< Sample (get) */
     AMVP_NET_POST, /**< Generic (post) */
-    AMVP_NET_POST_LOGIN, /**< Login (post) */
-    AMVP_NET_POST_REG, /**< Registration (post) */
-    AMVP_NET_POST_VS_RESP, /**< Vector set response (post) */
     AMVP_NET_PUT, /**< Generic (put) */
-    AMVP_NET_PUT_VALIDATION, /**< Submit testSession for validation (put) */
     AMVP_NET_DELETE /**< delete vector set results, data */
 } AMVP_NET_ACTION;
 
@@ -249,7 +241,7 @@ static long amvp_curl_http_get(AMVP_CTX *ctx, const char *url) {
      */
     curl_easy_perform(hnd);
 
-    if (ctx->log_lvl == AMVP_LOG_LVL_VERBOSE) {
+    if (ctx->log_lvl == AMVP_LOG_LVL_DEBUG) {
         printf("\nHTTP GET RSP:\n\n%s\n", ctx->curl_buf);
     }
     /*
@@ -357,7 +349,6 @@ static long amvp_curl_http_post(AMVP_CTX *ctx, const char *url, const char *data
         /* Clear the HTTP buffer for next server response */
         memzero_s(ctx->curl_buf, AMVP_CURL_BUF_MAX);
     }
-    //crv = curl_easy_setopt(hnd, CURLOPT_VERBOSE, 1L);
 
     /*
      * Send the HTTP POST request
@@ -366,7 +357,7 @@ static long amvp_curl_http_post(AMVP_CTX *ctx, const char *url, const char *data
     if (crv != CURLE_OK) {
         AMVP_LOG_ERR("Curl failed with code %d (%s)", crv, curl_easy_strerror(crv));
     }
-    if (ctx->log_lvl == AMVP_LOG_LVL_VERBOSE) {
+    if (ctx->log_lvl == AMVP_LOG_LVL_DEBUG) {
         printf("\nHTTP POST RSP:\n\n%s\n", ctx->curl_buf);
     }
 
@@ -471,10 +462,9 @@ static long amvp_curl_http_put(AMVP_CTX *ctx, const char *url, const char *data,
         memzero_s(ctx->curl_buf, AMVP_CURL_BUF_MAX);
     }
 
-    if (ctx->log_lvl == AMVP_LOG_LVL_VERBOSE) {
+    if (ctx->log_lvl == AMVP_LOG_LVL_DEBUG) {
         printf("\nHTTP PUT:\n\n%s\n", data);
     }
-    //crv = curl_easy_setopt(hnd, CURLOPT_VERBOSE, 1L);
 
     /*
      * Send the HTTP PUT request
@@ -484,7 +474,7 @@ static long amvp_curl_http_put(AMVP_CTX *ctx, const char *url, const char *data,
         AMVP_LOG_ERR("Curl failed with code %d (%s)", crv, curl_easy_strerror(crv));
     }
 
-    if (ctx->log_lvl == AMVP_LOG_LVL_VERBOSE) {
+    if (ctx->log_lvl == AMVP_LOG_LVL_DEBUG) {
         printf("\nHTTP PUT RSP:\n\n%s\n", ctx->curl_buf);
     }
 
@@ -585,7 +575,7 @@ static long amvp_curl_http_delete(AMVP_CTX *ctx, const char *url) {
         memzero_s(ctx->curl_buf, AMVP_CURL_BUF_MAX);
     }
 
-    if (ctx->log_lvl == AMVP_LOG_LVL_VERBOSE) {
+    if (ctx->log_lvl == AMVP_LOG_LVL_DEBUG) {
         printf("\nHTTP DELETE: %s\n", url);
     }
 
@@ -664,7 +654,7 @@ AMVP_RESULT amvp_send_test_session_registration(AMVP_CTX *ctx,
     AMVP_LOG_ERR("Curl not linked, exiting function"); 
     return AMVP_TRANSPORT_FAIL;
 #else
-    return amvp_send_with_path_seg(ctx, AMVP_NET_POST_REG,
+    return amvp_send_with_path_seg(ctx, AMVP_NET_POST,
                                    AMVP_TEST_SESSIONS_URI, reg, len);
 #endif
 }
@@ -755,7 +745,7 @@ AMVP_RESULT amvp_request_security_policy_generation(AMVP_CTX *ctx,
         return AMVP_TRANSPORT_FAIL;
     }
 
-    return amvp_transport_put(ctx, full_url, data, strnlen_s(data, AMVP_ATTR_URL_MAX));
+    return amvp_transport_put(ctx, full_url, data, strnlen_s(data, AMVP_CURL_BUF_MAX));
 }
 
 AMVP_RESULT amvp_get_security_policy_json(AMVP_CTX *ctx,
@@ -795,7 +785,7 @@ AMVP_RESULT amvp_send_login(AMVP_CTX *ctx,
     AMVP_LOG_ERR("Curl not linked, exiting function"); 
     return AMVP_TRANSPORT_FAIL;
 #else
-    return amvp_send_with_path_seg(ctx, AMVP_NET_POST_LOGIN,
+    return amvp_send_with_path_seg(ctx, AMVP_NET_POST,
                                    AMVP_LOGIN_URI, login, len);
 #endif
 }
@@ -841,7 +831,7 @@ AMVP_RESULT amvp_submit_vector_responses(AMVP_CTX *ctx, char *vsid_url) {
             "https://%s:%d%s/results",
             ctx->server_name, ctx->server_port, vsid_url);
 
-    return amvp_network_action(ctx, AMVP_NET_POST_VS_RESP, url, NULL, 0);
+    return amvp_network_action(ctx, AMVP_NET_POST, url, NULL, 0);
 #endif
 }
 
@@ -899,7 +889,7 @@ AMVP_RESULT amvp_retrieve_vector_set(AMVP_CTX *ctx, char *vsid_url) {
 
    AMVP_LOG_STATUS("GET %s", vsid_url);
 
-    return amvp_network_action(ctx, AMVP_NET_GET_VS, url, NULL, 0);
+    return amvp_network_action(ctx, AMVP_NET_GET, url, NULL, 0);
 #endif
 }
 
@@ -928,7 +918,7 @@ AMVP_RESULT amvp_retrieve_docs(AMVP_CTX *ctx, char *vsid_url) {
             ctx->server_name, ctx->server_port, vsid_url);
 
 
-    return amvp_network_action(ctx, AMVP_NET_GET_DOCS, url, NULL, 0);
+    return amvp_network_action(ctx, AMVP_NET_GET, url, NULL, 0);
 #endif
 }
 
@@ -957,7 +947,7 @@ AMVP_RESULT amvp_retrieve_vector_set_result(AMVP_CTX *ctx, const char *api_url) 
             "https://%s:%d%s/results",
             ctx->server_name, ctx->server_port, api_url);
 
-    return amvp_network_action(ctx, AMVP_NET_GET_VS_RESULT, url, NULL, 0);
+    return amvp_network_action(ctx, AMVP_NET_GET, url, NULL, 0);
 #endif
 }
 
@@ -981,7 +971,7 @@ AMVP_RESULT amvp_retrieve_expected_result(AMVP_CTX *ctx, const char *api_url) {
             "https://%s:%d%s/expected",
             ctx->server_name, ctx->server_port, api_url);
 
-    return amvp_network_action(ctx, AMVP_NET_GET_VS_SAMPLE, url, NULL, 0);
+    return amvp_network_action(ctx, AMVP_NET_GET, url, NULL, 0);
 #endif
 }
 
@@ -1008,7 +998,7 @@ AMVP_RESULT amvp_transport_put(AMVP_CTX *ctx,
             "https://%s:%d%s",
             ctx->server_name, ctx->server_port, endpoint);
 
-    return amvp_network_action(ctx, AMVP_NET_PUT_VALIDATION, url, data, data_len);
+    return amvp_network_action(ctx, AMVP_NET_PUT, url, data, data_len);
 #endif
 }
 
@@ -1138,9 +1128,6 @@ static AMVP_RESULT inspect_http_code(AMVP_CTX *ctx, int code) {
     AMVP_RESULT result = AMVP_TRANSPORT_FAIL; /* Generic failure */
     JSON_Value *root_value = NULL;
     const JSON_Object *obj = NULL;
-#ifdef AMVP_OLD_JSON_FORMAT
-    const JSON_Array *arr = NULL;
-#endif
     const char *err_str = NULL;
     char *tmp_err_str = NULL;
 
@@ -1151,8 +1138,8 @@ static AMVP_RESULT inspect_http_code(AMVP_CTX *ctx, int code) {
         /* If anything can be handled by the transport layer here, do it, otherwise return to sender */
         /* Check if JWT expired, and try to refresh if so */
         if (ctx->error) {
-            AMVP_LOG_WARN("A new protocol error has been encountered before the previous was handled. Data will be lost.");
-            amvp_free_protocol_err(ctx->error);
+            /* Assume we are trying to handle an existing error and have failed yet again */
+            return AMVP_TRANSPORT_FAIL;
         }
         ctx->error = amvp_parse_protocol_error(ctx->curl_buf);
         return AMVP_PROTOCOL_RSP_ERR; /* Let the caller handle the error */
@@ -1166,24 +1153,11 @@ static AMVP_RESULT inspect_http_code(AMVP_CTX *ctx, int code) {
         char *diff = NULL;
 
         root_value = json_parse_string(ctx->curl_buf);
-#ifdef AMVP_OLD_JSON_FORMAT
-        arr = json_value_get_array(root_value);
-        if (!arr) {
-            AMVP_LOG_ERR("HTTP body doesn't contain top-level JSON Array");
-            goto end;
-        }
-        obj = json_array_get_object(arr, 1);
+        obj = json_value_get_object(root_value);
         if (!obj) {
-            AMVP_LOG_ERR("HTTP body doesn't contain expected array elements");
+            AMVP_LOG_ERR("HTTP body doesn't contain expected top-level object");
             goto end;
         }
-#else
-    obj = json_value_get_object(root_value);
-    if (!obj) {
-        AMVP_LOG_ERR("HTTP body doesn't contain expected top-level object");
-        goto end;
-    }
-#endif
         err_str = json_object_get_string(obj, "error");
         if (!err_str) {
             AMVP_LOG_ERR("JSON object doesn't contain 'error'");
@@ -1230,42 +1204,21 @@ static AMVP_RESULT execute_network_action(AMVP_CTX *ctx,
                                           int *curl_code) {
     AMVP_RESULT result = 0;
     char *resp = NULL;
-    int resp_len = 0;
     int rc = 0;
 
     switch(action) {
     case AMVP_NET_GET:
-    case AMVP_NET_GET_VS:
-    case AMVP_NET_GET_DOCS:
-    case AMVP_NET_GET_VS_RESULT:
-    case AMVP_NET_GET_VS_SAMPLE:
         rc = amvp_curl_http_get(ctx, url);
         break;
 
     case AMVP_NET_POST:
-    case AMVP_NET_POST_LOGIN:
-    case AMVP_NET_POST_REG:
         rc = amvp_curl_http_post(ctx, url, data, data_len);
         break;
 
     case AMVP_NET_PUT:
-    case AMVP_NET_PUT_VALIDATION:
         rc = amvp_curl_http_put(ctx, url, data, data_len);
         break;
 
-    case AMVP_NET_POST_VS_RESP:
-        resp = json_serialize_to_string(ctx->kat_resp, &resp_len);
-        if (!resp) {
-            AMVP_LOG_ERR("Failed to post vector set responses");
-            return AMVP_JSON_ERR;
-        }
-        rc = amvp_curl_http_post(ctx, url, resp, resp_len);
-        //Check for code 400, which means we are reuploading a resp and must use PUT instead
-        result = inspect_http_code(ctx, rc);
-        if (result == AMVP_UNSUPPORTED_OP) {
-            rc = amvp_curl_http_put(ctx, url, resp, resp_len);
-        }
-        break;
     case AMVP_NET_DELETE:
         rc = amvp_curl_http_delete(ctx, url);
         break;
@@ -1281,8 +1234,7 @@ static AMVP_RESULT execute_network_action(AMVP_CTX *ctx,
     }
 
     if (result != AMVP_SUCCESS) {
-        if (result == AMVP_JWT_EXPIRED &&
-            action != AMVP_NET_POST_LOGIN) {
+        if (result == AMVP_JWT_EXPIRED) {
             /*
              * Expired JWT
              * We are going to refresh the session
@@ -1302,35 +1254,20 @@ static AMVP_RESULT execute_network_action(AMVP_CTX *ctx,
             /* Try action again after the refresh */
             switch(action) {
             case AMVP_NET_GET:
-            case AMVP_NET_GET_VS:
-            case AMVP_NET_GET_DOCS:
-            case AMVP_NET_GET_VS_RESULT:
-            case AMVP_NET_GET_VS_SAMPLE:
                 rc = amvp_curl_http_get(ctx, url);
                 break;
 
             case AMVP_NET_POST:
-            case AMVP_NET_POST_REG:
                 rc = amvp_curl_http_post(ctx, url, data, data_len);
                 break;
 
             case AMVP_NET_PUT:
-            case AMVP_NET_PUT_VALIDATION:
                 rc = amvp_curl_http_put(ctx, url, data, data_len);
                 break;
 
-            case AMVP_NET_POST_VS_RESP:
-                rc = amvp_curl_http_post(ctx, url, resp, resp_len);
-                //Check for code 400, which means we are reuploading a resp and must use PUT instead
-                result = inspect_http_code(ctx, rc);
-                if (result == AMVP_UNSUPPORTED_OP) {
-                    rc = amvp_curl_http_put(ctx, url, resp, resp_len);
-                }
-                break;
             case AMVP_NET_DELETE:
                 amvp_curl_http_delete(ctx, url);
                 break;
-            case AMVP_NET_POST_LOGIN:
             default:
                 AMVP_LOG_ERR("We should never be here!");
                 break;
@@ -1373,52 +1310,17 @@ static void log_network_status(AMVP_CTX *ctx,
         AMVP_LOG_VERBOSE("GET...\n\tStatus: %d\n\tUrl: %s\n\tResp:\n%s\n",
                       curl_code, url, ctx->curl_buf);
         break;
-    case AMVP_NET_GET_VS:
-        AMVP_LOG_STATUS("GET Vector Set...\n\tStatus: %d\n\tUrl: %s\n\tResp:\n%s\n",
-                         curl_code, url, ctx->curl_buf);
-        break;
-    case AMVP_NET_GET_DOCS:
-        AMVP_LOG_STATUS("GET SP and DC...\n\tStatus: %d\n\tUrl: %s\n\tResp:\n%s\n",
-                         curl_code, url, ctx->curl_buf);
-        break;
-    case AMVP_NET_GET_VS_RESULT:
-        AMVP_LOG_STATUS("GET Vector Set Result...\n\tStatus: %d\n\tUrl: %s\n\tResp:\n%s\n",
-                        curl_code, url, ctx->curl_buf);
-        break;
-    case AMVP_NET_GET_VS_SAMPLE:
-        AMVP_LOG_VERBOSE("GET Vector Set Sample...\n\tStatus: %d\n\tUrl: %s\n\tResp:\n%s\n",
-                        curl_code, url, ctx->curl_buf);
-        break;
+ 
     case AMVP_NET_POST:
         AMVP_LOG_VERBOSE("POST...\n\tStatus: %d\n\tUrl: %s\n\tResp: %s\n",
                         curl_code, url, ctx->curl_buf);
         break;
-    case AMVP_NET_POST_LOGIN:
-        AMVP_LOG_VERBOSE("POST Login...\n\tStatus: %d\n\tUrl: %s\n\tResp: Recieved\n",
-                      curl_code, url);
-        break;
-    case AMVP_NET_POST_REG:
-        AMVP_LOG_VERBOSE("POST Registration...\n\tStatus: %d\n\tUrl: %s\n\tResp: Recieved\n",
-                        curl_code, url);
-        AMVP_LOG_STATUS("POST Cert Req...\n\tStatus: %d\n\tUrl: %s",
-                      curl_code, url);
-        break;
-    case AMVP_NET_POST_VS_RESP:
-        AMVP_LOG_VERBOSE("POST Response Submission...\n\tStatus: %d\n\tUrl: %s\n\tResp:\n%s\n",
-                      curl_code, url, ctx->curl_buf);
-        AMVP_LOG_STATUS("POST Response Submission...\n\tStatus: %d\n\tUrl: %s",
-                      curl_code, url);
-        break;
+
     case AMVP_NET_PUT:
         AMVP_LOG_VERBOSE("PUT...\n\tStatus: %d\n\tUrl: %s\n\tResp: %s\n",
                         curl_code, url, ctx->curl_buf);
-        AMVP_LOG_STATUS("PUT Response Submission...\n\tStatus: %d\n\tUrl: %s",
-                      curl_code, url);
         break;
-    case AMVP_NET_PUT_VALIDATION:
-        AMVP_LOG_STATUS("PUT testSession Validation...\n\tStatus: %d\n\tUrl: %s\n\tResp: %s\n",
-                        curl_code, url, ctx->curl_buf);
-        break;
+
     case AMVP_NET_DELETE:
         AMVP_LOG_VERBOSE("DELETE...\n\tStatus: %d\n\tUrl: %s\n\tResp:\n%s\n",
                        curl_code, url, ctx->curl_buf);
@@ -1465,33 +1367,16 @@ static AMVP_RESULT amvp_network_action(AMVP_CTX *ctx,
 
     switch (action) {
     case AMVP_NET_GET:
-    case AMVP_NET_GET_VS:
-    case AMVP_NET_GET_DOCS:
-    case AMVP_NET_GET_VS_RESULT:
-    case AMVP_NET_GET_VS_SAMPLE:
         generic_action = AMVP_NET_GET;
         break;
 
     case AMVP_NET_POST:
-    case AMVP_NET_POST_REG:
         check_data = 1;
         generic_action = AMVP_NET_POST;
         break;
 
-    case AMVP_NET_POST_LOGIN:
-        /* Clear jwt if logging in */
-        if (ctx->jwt_token) free(ctx->jwt_token);
-        ctx->jwt_token = NULL;
-        check_data = 1;
-        generic_action = AMVP_NET_POST_LOGIN;
-        break;
-
-    case AMVP_NET_POST_VS_RESP:
-        generic_action = AMVP_NET_POST_VS_RESP;
-        break;
 
     case AMVP_NET_PUT:
-    case AMVP_NET_PUT_VALIDATION:
         check_data = 1;
         generic_action = AMVP_NET_PUT;
         break;
@@ -1511,7 +1396,7 @@ static AMVP_RESULT amvp_network_action(AMVP_CTX *ctx,
     rv = execute_network_action(ctx, generic_action, url,
                                 data, data_len, &curl_code);
 
-    /* Log to the console */
+    /* Log to the console */    
     log_network_status(ctx, action, curl_code, url);
 
     return rv;

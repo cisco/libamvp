@@ -118,7 +118,7 @@ typedef enum amvp_result {
                                   usually means an operation is being requested for an algorithm that is not yet
                                   registered */
     AMVP_MALFORMED_JSON,     /**< The given JSON is not properly formatted/readable JSON */
-    AMVP_JSON_ERR,           /**< Error occured attempting to parse JSON into data stuctures */
+    AMVP_JSON_ERR,           /**< Error occurred attempting to parse JSON into data stuctures */
     AMVP_TC_MISSING_DATA,    /**< Data is missing from test case JSON */
     AMVP_TC_INVALID_DATA,    /**< Test case JSON is formatted properly, but the data is bad, does not
                                   match the registration, or does not match the spec */
@@ -126,7 +126,7 @@ typedef enum amvp_result {
                                   server responses, files, etc */
     AMVP_CONVERT_DATA_ERR,   /**< Error converting data between hexidecimal and binary (either direction) */
     AMVP_DUP_CIPHER,         /**< The client is attempting to register an algorithm that has already been registered */
-    AMVP_TOTP_FAIL,          /**< A failure occured attempting to generate a TOTP */
+    AMVP_TOTP_FAIL,          /**< A failure occurred attempting to generate a TOTP */
     AMVP_CTX_NOT_EMPTY,      /**< Occurs specifically when an attempt is made to initialize a CTX that is already initialized */
     AMVP_JWT_MISSING,        /**< A JSON web token is missing from a file or from memory but was expected */
     AMVP_JWT_EXPIRED,        /**< The provided JWT was not accepted by the server because it is expired */
@@ -145,7 +145,7 @@ typedef enum amvp_result {
  */
 
 /**
- * @brief amvp_create_test_session() creates a context that can be used to commence a test session
+ * @brief amvp_init_cert_request() creates a context that can be used to commence a test session
  *        with an AMVP server. This function should be called first to create a context that is
  *        used to manage all the API calls into libamvp. The context should be released after the
  *        test session has completed by invoking amvp_free_test_session().
@@ -154,13 +154,13 @@ typedef enum amvp_result {
  *        messages from libamvp. The application can then forward the log messages to any logging
  *        service it desires, such as syslog.
  *
- * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
+ * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_init_cert_request.
  * @param progress_cb Address of function to receive log messages from libamvp.
  * @param level The level of detail to use in logging, as defined by AMVP_LOG_LVL.
  *
  * @return AMVP_RESULT
  */
-AMVP_RESULT amvp_create_test_session(AMVP_CTX **ctx,
+AMVP_RESULT amvp_init_cert_request(AMVP_CTX **ctx,
                                      AMVP_RESULT (*progress_cb)(char *msg, AMVP_LOG_LVL level),
                                      AMVP_LOG_LVL level);
 
@@ -170,7 +170,7 @@ AMVP_RESULT amvp_create_test_session(AMVP_CTX **ctx,
  *        the application layer. This function should be invoked after a test session has completed
  *        and a reference to the context is no longer needed.
  *
- * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
+ * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_init_cert_request.
  *
  * @return AMVP_RESULT
  */
@@ -181,7 +181,7 @@ AMVP_RESULT amvp_free_test_session(AMVP_CTX *ctx);
  *        the server. This function is used to specify the hostname or IP address of the AMVP
  *        server. The TCP port number can also be specified if the server doesn't use port 443.
  *
- * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
+ * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_init_cert_request.
  * @param server_name Name or IP address of the AMVP server.
  * @param port TCP port number the server listens on.
  *
@@ -195,7 +195,7 @@ AMVP_RESULT amvp_set_server(AMVP_CTX *ctx, const char *server_name, int port);
  *        function allows the path segment prefix to be specified. The value provided to this
  *        function is prepended to the path segment of the URI used for the AMVP REST calls.
  *
- * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
+ * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_init_cert_request.
  * @param path_segment Value to embed in the URI path after the server name and before the AMVP
  *        well-known path.
  *
@@ -211,7 +211,7 @@ AMVP_RESULT amvp_set_path_segment(AMVP_CTX *ctx, const char *path_segment);
  *        the TLS handshake. These root certificates are set using this function. They must be PEM
  *        encoded and all contained in the same file.
  *
- * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
+ * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_init_cert_request.
  * @param ca_file Name of file containing all the PEM encoded X.509 certificates used as trust
  *        anchors for the TLS session.
  *
@@ -226,7 +226,7 @@ AMVP_RESULT amvp_set_cacerts(AMVP_CTX *ctx, const char *ca_file);
  *        needs to be presented during the TLS handshake. The certificate used by libamvp needs to
  *        be trusted by the AMVP server. Otherwise the TLS handshake will fail.
  *
- * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
+ * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_init_cert_request.
  * @param cert_file Name of file containing the PEM encoded X.509 certificate to use as the client
  *        identity.
  * @param key_file Name of file containing PEM encoded private key associated with the client
@@ -241,30 +241,18 @@ AMVP_RESULT amvp_set_certkey(AMVP_CTX *ctx, char *cert_file, char *key_file);
  *        will allow the client to retrieve the correct answers later on, allowing for comparison
  *        and debugging.
  *
- * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
+ * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_init_cert_request.
  *
  * @return AMVP_RESULT
  */
 AMVP_RESULT amvp_mark_as_sample(AMVP_CTX *ctx);
 
 /**
- * @brief amvp_mark_as_request_only() marks the registration as a request only. This function sets
- *         a flag that will allow the client to retrieve the vectors from the server and store them
- *         in a file for later use.
- *
- * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
- * @param filename Name of the file to be used for the request vectors
- *
- * @return AMVP_RESULT
- */
-AMVP_RESULT amvp_mark_as_request_only(AMVP_CTX *ctx, char *filename);
-
-/**
  * @brief amvp_mark_as_get_only() marks the operation as a GET only. This function will take the
  *        string parameter and perform a GET to check the get of a specific request. The request ID
  *        must be part of the string.
  *
- * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
+ * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_init_cert_request.
  * @param string used for the get, such as '/amvp/v1/requests/383'
  *
  * @return AMVP_RESULT
@@ -277,7 +265,7 @@ AMVP_RESULT amvp_mark_as_get_only(AMVP_CTX *ctx, char *string);
  *        string parameter for the location to save the results from the GET request indicated in
  *        amvp_mark_as_get_only() to as a file.
  *
- * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
+ * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_init_cert_request.
  * @param filename location to save the GET results to (assumes data in JSON format)
  *
  * @return AMVP_RESULT
@@ -288,43 +276,12 @@ AMVP_RESULT amvp_set_get_save_file(AMVP_CTX *ctx, char *filename);
  * @brief amvp_mark_as_delete only() marks the operation as a DELETE only. This function will
  *        perform an HTTP DELETE call on the resource at the givenURL.
  *
- * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
+ * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_init_cert_request.
  * @param request_url url of resource to delete
  *
  * @return AMVP_RESULT
  */
 AMVP_RESULT amvp_mark_as_delete_only(AMVP_CTX *ctx, char *request_url);
-
-/**
- * @brief amvp_get_vector_set_count will return the number of vector sets that are expected based on the current
- * registration. This should be seen as a close estimate not an exact number, as different AMVP servers could
- * possibly have different behaviors.
- *
- * @param ctx Pointer to AMVP_CTX with registered algorithms
- *
- * @return Count of expected vector sets
- */
-int amvp_get_vector_set_count(AMVP_CTX *ctx);
-
-/**
- * @brief Performs the AMVP testing procedures.
- *        This function will do the following actions:
- *          1. Verify the provided metadata if user has specified \p fips_validation.
- *          2. Register a new testSession with the AMVP server with the capabilities attached to
- *             the \p ctx.
- *          3. Communicate with the AMVP server to acquire the test vectors, calculate the results
- *             and upload the results to the server.
- *          4. Check the results of each vector associated with the testSession. The success or
- *             failure information will be printed to stderr.
- *          5. Request that the AMVP server perform a FIPS validation (if \p fips_validation == 1
- *             and testSession is passed).
- *
- * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
- * @param fips_validation A flag to indicate whether a fips validation is being performed on the
- *        test session
- * @return AMVP_RESULT
- */
-AMVP_RESULT amvp_run(AMVP_CTX *ctx, int fips_validation);
 
 AMVP_RESULT amvp_oe_ingest_metadata(AMVP_CTX *ctx, const char *metadata_file);
 
@@ -353,120 +310,15 @@ AMVP_RESULT amvp_oe_oe_set_dependency(AMVP_CTX *ctx,
                                       unsigned int dependency_id);
 
 /**
- * @brief amvp_set_json_filename specifies JSON registration file to be used during registration.
- *        This allows the app to skip the amvp_enable_* API calls
- *
- * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
- * @param json_filename Name of the file that contains the JSON registration
- *
- * @return AMVP_RESULT
- */
-AMVP_RESULT amvp_set_json_filename(AMVP_CTX *ctx, const char *json_filename);
-
-/**
- * @brief amvp_get_current_registration returns a string form of the currently registered set of capabilities. If a test
- * session has already begun it will use the session's submitted registration. If it has not yet begun, only the capabilities
- * registered thus far will be returrned.
- *
- * @param ctx The ctx to retrieve registration from
- * @param len An optional pointer to an integer for saving the length of the returned string
- * @return The string (char*) form of the current registration. The string must be later freed by the user.
- */
-char *amvp_get_current_registration(AMVP_CTX *ctx, int *len);
-
-/**
- * @brief amvp_load_kat_filename loads and processes JSON kat vector file This option will not
- *        communicate with the server at all.
- *
- * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
- * @param kat_filename Name of the file that contains the JSON kat vectors
- *
- * @return AMVP_RESULT
- */
-AMVP_RESULT amvp_load_kat_filename(AMVP_CTX *ctx, const char *kat_filename);
-
-/**
- * @brief Retrieves the results of an already-completed test session
- *
- * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
- * @param request_filename File containing the session info created by libamvp
- *
- * @return AMVP_RESULT
- */
-AMVP_RESULT amvp_get_results_from_server(AMVP_CTX *ctx, const char *request_filename);
-
-/**
- * @brief Gets the expected test results for test sessions marked as samples
- *
- * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
- * @param request_filename File containing the session info created by libamvp
- * @param save_filename path/name for file to save the expected results too. OPTIONAL. If null,
- *        will print expected results to log.
- *
- * @return AMVP_RESULT
- */
-AMVP_RESULT amvp_get_expected_results(AMVP_CTX *ctx, const char *request_filename, const char *save_filename);
-
-/**
- * @brief Queries the server for any vector sets that have not received a response (e.x. in case of
- *        lose of connectivity during testing), downloads those vector sets, and continues to
- *        process them
- *
- * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
- * @param request_filename File containing the session info created by libamvp
- * @param fips_validation Should be != 0 in case of fips validation (metadata must be provided)
- *
- * @return AMVP_RESULT
- */
-AMVP_RESULT amvp_resume_test_session(AMVP_CTX *ctx, const char *request_filename, int fips_validation);
-
-
-/**
- * @brief Requests the server to cancel a test session and delete associated data
- *
- * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
- * @param request_filename File containing the session info created by libamvp
- * @param save_filename OPTIONAL arugment indicated a file the server response can be saved to.
- *        Leave NULL if not applicable
- *
- * @return AMVP_RESULT
- */
-AMVP_RESULT amvp_cancel_test_session(AMVP_CTX *ctx, const char *request_filename, const char *save_filename);
-
-/**
  * @brief amvp_set_2fa_callback() sets a callback function which will create or obtain a TOTP
  *        password for the second part of the two-factor authentication.
  *
- * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
+ * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_init_cert_request.
  * @param totp_cb Function that will get the TOTP password
  *
  * @return AMVP_RESULT
  */
 AMVP_RESULT amvp_set_2fa_callback(AMVP_CTX *ctx, AMVP_RESULT (*totp_cb)(char **token, int token_max));
-
-/**
- * @brief amvp_bin_to_hexstr() Converts a binary string to hex
- *
- * @param src Pointer to the binary source string
- * @param src_len Length of source sting in bytes
- * @param dest Length of destination hex string
- * @param dest_max Maximum length allowed for destination
- *
- * @return AMVP_RESULT
- */
-AMVP_RESULT amvp_bin_to_hexstr(const unsigned char *src, int src_len, char *dest, int dest_max);
-
-/**
- * @brief amvp_hexstr_to_bin() Converts a hex string to binary
- *
- * @param src Pointer to the hex source string
- * @param dest Length of destination binary string
- * @param dest_max Maximum length allowed for destination
- * @param converted_len the number of bytes converted (output length)
- *
- * @return AMVP_RESULT
- */
-AMVP_RESULT amvp_hexstr_to_bin(const char *src, unsigned char *dest, int dest_max, int *converted_len);
 
 /**
  * @brief amvp_decode_base64 converts a base64 encoded string into a byte buffer
@@ -492,7 +344,7 @@ const char *amvp_lookup_error_string(AMVP_RESULT rv);
  * @brief amvp_cleanup() extends the curl_global_cleanup function to applications using libamvp to
  *        perform cleanup of curl resources
  *
- * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_create_test_session.
+ * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_init_cert_request.
  *
  * @return AMVP_RESULT
  *
@@ -513,6 +365,7 @@ const char *amvp_version(void);
  */
 const char *amvp_protocol_version(void);
 
+AMVP_RESULT amvp_check_cert_req_status(AMVP_CTX *ctx);
 AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx);
 AMVP_RESULT amvp_mark_as_cert_req(AMVP_CTX *ctx, int module_id, int vendor_id);
 AMVP_RESULT amvp_cert_req_add_contact(AMVP_CTX *ctx, const char *contact_id);
@@ -526,8 +379,6 @@ AMVP_RESULT amvp_read_cert_req_info_file(AMVP_CTX *ctx, const char *filename);
 AMVP_RESULT amvp_finalize_cert_request(AMVP_CTX *ctx);
 
 AMVP_RESULT amvp_retrieve_docs(AMVP_CTX *ctx, char *vsid_url);
-AMVP_RESULT amvp_mark_as_post_resources(AMVP_CTX *ctx, char *filename);
-AMVP_RESULT amvp_post_resources(AMVP_CTX *ctx, const char *resource_file);
 
 /** @} */
 /** @internal ALL APIS SHOULD BE ADDED ABOVE THESE BLOCKS */

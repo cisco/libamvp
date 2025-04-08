@@ -13,6 +13,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <ctype.h>
+#include <unistd.h>
 #include "amvp.h"
 #include "amvp_lcl.h"
 #include "amvp_error.h"
@@ -23,8 +24,6 @@
 #elif !defined AMVP_OFFLINE
 #include <curl/curl.h>
 #endif
-
-static int amvp_char_to_int(char ch);
 
 /*
  * Basic logging for libamvp
@@ -105,148 +104,6 @@ AMVP_RESULT amvp_cleanup(AMVP_CTX *ctx) {
     return rv;
 }
 
-/*
- * Convert a byte array from source to a hexadecimal string which is
- * stored in the destination.
- */
-AMVP_RESULT amvp_bin_to_hexstr(const unsigned char *src, int src_len, char *dest, int dest_max) {
-    int i, j;
-    unsigned char nibb_a, nibb_b;
-    unsigned char hex_chars[] = "0123456789ABCDEF";
-
-    if (!src || !dest) {
-        return AMVP_CONVERT_DATA_ERR;
-    }
-
-    if ((src_len * 2) > dest_max) {
-        return AMVP_CONVERT_DATA_ERR;
-    }
-
-    for (i = 0, j = 0; i < src_len; i++, j += 2) {
-        nibb_a = *src >> 4;   /* Get first half of byte */
-        nibb_b = *src & 0x0f; /* Get second half of byte */
-
-        *dest = hex_chars[nibb_a];
-        *(dest + 1) = hex_chars[nibb_b];
-
-        dest += 2;
-        src++;
-    }
-    *dest = '\0';
-
-    return AMVP_SUCCESS;
-}
-
-/*
- * Convert a source hexadecimal string to a byte array which is stored
- * in the destination.
- * TODO: Enable the function to handle odd number of hex characters
- */
-AMVP_RESULT amvp_hexstr_to_bin(const char *src, unsigned char *dest, int dest_max, int *converted_len) {
-    int src_len;
-    int byte_a, byte_b;
-    int is_odd = 0;
-    int length_converted = 0;
-
-    if (!src || !dest) {
-        return AMVP_INVALID_ARG;
-    }
-
-    src_len = strnlen_s(src, AMVP_HEXSTR_MAX);
-
-    /*
-     * Make sure the hex value isn't too large
-     */
-    if (src_len > (2 * dest_max)) {
-        return AMVP_DATA_TOO_LARGE;
-    }
-
-    if (src_len & 1) {
-        is_odd = 1;
-    }
-
-    if (!is_odd) {
-        while (*src && src[1]) {
-            byte_a = amvp_char_to_int((char)*src) << 4; /* Shift to left half of byte */
-            byte_b = amvp_char_to_int(*(src + 1));
-
-            *dest = byte_a + byte_b; /* Combine left half with right half */
-
-            dest++;
-            src += 2;
-            length_converted++;
-        }
-    } else {
-        return AMVP_UNSUPPORTED_OP;
-    }
-
-    if (converted_len) *converted_len = length_converted;
-    return AMVP_SUCCESS;
-}
-
-/*
- * Local - helper function for amvp_hexstring_to_bytes
- * Used to convert a hexadecimal character to it's byte
- * representation.
- */
-static int amvp_char_to_int(char ch) {
-    int ch_i;
-
-    if (ch >= '0' && ch <= '9') {
-        ch_i = ch - '0';
-    } else if (ch >= 'A' && ch <= 'F') {
-        ch_i = ch - 'A' + 10;
-    } else if (ch >= 'a' && ch <= 'f') {
-        ch_i = ch - 'a' + 10;
-    } else {
-        ch_i = 0;
-    }
-
-    return ch_i;
-}
-
-#ifdef AMVP_OLD_JSON_FORMAT
-/*
- * Creates a JSON amvp array which consists of
- * [{preamble}, {object}]
- * preamble is populated with the version string
- * returns AMVP_SUCCESS or AMVP_JSON_ERR
- */
-AMVP_RESULT amvp_create_array(JSON_Object **obj, JSON_Value **val, JSON_Array **arry) {
-    JSON_Value *reg_arry_val = NULL;
-    JSON_Object *reg_obj = NULL;
-    JSON_Array *reg_arry = NULL;
-    JSON_Value *ver_val = NULL;
-    JSON_Object *ver_obj = NULL;
-
-    reg_arry_val = json_value_init_array();
-    if (!reg_arry_val) {
-        return AMVP_JSON_ERR;
-    }
-
-    reg_obj = json_value_get_object(reg_arry_val);
-    reg_arry = json_array((const JSON_Value *)reg_arry_val);
-    if (!reg_arry) {
-        return AMVP_JSON_ERR;
-    }
-    ver_val = json_value_init_object();
-    ver_obj = json_value_get_object(ver_val);
-    if (!ver_obj) {
-        return AMVP_JSON_ERR;
-    }
-
-    json_object_set_string(ver_obj, "amvVersion", AMVP_VERSION);
-    if (json_array_append_value(reg_arry, ver_val) != JSONSuccess) {
-        return AMVP_JSON_ERR;
-    }
-
-
-    *obj = reg_obj;
-    *val = reg_arry_val;
-    *arry = reg_arry;
-    return AMVP_SUCCESS;
-}
-#else
 AMVP_RESULT amvp_create_response_obj(JSON_Object **obj, JSON_Value **val) {
     JSON_Value *tval = NULL;
     JSON_Object *tobj = NULL;
@@ -267,7 +124,6 @@ AMVP_RESULT amvp_add_version_to_obj(JSON_Object *obj) {
     json_object_set_string(obj, "amvVersion", AMVP_VERSION);
     return AMVP_SUCCESS;
 }
-#endif
 
 /*
  * This function returns a string that describes the error
@@ -299,7 +155,7 @@ const char *amvp_lookup_error_string(AMVP_RESULT rv) {
         { AMVP_JWT_MISSING,        "Error using JWT"                                  },
         { AMVP_JWT_EXPIRED,        "Provided JWT has expired"                         },
         { AMVP_JWT_INVALID,        "Proivded JWT is not valid"                        },
-        { AMVP_INTERNAL_ERR,       "Unexpected error occured internally"              }
+        { AMVP_INTERNAL_ERR,       "Unexpected error occurred internally"              }
     };
 
     for (i = 0; i < AMVP_RESULT_MAX - 1; i++) {
@@ -431,20 +287,13 @@ AMVP_RESULT amvp_setup_json_ev_group(AMVP_CTX **ctx,
 
 JSON_Object *amvp_get_obj_from_rsp(AMVP_CTX *ctx, JSON_Value *arry_val) {
     JSON_Object *obj = NULL;
-#ifdef AMVP_OLD_JSON_FORMAT
-    JSON_Array *reg_array;
-#endif
 
     if (!ctx || !arry_val) {
         AMVP_LOG_ERR("Missing arguments");
         return NULL;
     }
-#ifdef AMVP_OLD_JSON_FORMAT
-    reg_array = json_value_get_array(arry_val);
-    obj = json_array_get_object(reg_array, 1);
-#else
+
     obj = json_value_get_object(arry_val);
-#endif
     return obj;
 }
 
@@ -859,5 +708,227 @@ int amvp_get_request_status(AMVP_CTX *ctx, char **output) {
 
 end:
     if (val) json_value_free(val);
+    return rv;
+}
+
+
+/*
+ * Simple utility function to free a supported length
+ * list from the capabilities structure.
+ */
+void amvp_free_sl(AMVP_SL_LIST *list) {
+    AMVP_SL_LIST *top = list;
+    AMVP_SL_LIST *tmp;
+
+    while (top) {
+        tmp = top;
+        top = top->next;
+        free(tmp);
+    }
+}
+
+/*
+ * Simple utility function to free a name
+ * list from the capabilities structure.
+ */
+void amvp_free_nl(AMVP_NAME_LIST *list) {
+    AMVP_NAME_LIST *top = list;
+    AMVP_NAME_LIST *tmp;
+
+    while (top) {
+        tmp = top;
+        top = top->next;
+        free(tmp);
+    }
+}
+
+
+/*
+ * This is a retry handler, which pauses for a specific time.
+ * This allows the server time to generate the vectors on behalf of
+ * the client and to process the vector responses. The caller of this function
+ * can choose to implement a retry backoff using 'modifier'. Additionally, this
+ * function will ensure that retry periods will sum to no longer than AMVP_MAX_WAIT_TIME.
+ */
+AMVP_RESULT amvp_retry_handler(AMVP_CTX *ctx, int *retry_period, unsigned int *waited_so_far, int modifier, AMVP_WAITING_STATUS situation) {
+    /* perform check at beginning of function call, so library can check one more time when max
+     * time is reached to see if server status has changed */
+    if (*waited_so_far >= AMVP_MAX_WAIT_TIME) {
+        return AMVP_TRANSPORT_FAIL;
+    }
+
+    if (*waited_so_far + *retry_period > AMVP_MAX_WAIT_TIME) {
+        *retry_period = AMVP_MAX_WAIT_TIME - *waited_so_far;
+    }
+    if (*retry_period <= AMVP_RETRY_TIME_MIN || *retry_period > AMVP_RETRY_TIME_MAX) {
+        *retry_period = AMVP_RETRY_TIME_MAX;
+        AMVP_LOG_WARN("retry_period not found, using max retry period!");
+    }
+    if (situation == AMVP_WAITING_FOR_TESTS) {
+        AMVP_LOG_STATUS("Certification request session not yet ready, server requests we wait %u seconds and try again...", *retry_period);
+    } else if (situation == AMVP_WAITING_FOR_RESULTS) {
+        AMVP_LOG_STATUS("Results not ready, waiting %u seconds and trying again...", *retry_period);
+    } else {
+        AMVP_LOG_STATUS("Waiting %u seconds and trying again...", *retry_period);
+    }
+
+    #ifdef _WIN32
+    /*
+     * Windows uses milliseconds
+     */
+    Sleep(*retry_period * 1000);
+    #else
+    sleep(*retry_period);
+    #endif
+
+    /* ensure that all parameters are valid and that we do not wait longer than AMVP_MAX_WAIT_TIME */
+    if (modifier < 1 || modifier > AMVP_RETRY_MODIFIER_MAX) {
+        AMVP_LOG_WARN("retry modifier not valid, defaulting to 1 (no change)");
+        modifier = 1;
+    }
+    if ((*retry_period *= modifier) > AMVP_RETRY_TIME_MAX) {
+        *retry_period = AMVP_RETRY_TIME_MAX;
+    }
+
+    *waited_so_far += *retry_period;
+
+    return AMVP_KAT_DOWNLOAD_RETRY;
+}
+
+
+static void amvp_generic_error_log(AMVP_CTX *ctx, AMVP_PROTOCOL_ERR *err) {
+    AMVP_PROTOCOL_ERR_LIST *list = NULL;
+    int i = 0;
+
+    AMVP_LOG_ERR("Error(s) reported by server while attempting task.");
+    AMVP_LOG_ERR("Category: %s", err->category_desc);
+    AMVP_LOG_ERR("Error(s):");
+
+    list = err->errors;
+    while (list) {
+        AMVP_LOG_ERR("    Code: %d", list->code);
+        AMVP_LOG_ERR("    Messages:");
+        for (i = 0; i < list->desc_count; i++) {
+            AMVP_LOG_ERR("        %s", list->desc[i]);
+        }
+        list = list->next;
+    }
+}
+
+/* Return AMVP_RETRY_OPERATION if we want the caller to try whatever task again */
+AMVP_RESULT amvp_handle_protocol_error(AMVP_CTX *ctx, AMVP_PROTOCOL_ERR *err) {
+    AMVP_PROTOCOL_ERR_LIST *list = NULL;
+    AMVP_RESULT rv = AMVP_INTERNAL_ERR;
+
+    if (!err) {
+        return AMVP_MISSING_ARG;
+    }
+    list = err->errors;
+    if (!list) {
+        return AMVP_MISSING_ARG;
+    }
+    switch (err->category) {
+    case AMVP_PROTOCOL_ERR_AUTH:
+        while (list) {
+            switch(list->code) {
+            case AMVP_ERR_CODE_AUTH_MISSING_PW:
+                AMVP_LOG_ERR("TOTP was expected but not provided");
+                rv = AMVP_MISSING_ARG;
+                break;
+            case AMVP_ERR_CODE_AUTH_INVALID_JWT:
+                AMVP_LOG_ERR("Provided JWT is invalid");
+                rv = AMVP_INVALID_ARG;
+                break;
+            case AMVP_ERR_CODE_AUTH_EXPIRED_JWT:
+                AMVP_LOG_STATUS("Attempting to refresh JWT and continue...");
+                if (amvp_refresh(ctx) == AMVP_SUCCESS) {
+                    AMVP_LOG_STATUS("JWT succesfully refreshed. Trying again...");
+                    rv = AMVP_RETRY_OPERATION;
+                } else {
+                    AMVP_LOG_ERR("Attempted to refresh JWT but failed");
+                    rv = AMVP_TRANSPORT_FAIL;
+                }
+                break;
+            case AMVP_ERR_CODE_AUTH_INVALID_PW:
+                AMVP_LOG_ERR("Provided TOTP invalid; check generator, seed, and system clock");
+                rv = AMVP_INVALID_ARG;
+                break;
+            default:
+                break;
+            }
+            list = list->next;
+        }
+        break;
+    case AMVP_PROTOCOL_ERR_GENERAL:
+    case AMVP_PROTOCOL_ERR_MALFORMED_PAYLOAD:
+    case AMVP_PROTOCOL_ERR_INVALID_REQUEST:
+    case AMVP_PROTOCOL_ERR_ON_SERVER:
+        amvp_generic_error_log(ctx, err);
+        break;
+    case AMVP_PROTOCOL_ERR_CAT_MAX:
+    default:
+        return AMVP_INVALID_ARG;
+    }
+
+    amvp_free_protocol_err(ctx->error);
+    ctx->error = NULL;
+    return rv;
+}
+
+int amvp_get_id_from_url(AMVP_CTX *ctx, const char *url) {
+    int id = 0;
+
+    sscanf(url, "/amvp/v1/certRequests/%d", &id);
+    if (id <= 0) {
+        AMVP_LOG_ERR("Unable to parse ID from URL: %s", url);
+        return -1;
+    }
+    return id;
+}
+
+/** 
+ * This function assumes the curl buffer has cert request status information.
+ * It will overwrite the file if it already exists.
+ */
+AMVP_RESULT amvp_save_cert_req_info_file(AMVP_CTX *ctx, JSON_Object *contents) {
+    char *file = NULL;
+    AMVP_RESULT rv = AMVP_INTERNAL_ERR;
+    int id = 0;
+    const char *url = NULL;
+
+    AMVP_LOG_STATUS("Saving session info to file...");
+
+    url = json_object_get_string(contents, "url");
+    if (!url) {
+        AMVP_LOG_ERR("Error getting URL from cert request JSON");
+        rv = AMVP_JSON_ERR;
+        goto end;
+    }
+    id = amvp_get_id_from_url(ctx, url);
+    if (id < 0) {
+        AMVP_LOG_ERR("Error getting ID from URL");
+        rv = AMVP_JSON_ERR;
+        goto end;
+    }
+    json_object_set_string(contents, "accessToken", ctx->jwt_token);
+    /* Create the name of the file we are saving info to */
+    file = calloc(AMVP_CERT_REQUEST_FILENAME_MAX_LEN + 1, sizeof(char));
+    if (!file) {
+        AMVP_LOG_ERR("Error allocating memory for certify request filename");
+        rv = AMVP_MALLOC_FAIL;
+        goto end;
+    }
+    snprintf(file, AMVP_CERT_REQUEST_FILENAME_MAX_LEN + 1, "%s_%d.json", AMVP_CERT_REQUEST_FILENAME_DEFAULT, id);
+
+    /* Save the payload to the file */
+    rv = (json_serialize_to_file_pretty(json_object_get_wrapping_value(contents), file) == JSONSuccess ? AMVP_SUCCESS : AMVP_INTERNAL_ERR);
+    if (rv != AMVP_SUCCESS) {
+        AMVP_LOG_ERR("Failed to write module creation response to file!");
+    } else {
+        AMVP_LOG_STATUS("Successfully created cert request file %s", file);
+    }
+
+    rv = AMVP_SUCCESS;
+end:
     return rv;
 }
