@@ -966,7 +966,7 @@ static AMVP_RESULT amvp_output_cert_request_status(AMVP_CTX *ctx, JSON_Object *s
     } else if (json_object_has_value_of_type(status_json, "certRequestId", JSONNumber)) {
         req_id = (int) json_object_get_number(status_json, "certRequestId");
     }
-    req_id = 914;
+
     module_id = (int)json_object_get_number(status_json, "moduleId");
     module_name = amvp_get_module_name_from_id(ctx, module_id);
     if (!module_name) {

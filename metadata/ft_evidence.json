@@ -1,0 +1,54 @@
+{
+    "amvVersion": "0.1",
+    "functionalTest":
+    {
+      "document":
+      {
+        "base-catalogVersion": "3.0",
+        "base-lastUpdated": "October-16-2023",
+        "functionalTesting-EC": "0.6",
+        "functionalTesting-lastUpdated": "October-29-2024"
+      },
+      "defaults":
+      {
+        "access": "physical remote observed",
+        "technique": "debugger simulation emulation harness manual other",
+        "description": "description of test procedure",
+        "harnessID": "",
+        "setup": "String - reference into Catalog",
+        "errorInduction": "description of modifications",
+        "results":
+        {
+            "digest": "####",
+            "fileLocation": "directory or location of test evidence",
+            "integrityMechanism": "SHA2-256"
+        }
+      },
+      "testEvidence":
+      [
+        {
+            "teList":
+            [
+              "TE02.12.01",
+              "TE03.02.01",
+              "TE03.07.08",
+              "TE03.14.03",
+              "TE03.15.02",
+              "TE04.56.02"
+            ],
+            "description": "Verify that versioning info identifies distinct components.",
+            "access": "physical",
+            "technique": "debugger simulation emulation harness manual other",
+            "harnessId": "String - UUID for debugger",
+            "setup": "reference into Catalog",
+            "errorInduction": "description of",
+            "results":
+            {
+                "digest": "########",
+                "fileLocation": "location of test evidence",
+                "integrityMechanism": "SHA2-512"
+            }
+        }
+      ]
+    }
+}
