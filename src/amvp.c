@@ -946,15 +946,16 @@ static AMVP_CERT_REQ_STATUS amvp_parse_cert_req_status_str(JSON_Object *json) {
 /* Output prettified cert request status to log */
 static AMVP_RESULT amvp_output_cert_request_status(AMVP_CTX *ctx, JSON_Object *status_json) {
     JSON_Object *tmp_obj = NULL;
-    JSON_Array *arr = NULL;
+    JSON_Array *arr = NULL, *feedback = NULL;
     char *module_name = NULL;
     int req_id = 0, module_id = 0, vendor_id = 0, i = 0;
     size_t arr_size = 0;
     AMVP_RESULT rv = AMVP_SUCCESS;
-    AMVP_NAME_LIST *fte_list = NULL, *fte_iter = NULL, *sce_list = NULL, *sce_iter = NULL;
+    AMVP_NAME_LIST *fte_list = NULL, *fte_iter = NULL, *sce_list = NULL,
+                   *sce_iter = NULL, *feedback_list = NULL, *feedback_iter = NULL;
     AMVP_SL_LIST *sp_list = NULL, *sp_iter = NULL;
     AMVP_CERT_REQ_STATUS cert_req_status = AMVP_CERT_REQ_STATUS_UNKNOWN;
-    const char *feedback = NULL, *cert_id = NULL;
+    const char *cert_id = NULL;
     if (!ctx || !status_json) {
         return AMVP_INTERNAL_ERR;
     }
@@ -1011,8 +1012,25 @@ static AMVP_RESULT amvp_output_cert_request_status(AMVP_CTX *ctx, JSON_Object *s
         goto end;
     case AMVP_CERT_REQ_STATUS_REJECTED:
         AMVP_LOG_STATUS("        " AMVP_ANSI_COLOR_RED "The cert request has been rejected." AMVP_ANSI_COLOR_RESET);
-        feedback = json_object_get_string(status_json, "ruleFeedback");
-        AMVP_LOG_STATUS("        " AMVP_ANSI_COLOR_RED "Reasoning: %s\n" AMVP_ANSI_COLOR_RESET, feedback);
+        feedback = json_object_get_array(status_json, "ruleFeedback");
+        if (!feedback) {
+            AMVP_LOG_ERR("Server marked request as rejected, but failed to provide reasoning");
+            goto end;
+        }
+        arr_size = json_array_get_count(feedback);
+        if (arr_size <= 0 || arr_size > 16) {
+            AMVP_LOG_ERR("Server provided invalid feedback list (empty or too long)");
+            goto end;
+        }
+        for (i = 0; i < (int)arr_size; i++) {
+            amvp_append_name_list(&feedback_list, json_array_get_string(feedback, i));
+        }
+        AMVP_LOG_STATUS("        " AMVP_ANSI_COLOR_RED "Reasoning:" AMVP_ANSI_COLOR_RESET);
+        feedback_iter = feedback_list;
+        while (feedback_iter) {
+            AMVP_LOG_STATUS(AMVP_ANSI_COLOR_RED "          %s" AMVP_ANSI_COLOR_RESET, feedback_iter->name);
+            feedback_iter = feedback_iter->next;
+        }
         break;
     case AMVP_CERT_REQ_STATUS_ERROR:
         AMVP_LOG_ERR("        " AMVP_ANSI_COLOR_RED "The cert request has encountered an error." AMVP_ANSI_COLOR_RESET);
@@ -1097,6 +1115,7 @@ end:
     if (fte_list) amvp_free_nl(fte_list);
     if (sce_list) amvp_free_nl(sce_list);
     if (sp_list) amvp_free_sl(sp_list);
+    if (feedback_list) amvp_free_nl(feedback_list);
     if (module_name) free(module_name);
     return rv;
 }
