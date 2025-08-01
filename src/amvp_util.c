@@ -216,69 +216,6 @@ void amvp_kv_list_free(AMVP_KV_LIST *kv_list) {
     }
 }
 
-AMVP_RESULT amvp_setup_json_rsp_group(AMVP_CTX **ctx,
-                                      JSON_Value **outer_arr_val,
-                                      JSON_Value **r_vs_val,
-                                      JSON_Object **r_vs,
-                                      const char *alg_str,
-                                      JSON_Array **groups_arr) {
-    if ((*ctx)->kat_resp) {
-        json_value_free((*ctx)->kat_resp);
-    }
-    (*ctx)->kat_resp = *outer_arr_val;
-
-    *r_vs_val = json_value_init_object();
-    *r_vs = json_value_get_object(*r_vs_val);
-    if (!*r_vs) {
-        return AMVP_JSON_ERR;
-    } 
-
-    if (json_object_set_number(*r_vs, "vsId", (*ctx)->vs_id) != JSONSuccess ||
-            json_object_set_string(*r_vs, "algorithm", alg_str) != JSONSuccess) {
-        return AMVP_JSON_ERR;
-    }
-
-    /* create an array of response test groups */
-    json_object_set_value(*r_vs, "testGroups", json_value_init_array());
-    (*groups_arr) = json_object_get_array(*r_vs, "testGroups");
-    if (!*groups_arr) {
-        return AMVP_JSON_ERR;
-    }
-
-    return AMVP_SUCCESS;
-}
-
-
-AMVP_RESULT amvp_setup_json_ev_group(AMVP_CTX **ctx,
-                                      JSON_Value **outer_arr_val,
-                                      JSON_Value **r_vs_val,
-                                      JSON_Object **r_vs,
-                                      JSON_Array **groups_arr) {
-    if ((*ctx)->kat_resp) {
-        json_value_free((*ctx)->kat_resp);
-    }
-    (*ctx)->kat_resp = *outer_arr_val;
-
-    *r_vs_val = json_value_init_object();
-    *r_vs = json_value_get_object(*r_vs_val);
-    if (!*r_vs) {
-        return AMVP_JSON_ERR;
-    } 
-
-    if (json_object_set_number(*r_vs, "ieId", (*ctx)->vs_id) != JSONSuccess) {
-        return AMVP_JSON_ERR;
-    }
-
-    /* create an array of response test groups */
-    json_object_set_value(*r_vs, "teGroups", json_value_init_array());
-    (*groups_arr) = json_object_get_array(*r_vs, "teGroups");
-    if (!*groups_arr) {
-        return AMVP_JSON_ERR;
-    }
-
-    return AMVP_SUCCESS;
-}
-
 JSON_Object *amvp_get_obj_from_rsp(AMVP_CTX *ctx, JSON_Value *arry_val) {
     JSON_Object *obj = NULL;
 

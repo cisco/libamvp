@@ -96,7 +96,6 @@ AMVP_RESULT amvp_set_2fa_callback(AMVP_CTX *ctx, AMVP_RESULT (*totp_cb)(char **t
  * when the test session is finished.
  */
 AMVP_RESULT amvp_free_test_session(AMVP_CTX *ctx) {
-    AMVP_VS_LIST *vs_entry, *vs_e2;
     int i = 0;
 
     if (!ctx) {
@@ -113,26 +112,14 @@ AMVP_RESULT amvp_free_test_session(AMVP_CTX *ctx) {
     if (ctx->tls_key) { free(ctx->tls_key); }
     if (ctx->http_user_agent) { free(ctx->http_user_agent); }
     if (ctx->session_file_path) { free(ctx->session_file_path); }
-    if (ctx->json_filename) { free(ctx->json_filename); }
     if (ctx->session_url) { free(ctx->session_url); }
-    if (ctx->vector_req_file) { free(ctx->vector_req_file); }
     if (ctx->get_string) { free(ctx->get_string); }
     if (ctx->delete_string) { free(ctx->delete_string); }
     if (ctx->save_filename) { free(ctx->save_filename); }
-    if (ctx->post_filename) { free(ctx->post_filename); }
-    if (ctx->put_filename) { free(ctx->put_filename); }
     if (ctx->mod_cert_req_file) { free(ctx->mod_cert_req_file); }
     if (ctx->jwt_token) { free(ctx->jwt_token); }
     if (ctx->tmp_jwt) { free(ctx->tmp_jwt); }
     if (ctx->error) { amvp_free_protocol_err(ctx->error); ctx->error = NULL; }
-    if (ctx->vs_list) {
-        vs_entry = ctx->vs_list;
-        while (vs_entry) {
-            vs_e2 = vs_entry->next;
-            free(vs_entry);
-            vs_entry = vs_e2;
-        }
-    }
     if (ctx->vsid_url_list) {
         amvp_free_str_list(&ctx->vsid_url_list);
     }

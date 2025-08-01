@@ -81,34 +81,6 @@ AMVP_RESULT amvp_build_registration_json(AMVP_CTX *ctx, JSON_Value **reg) {
     return AMVP_SUCCESS;
 }
 
-AMVP_RESULT amvp_build_full_registration(AMVP_CTX *ctx, char **out, int *out_len) {
-    JSON_Value *top_array_val = NULL, *val = NULL;
-    JSON_Array *top_array = NULL;
-    JSON_Object *obj = NULL;
-
-    /*
-     * Start top-level array
-     */
-    top_array_val = json_value_init_array();
-    if (!top_array_val) {
-        return AMVP_MALLOC_FAIL;
-    }
-    top_array = json_array((const JSON_Value *)top_array_val);
-
-    val = json_value_init_object();
-    obj = json_value_get_object(val);
-
-    json_object_set_boolean(obj, "isSample", ctx->is_sample);
-    json_object_set_value(obj, "algorithms", ctx->registration);
-
-    json_array_append_value(top_array, val);
-    *out = json_serialize_to_string(top_array_val, out_len);
-
-    json_object_soft_remove(obj, "algorithms");
-    if (top_array_val) json_value_free(top_array_val);
-    return AMVP_SUCCESS;
-}
-
 /*
  * This function builds the JSON message to register an OE with the
  * validating crypto server

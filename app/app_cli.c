@@ -115,15 +115,12 @@ static ko_longopt_t longopts[] = {
     { "error", ko_no_argument, 306 },
     { "verbose", ko_no_argument, 307 },
     { "none", ko_no_argument, 308 },
-    { "manual_registration", ko_required_argument, 400 },
     { "fips_validation", ko_required_argument, 402 },
     { "get", ko_required_argument, 406 },
     { "post", ko_required_argument, 407 },
     { "put", ko_required_argument, 408 },
-    { "certnum", ko_required_argument, 410 },
     { "save_to", ko_required_argument, 413 },
     { "delete", ko_required_argument, 414 },
-    { "cancel_session", ko_required_argument, 415 },
     { "debug", ko_no_argument, 417 },
     { "module_cert_req", ko_required_argument, 419 },
     { "with_vendor", ko_required_argument, 424} ,
@@ -173,8 +170,6 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
     ketopt_t opt = KETOPT_INIT;
     int c = 0, diff = 0, tmp = 0;
 
-    cfg->empty_alg = 1;
-
     /* Set the default configuration values */
     default_config(cfg);
 
@@ -223,14 +218,6 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
             cfg->level = AMVP_LOG_LVL_NONE;
             break;
 
-        case 400:
-            cfg->manual_reg = 1;
-            if (!check_option_length(opt.arg, c, JSON_FILENAME_LENGTH)) {
-                return 1;
-            }
-            strcpy_s(cfg->reg_file, JSON_FILENAME_LENGTH + 1, opt.arg);
-            break;
-
         case 402:
             cfg->fips_validation = 1;
             if (!check_option_length(opt.arg, c, JSON_FILENAME_LENGTH)) {
@@ -263,13 +250,6 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
             strcpy_s(cfg->put_filename, JSON_FILENAME_LENGTH + 1, opt.arg);
             break;
 
-        case 410:
-            if (!check_option_length(opt.arg, c, JSON_STRING_LENGTH)) {
-                return 1;
-            }
-            strcpy_s(value, JSON_STRING_LENGTH, opt.arg);
-            break;
-
         case 's':
         case 413:
             cfg->save_to = 1;
@@ -285,14 +265,6 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
                 return 1;
             }
             strcpy_s(cfg->delete_url, JSON_REQUEST_LENGTH + 1, opt.arg);
-            break;
-
-        case 415:
-            cfg->cancel_session = 1;
-            if (!check_option_length(opt.arg, c, JSON_FILENAME_LENGTH)) {
-                return 1;
-            }
-            strcpy_s(cfg->session_file, JSON_FILENAME_LENGTH + 1, opt.arg);
             break;
 
         case 417:

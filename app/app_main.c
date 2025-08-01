@@ -29,7 +29,6 @@ const char *ca_chain_file;
 char *cert_file;
 char *key_file;
 const char *path_segment;
-char value[JSON_STRING_LENGTH] = "same";
 
 #define CHECK_ENABLE_CAP_RV(rv) \
     if (rv != AMVP_SUCCESS) { \
