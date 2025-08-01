@@ -33,6 +33,8 @@ static AMVP_RESULT amvp_parse_login(AMVP_CTX *ctx);
 
 static AMVP_CERT_REQ_STATUS amvp_parse_cert_req_status_str(JSON_Object *json);
 
+static AMVP_RESULT amvp_output_test_evidence_table(AMVP_CTX *ctx, JSON_Array *missing_te_array);
+
 #define MODULES "modules/"
 #define REQUESTS "requests/"
 #define AMVP_CERTIFY_ENDPOINT "certify"
@@ -342,16 +344,21 @@ AMVP_RESULT amvp_set_get_save_file(AMVP_CTX *ctx, char *filename) {
     return AMVP_SUCCESS;
 }
 
-AMVP_RESULT amvp_mark_as_cert_req(AMVP_CTX *ctx, int module_id, int vendor_id) {
+AMVP_RESULT amvp_mark_as_cert_req(AMVP_CTX *ctx, const char *module_file, int vendor_id) {
     if (!ctx) {
         return AMVP_NO_CTX;
     }
 
-    if (!module_id || !vendor_id) {
+    if (!module_file || !vendor_id) {
         AMVP_LOG_ERR("Missing module or vendor ID");
         return AMVP_INVALID_ARG;
     }
-    ctx->cert_req_info.module_id = module_id;
+    if (strnlen_s(module_file, AMVP_JSON_FILENAME_MAX + 1) > AMVP_JSON_FILENAME_MAX) {
+        AMVP_LOG_ERR("Module file name is suspiciously long...");
+        return AMVP_INVALID_ARG;
+    }
+ 
+    strcpy_s(ctx->cert_req_info.module_file, AMVP_JSON_FILENAME_MAX + 1, module_file);
     ctx->cert_req_info.vendor_id = vendor_id;
     ctx->action = AMVP_ACTION_CERT_REQ;
     return AMVP_SUCCESS;
@@ -543,243 +550,6 @@ err:
     return rv;
 }
 
-AMVP_RESULT amvp_create_module(AMVP_CTX *ctx, char *filename) {
-    AMVP_RESULT rv = AMVP_SUCCESS;
-    char *reg = NULL, *file = NULL;
-    const char *url = NULL, *id = NULL, *tmp = NULL;
-    int reg_len = 0, diff = 0, level = 0;
-    JSON_Value *tmp_json = NULL, *val = NULL;
-    JSON_Object *obj = NULL, *obj2 = NULL;
-    if (!ctx) {
-        return AMVP_NO_CTX;
-    }
-
-    /*
-     * Send the capabilities to the AMVP server and get the response,
-     * which should be a list of vector set ID urls
-     */
-    AMVP_LOG_STATUS("Reading module file...\n");
-    tmp_json = json_parse_file(filename);
-    if (!tmp_json) {
-        AMVP_LOG_ERR("Error reading module file");
-        rv = AMVP_JSON_ERR;
-        goto end;
-    }
-
-    /* Sanity check format, Log some info about the module */
-    obj = amvp_get_obj_from_rsp(ctx, tmp_json);
-    if (!obj) {
-        AMVP_LOG_ERR("Module file in incorrect format");
-        rv = AMVP_JSON_ERR;
-        goto end;
-    }
-    obj2 = json_object_get_object(obj, "moduleInfo");
-    if (!obj2) {
-        AMVP_LOG_ERR("Module file missing required info");
-        rv = AMVP_JSON_ERR;
-        goto end;
-    }
-    tmp = json_object_get_string(obj2, "name");
-    if (!tmp) {
-        AMVP_LOG_ERR("Module file missing required info (name)");
-        rv = AMVP_JSON_ERR;
-        goto end;
-    }
-    AMVP_LOG_STATUS("Module Name: %s", tmp);
-
-    tmp = json_object_get_string(obj2, "description");
-    if (!tmp) {
-        AMVP_LOG_ERR("Module file missing required info (description)");
-        rv = AMVP_JSON_ERR;
-        goto end;
-    }
-    AMVP_LOG_STATUS("Description: %s", tmp);
-
-    tmp = json_object_get_string(obj2, "type");
-    if (!tmp) {
-        AMVP_LOG_ERR("Module file missing required info (type)");
-        rv = AMVP_JSON_ERR;
-        goto end;
-    }
-    AMVP_LOG_STATUS("Type: %s", tmp);
-
-    level = json_object_get_number(obj2, "overallSecurityLevel");
-    if (!level) {
-        AMVP_LOG_ERR("Module file missing required info (level)");
-        rv = AMVP_JSON_ERR;
-        goto end;
-    }
-    AMVP_LOG_STATUS("Overall Security Level: %d\n", level);
-
-    reg = json_serialize_to_string(tmp_json, &reg_len);
-
-    rv = amvp_login(ctx, 0);
-    if (rv != AMVP_SUCCESS) {
-        AMVP_LOG_ERR("Error logging in with AMVP server while trying to create module");
-        goto end;
-    }
-
-    AMVP_LOG_STATUS("Sending module create request...");
-    rv = amvp_send_module_creation(ctx, reg, reg_len);
-    if (rv == AMVP_SUCCESS) {
-        val = json_parse_string(ctx->curl_buf);
-        if (!val) {
-            AMVP_LOG_ERR("Error while parsing json from server!");
-            rv = AMVP_JSON_ERR;
-            goto end;
-        }
-        obj = amvp_get_obj_from_rsp(ctx, val);
-        if (!obj) {
-            AMVP_LOG_ERR("Error while parsing json from server!");
-            rv = AMVP_JSON_ERR;
-            goto end;
-        }
-        url = json_object_get_string(obj, "url");
-
-        file = calloc(AMVP_REQ_FILENAME_MAX_LEN + 1, sizeof(char));
-        if (!file) {
-            AMVP_LOG_ERR("Unable to allocate memory for storing module file");
-            goto end;
-        }
-
-        id = url;
-        while(*id != 0) {
-            memcmp_s(id, strlen(REQUESTS), REQUESTS, strlen(REQUESTS), &diff);
-            if (!diff) {
-                break;
-            }
-            id++;
-        }
-        id += strnlen_s(REQUESTS, AMVP_ATTR_URL_MAX);
-
-        AMVP_LOG_STATUS("Module Request URL: %s", url);
-
-        snprintf(file, AMVP_REQ_FILENAME_MAX_LEN + 1, "%s_%s_%s.json", AMVP_MODULE_FILENAME_DEFAULT, AMVP_REQ_FILENAME_DEFAULT, id);
-        rv = amvp_json_serialize_to_file_pretty_w(json_object_get_wrapping_value(obj), file);
-        if (rv != AMVP_SUCCESS) {
-            AMVP_LOG_ERR("Failed to write module creation response to file.");
-        } else {
-            amvp_json_serialize_to_file_pretty_a(NULL, file);
-            AMVP_LOG_STATUS("Successfully created module request and saved request info to file %s", file);
-        }
-    }
-
-end:
-    if (reg) free(reg);
-    if (file) free (file);
-    if (val) json_value_free(val);
-    if (tmp_json) json_value_free(tmp_json);
-    return rv;
-}
-
-AMVP_RESULT amvp_get_module_request(AMVP_CTX *ctx, char *filename) {
-    AMVP_RESULT rv = AMVP_SUCCESS;
-    AMVP_REQUEST_STATUS status = 0;
-    JSON_Value *val = NULL;
-    JSON_Array *arr = NULL;
-    JSON_Object *obj = NULL;
-    const char *url = NULL;
-    char *approved = NULL, *substr = NULL, *file = NULL;
-    int len = 0;
-
-    if (!ctx) {
-        return AMVP_NO_CTX;
-    }
-
-    /*
-     * Send the capabilities to the AMVP server and get the response,
-     * which should be a list of vector set ID urls
-     */
-    val = json_parse_file(filename);
-    arr = json_value_get_array(val);
-    obj = json_array_get_object(arr, 0);
-    if (!obj) {
-        AMVP_LOG_ERR("Invalid request file provided when getting module request");
-        goto end;
-    }
-    url = json_object_get_string(obj, "url");
-    if (!url) {
-        AMVP_LOG_ERR("Request file missing URL");
-        goto end;
-    }
-
-    rv = amvp_login(ctx, 0);
-    if (rv != AMVP_SUCCESS) {
-        AMVP_LOG_ERR("Error logging in with AMVP server while trying to get module request status");
-        goto end;
-    }
-
-    rv = amvp_transport_get(ctx, url, NULL);
-
-    if (rv != AMVP_SUCCESS) {
-        AMVP_LOG_ERR("Failed to get status of request from server");
-        goto end;
-    }
-
-    status = amvp_get_request_status(ctx, &approved);
-    switch (status) {
-    case AMVP_REQUEST_STATUS_INITIAL:
-        AMVP_LOG_STATUS("Module request still in initial status");
-        break;
-    case AMVP_REQUEST_STATUS_APPROVED:
-        /* Check and make sure the approved Url is a module before storing it as a module */
-        len = strnlen_s(approved, AMVP_REQUEST_STR_LEN_MAX + 1);
-        strstr_s(approved, len, AMVP_MODULE_ENDPOINT, sizeof(AMVP_MODULE_ENDPOINT) - 1, &substr);
-        if (!substr) {
-            AMVP_LOG_ERR("Request approved, but not saving to file as it is not a module. URL: %s", approved);
-            goto end;
-        }
-        AMVP_LOG_STATUS("Module request approved! URL: %s", approved);
-        AMVP_LOG_STATUS("Saving module info to file...");
-
-        rv = amvp_transport_get(ctx, approved, NULL);
-        if (rv != AMVP_SUCCESS) {
-            AMVP_LOG_ERR("Failure getting approved module info");
-            goto end;
-        }
-
-        /* substr is set to beginning of "modules" - set it to whatever comes after "modules/" */
-        substr += sizeof(AMVP_MODULE_ENDPOINT);
-
-        file = calloc(AMVP_REQ_FILENAME_MAX_LEN + 1, sizeof(char));
-        if (!file) {
-            AMVP_LOG_ERR("Unable to allocate memory for storing module file");
-            goto end;
-        }
-
-        if (val) json_value_free(val);
-        val = json_parse_string(ctx->curl_buf);
-        obj = amvp_get_obj_from_rsp(ctx, val);
-        if (!obj) {
-            AMVP_LOG_ERR("Failure getting approved module info");
-            goto end;
-        }
-        json_object_set_string(obj, "url", approved);
-
-        snprintf(file, AMVP_REQ_FILENAME_MAX_LEN + 1, "%s_%s.json", AMVP_MODULE_FILENAME_DEFAULT, substr);
-        rv = amvp_json_serialize_to_file_pretty_w(json_object_get_wrapping_value(obj), file);
-        if (rv != AMVP_SUCCESS) {
-            AMVP_LOG_ERR("Failed to write module info to file.");
-        } else {
-            amvp_json_serialize_to_file_pretty_a(NULL, file);
-            AMVP_LOG_STATUS("Successfully saved module info to file %s", file);
-        }
-        break;
-    case AMVP_REQUEST_STATUS_REJECTED:
-        AMVP_LOG_STATUS("Module request was rejected");
-        break;
-    default:
-        AMVP_LOG_ERR("Unable to determine request status");
-        break;
-    }
-
-end:
-    if (approved) free(approved);
-    if (file) free(file);
-    if (val) json_value_free(val);
-    return rv;
-}
-
 static char* amvp_get_module_name_from_id(AMVP_CTX *ctx, int id) {
     char *url = NULL, *module_name = NULL;
     AMVP_RESULT rv = AMVP_SUCCESS;
@@ -943,16 +713,97 @@ static AMVP_CERT_REQ_STATUS amvp_parse_cert_req_status_str(JSON_Object *json) {
     return AMVP_CERT_REQ_STATUS_UNKNOWN;
 }
 
+/* Helper function to output test evidence table */
+static AMVP_RESULT amvp_output_test_evidence_table(AMVP_CTX *ctx, JSON_Array *missing_te_array) {
+    JSON_Object *tmp_obj = NULL;
+    JSON_Array *req_arr = NULL;
+    const char *te_name = NULL;
+    size_t arr_size = 0, req_arr_size = 0;
+    int i = 0, j = 0;
+
+    if (!ctx || !missing_te_array) {
+        return AMVP_INVALID_ARG;
+    }
+
+    arr_size = json_array_get_count(missing_te_array);
+    AMVP_LOG_NEWLINE;
+    AMVP_LOG_STATUS("    List of remaining required test evidence submissions:");
+    if (arr_size == 0) {
+        AMVP_LOG_STATUS(AMVP_ANSI_COLOR_GREEN "        All expected test evidence has been submitted!" AMVP_ANSI_COLOR_RESET);
+        return AMVP_SUCCESS;
+    }
+
+    /* Output table header */
+    AMVP_LOG_STATUS("        %-30s   %s", "Test Requirement", "Tags");
+    AMVP_LOG_STATUS("        %s", "--------------------------------------------------------------");
+
+    /* Process each test evidence item */
+    for (i = 0; i < (int)arr_size; i++) {
+        tmp_obj = json_array_get_object(missing_te_array, i);
+        te_name = json_object_get_string(tmp_obj, "testRequirement");
+        if (!te_name) {
+            AMVP_LOG_ERR("Server provided a test evidence object without a name");
+            break;
+        }
+
+        req_arr = json_object_get_array(tmp_obj, "tags");
+        if (!req_arr) {
+            AMVP_LOG_ERR("Server provided a test evidence object without tags");
+            break;
+        }
+
+        req_arr_size = json_array_get_count(req_arr);
+        if (!req_arr_size) {
+            AMVP_LOG_ERR("Server provided a test evidence object with an empty tags array");
+            break;
+        }
+
+        /* Build the tags string for this test requirement */
+        char tags_str[2048] = {0}; /* Buffer for concatenated tags */
+        size_t tags_str_len = 0;
+        for (j = 0; j < (int)req_arr_size; j++) {
+            const char *tag = json_array_get_string(req_arr, j);
+            if (tag) {
+                /* Create a copy of the tag with forward slashes replaced by " or " */
+                char modified_tag[256] = {0};
+                size_t tag_len = strnlen_s(tag, 255);
+                size_t mod_tag_len = 0;
+                
+                for (size_t k = 0; k < tag_len && mod_tag_len < sizeof(modified_tag) - 5; k++) {
+                    if (tag[k] == '/') {
+                        strcpy_s(modified_tag + mod_tag_len, sizeof(modified_tag) - mod_tag_len, " or ");
+                        mod_tag_len += 4;
+                    } else {
+                        modified_tag[mod_tag_len] = tag[k];
+                        mod_tag_len++;
+                    }
+                }
+                
+                /* Check if we have space (including separator and null terminator) */
+                if (tags_str_len + mod_tag_len + 3 < sizeof(tags_str)) {
+                    if (j > 0) {
+                        strcpy_s(tags_str + tags_str_len, sizeof(tags_str) - tags_str_len, ", ");
+                        tags_str_len += 2;
+                    }
+                    strcpy_s(tags_str + tags_str_len, sizeof(tags_str) - tags_str_len, modified_tag);
+                    tags_str_len += mod_tag_len;
+                }
+            }
+        }
+        AMVP_LOG_STATUS("        " AMVP_ANSI_COLOR_YELLOW "%-30s" AMVP_ANSI_COLOR_RESET " %s", te_name, tags_str);
+    }
+
+    return AMVP_SUCCESS;
+}
+
 /* Output prettified cert request status to log */
 static AMVP_RESULT amvp_output_cert_request_status(AMVP_CTX *ctx, JSON_Object *status_json) {
-    JSON_Object *tmp_obj = NULL;
     JSON_Array *arr = NULL, *feedback = NULL;
     char *module_name = NULL;
     int req_id = 0, module_id = 0, vendor_id = 0, i = 0;
     size_t arr_size = 0;
     AMVP_RESULT rv = AMVP_SUCCESS;
-    AMVP_NAME_LIST *fte_list = NULL, *fte_iter = NULL, *sce_list = NULL,
-                   *sce_iter = NULL, *feedback_list = NULL, *feedback_iter = NULL;
+    AMVP_NAME_LIST *feedback_list = NULL, *feedback_iter = NULL;
     AMVP_SL_LIST *sp_list = NULL, *sp_iter = NULL;
     AMVP_CERT_REQ_STATUS cert_req_status = AMVP_CERT_REQ_STATUS_UNKNOWN;
     const char *cert_id = NULL;
@@ -1042,27 +893,11 @@ static AMVP_RESULT amvp_output_cert_request_status(AMVP_CTX *ctx, JSON_Object *s
     }
 
     /* Get the expected functional test evidence list, or the list of not submitted yet TEs */
-    arr = json_object_get_array(status_json, "expectedFunctionalTestEvidence");
-    if (!arr) {
-        arr_size = 0;
-    } else {
-        arr_size = json_array_get_count(arr);
-        for (i = 0; i < (int)arr_size; i++) {
-            tmp_obj = json_array_get_object(arr, i);
-            amvp_append_name_list(&fte_list, json_object_get_string(tmp_obj, "testRequirement"));
-        }
-    }
-
-    /* Get the expected source code evidence list, or the list of not submitted yet TEs */
-    arr = json_object_get_array(status_json, "expectedSourceCodeEvidence");
-    if (!arr) {
-        arr_size = 0;
-    } else {
-        arr_size = json_array_get_count(arr);
-        for (i = 0; i < (int)arr_size; i++) {
-            tmp_obj = json_array_get_object(arr, i);
-            amvp_append_name_list(&sce_list, json_object_get_string(tmp_obj, "testRequirement"));
-        }
+    arr = json_object_get_array(status_json, "missingTestEvidence");
+    rv = amvp_output_test_evidence_table(ctx, arr);
+    if (rv != AMVP_SUCCESS) {
+        AMVP_LOG_ERR("Error outputting test evidence table");
+        goto end;
     }
 
     /* Get the list of missing security policy sections */
@@ -1072,33 +907,9 @@ static AMVP_RESULT amvp_output_cert_request_status(AMVP_CTX *ctx, JSON_Object *s
     } else {
         arr_size = json_array_get_count(arr);
         for (i = 0; i < (int)arr_size; i++) {
-            tmp_obj = json_array_get_object(arr, i);
             amvp_append_sl_list(&sp_list, json_array_get_number(arr, i));
         }
     }
-
-    AMVP_LOG_STATUS("    List of remaining required functional test evidence submissions:");
-    if (fte_list) {
-        fte_iter = fte_list;
-        while (fte_iter) {
-            AMVP_LOG_STATUS(AMVP_ANSI_COLOR_YELLOW "        %s" AMVP_ANSI_COLOR_RESET, fte_iter->name);
-            fte_iter = fte_iter->next;
-        }
-    } else {
-        AMVP_LOG_STATUS(AMVP_ANSI_COLOR_GREEN "        All expected functional test evidence has been submitted!" AMVP_ANSI_COLOR_RESET);
-    }
-
-    AMVP_LOG_STATUS("    List of remaining required source code evidence submissions:");
-    if (sce_list) {
-        sce_iter = sce_list;
-        while (sce_iter) {
-            AMVP_LOG_STATUS(AMVP_ANSI_COLOR_YELLOW "        %s" AMVP_ANSI_COLOR_RESET, sce_iter->name);
-            sce_iter = sce_iter->next;
-        }
-    } else {
-        AMVP_LOG_STATUS(AMVP_ANSI_COLOR_GREEN "        All expected source code evidence has been submitted!" AMVP_ANSI_COLOR_RESET);
-    }
-
     AMVP_LOG_STATUS("    List of unsubmitted security policy sections:");
     if (sp_list) {
         sp_iter = sp_list;
@@ -1112,8 +923,7 @@ static AMVP_RESULT amvp_output_cert_request_status(AMVP_CTX *ctx, JSON_Object *s
     AMVP_LOG_STATUS("");
 
 end:
-    if (fte_list) amvp_free_nl(fte_list);
-    if (sce_list) amvp_free_nl(sce_list);
+    //if (te_list) amvp_free_nl(te_list);
     if (sp_list) amvp_free_sl(sp_list);
     if (feedback_list) amvp_free_nl(feedback_list);
     if (module_name) free(module_name);
@@ -1213,26 +1023,53 @@ end:
  */
 AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx) {
     AMVP_RESULT rv = AMVP_SUCCESS;
-    char *module_name = NULL, *reg = NULL, *file = NULL;
+    char *reg = NULL, *file = NULL;
     int reg_len = 0, i = 0;
     JSON_Value *cert_submission_val = NULL, *cert_rsp_val = NULL, *cert_info_val = NULL,
-               *output_file_val = NULL;
-    JSON_Object *tmp_obj = NULL;
-    const char *url = NULL, *token = NULL;
+               *output_file_val = NULL, *module_file_val = NULL;
+    JSON_Object *tmp_obj = NULL, *module_file_obj = NULL, *module_info_obj = NULL;
+    const char *url = NULL, *token = NULL, *module_name = NULL;
 
     if (!ctx) {
         return AMVP_NO_CTX;
     }
+
+    if (ctx->cert_req_info.module_file[0] == '\0') {
+        AMVP_LOG_ERR("Must provide module file name before certifying");
+        return AMVP_MISSING_ARG;
+    }
+
+    module_file_val = json_parse_file(ctx->cert_req_info.module_file);
+    if (!module_file_val) {
+        AMVP_LOG_ERR("Provided module file is invalid or does not exist");
+        return AMVP_INVALID_ARG;
+    }
+    module_file_obj = json_value_get_object(module_file_val);
+    if (!module_file_obj) {
+        AMVP_LOG_ERR("Provided module file is invalid or does not contain a JSON object");
+        json_value_free(module_file_val);
+        return AMVP_INVALID_ARG;
+    }
+
     rv = amvp_login(ctx, 0);
     if (rv != AMVP_SUCCESS) {
         AMVP_LOG_ERR("Failed to login to AMVP server when creating cert request");
         goto end;
     }
 
-    /* do a get on the module ID provided and show its basic info in logs */
-    AMVP_LOG_STATUS("Fetching info about cert req...");
+    module_info_obj = json_object_get_object(module_file_obj, "moduleInfo");
+    if (!module_info_obj) {
+        AMVP_LOG_ERR("Module file does not contain moduleInfo object");
+        rv = AMVP_JSON_ERR;
+        goto end;
+    }
 
-    module_name = amvp_get_module_name_from_id(ctx, ctx->cert_req_info.module_id);
+    module_name = json_object_get_string(module_info_obj, "name");
+    if (!module_name) {
+        AMVP_LOG_ERR("Module file does not contain name field");
+        rv = AMVP_JSON_ERR;
+        goto end;
+    }
 
     AMVP_LOG_STATUS("    Module: %s", module_name);
     if (ctx->cert_req_info.vendor_id) {
@@ -1321,7 +1158,6 @@ AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx) {
 end:
     if (reg) json_free_serialized_string(reg);
     if (file) free(file);
-    if (module_name) free(module_name);
     if (output_file_val) json_value_free(output_file_val); //Also frees the header and body vals
     if (cert_info_val) json_value_free(cert_info_val);
     if (cert_rsp_val) json_value_free(cert_rsp_val);

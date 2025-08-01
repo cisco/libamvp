@@ -97,11 +97,7 @@ Test(VERIFY_FIPS_OPERATING_ENV, verify_fips_operating_env, .init = setup, .fini 
     cr_assert(rv == AMVP_SUCCESS);
 
     rv = amvp_verify_fips_validation_metadata(ctx);
-#ifdef AMVP_OFFLINE
-    cr_assert(rv == AMVP_TRANSPORT_FAIL);
-#else
     cr_assert(rv == AMVP_MISSING_ARG);
-#endif
 }
 
 /*

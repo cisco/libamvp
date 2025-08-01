@@ -464,11 +464,7 @@ Test(RUN, missing_path, .init = setup_full_ctx, .fini = teardown) {
     cr_assert(rv == AMVP_SUCCESS);
 
     rv = amvp_run(ctx, 0);
-#ifdef AMVP_OFFLINE
-    cr_assert(rv == AMVP_TRANSPORT_FAIL);
-#else
     cr_assert(rv == AMVP_MISSING_ARG);
-#endif
 }
 
 /**
@@ -538,11 +534,7 @@ Test(RUN, bad_totp_cb, .init = setup_full_ctx, .fini = teardown) {
  */
 Test(RUN, good_without_totp, .init = setup_full_ctx, .fini = teardown) {
     rv = amvp_run(ctx, 0);
-#ifdef AMVP_OFFLINE
-    cr_assert(rv == AMVP_TRANSPORT_FAIL);
-#else
     cr_assert(rv == AMVP_MISSING_ARG);
-#endif
 }
 
 /*
@@ -558,11 +550,7 @@ Test(RUN, null_ctx, .fini = teardown) {
  */
 Test(CHECK_RESULTS, no_vs_list, .init = setup, .fini = teardown) {
     rv = amvp_check_test_results(ctx);
-#ifdef AMVP_OFFLINE
-    cr_assert(rv == AMVP_TRANSPORT_FAIL);
-#else
     cr_assert(rv == AMVP_MISSING_ARG);
-#endif
 }
 
 /*
@@ -697,11 +685,7 @@ Test(PROCESS_TESTS, upload_vectors_from_file, .init = setup_full_ctx, .fini = te
     cr_assert(rv == AMVP_MISSING_ARG);
 
     rv = amvp_upload_vectors_from_file(ctx, "json/rsp.json", 0);
-#ifdef AMVP_OFFLINE
-    cr_assert(rv == AMVP_TRANSPORT_FAIL);
-#else
     cr_assert(rv == AMVP_MISSING_ARG);
-#endif
 }
 
 /*

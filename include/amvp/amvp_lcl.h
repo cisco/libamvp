@@ -957,53 +957,6 @@ struct amvp_result_desc_t {
 };
 
 /*
- * Used to help manage capability structures
- */
-typedef enum amvp_capability_type {
-    AMVP_SYM_TYPE = 1,
-    AMVP_HASH_TYPE,
-    AMVP_DRBG_TYPE,
-    AMVP_HMAC_TYPE,
-    AMVP_CMAC_TYPE,
-    AMVP_KMAC_TYPE,
-    AMVP_RSA_KEYGEN_TYPE,
-    AMVP_RSA_SIGGEN_TYPE,
-    AMVP_RSA_SIGVER_TYPE,
-    AMVP_RSA_PRIM_TYPE,
-    AMVP_ECDSA_KEYGEN_TYPE,
-    AMVP_ECDSA_KEYVER_TYPE,
-    AMVP_ECDSA_SIGGEN_TYPE,
-    AMVP_ECDSA_SIGVER_TYPE,
-    AMVP_DSA_TYPE,
-    AMVP_KDF135_SNMP_TYPE,
-    AMVP_KDF135_SSH_TYPE,
-    AMVP_KDF135_SRTP_TYPE,
-    AMVP_KDF135_IKEV2_TYPE,
-    AMVP_KDF135_IKEV1_TYPE,
-    AMVP_KDF135_X942_TYPE,
-    AMVP_KDF135_X963_TYPE,
-    AMVP_KDF135_TPM_TYPE,
-    AMVP_KDF108_TYPE,
-    AMVP_PBKDF_TYPE,
-    AMVP_KDF_TLS12_TYPE,
-    AMVP_KDF_TLS13_TYPE,
-    AMVP_KAS_ECC_CDH_TYPE,
-    AMVP_KAS_ECC_COMP_TYPE,
-    AMVP_KAS_ECC_NOCOMP_TYPE,
-    AMVP_KAS_ECC_SSC_TYPE,
-    AMVP_KAS_FFC_COMP_TYPE,
-    AMVP_KAS_FFC_SSC_TYPE,
-    AMVP_KAS_FFC_NOCOMP_TYPE,
-    AMVP_KAS_IFC_TYPE,
-    AMVP_KDA_ONESTEP_TYPE,
-    AMVP_KDA_TWOSTEP_TYPE,
-    AMVP_KDA_HKDF_TYPE,
-    AMVP_KTS_IFC_TYPE,
-    AMVP_SAFE_PRIMES_KEYGEN_TYPE,
-    AMVP_SAFE_PRIMES_KEYVER_TYPE
-} AMVP_CAP_TYPE;
-
-/*
  * Supported length list
  */
 typedef struct amvp_sl_list_t {
@@ -1205,7 +1158,7 @@ typedef struct amvp_fips_t {
 #define AMVP_MAX_CONTACTS_PER_CERT_REQ 10
 #define AMVP_CONTACT_STR_MAX_LEN 16
 typedef struct amvp_cert_req_t {
-    int module_id;
+    char module_file[AMVP_JSON_FILENAME_MAX + 1];
     int vendor_id;
     int contact_count;
     int acv_cert_count;
@@ -1222,7 +1175,6 @@ typedef enum amvp_action {
     AMVP_ACTION_PUT,
     AMVP_ACTION_DELETE,
     AMVP_ACTION_CERT_REQ,
-    AMVP_ACTION_CREATE_MODULE,
     AMVP_ACTION_SUBMIT_CRSESSION_RESPONSES,
     AMVP_ACTION_NA
 } AMVP_ACTION;
@@ -1312,6 +1264,16 @@ AMVP_RESULT amvp_request_security_policy_generation(AMVP_CTX *ctx, const char *u
 AMVP_RESULT amvp_send_security_policy(AMVP_CTX *ctx, const char *url, char *sp, int sp_len);
 
 AMVP_RESULT amvp_get_security_policy_json(AMVP_CTX *ctx, const char *url);
+
+/* Network action types for transport layer */
+typedef enum amvp_net_action {
+    AMVP_NET_GET = 1, /**< Generic (get) */
+    AMVP_NET_POST,    /**< Generic (post) */
+    AMVP_NET_PUT,     /**< Generic (put) */
+    AMVP_NET_DELETE   /**< delete vector set results, data */
+} AMVP_NET_ACTION;
+
+AMVP_RESULT amvp_network_action(AMVP_CTX *ctx, AMVP_NET_ACTION action, const char *url, const char *data, int data_len);
 
 AMVP_RESULT amvp_transport_put_validation(AMVP_CTX *ctx, const char *data, int data_len);
 

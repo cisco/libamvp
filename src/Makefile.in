@@ -89,7 +89,6 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-@BUILDING_OFFLINE_TRUE@am__append_1 = -DAMVP_OFFLINE
 subdir = src
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/libtool.m4 \
@@ -136,8 +135,8 @@ LTLIBRARIES = $(lib_LTLIBRARIES)
 am__DEPENDENCIES_1 =
 libamvp_la_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_libamvp_la_OBJECTS = amvp.lo amvp_build_register.lo \
-	amvp_operating_env.lo amvp_transport.lo amvp_util.lo \
-	amvp_error.lo amvp_base64.lo parson.lo
+	amvp_operating_env.lo amvp_transport.lo amvp_endpoints.lo \
+	amvp_util.lo amvp_error.lo amvp_base64.lo parson.lo
 libamvp_la_OBJECTS = $(am_libamvp_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -159,7 +158,8 @@ DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = ./$(DEPDIR)/amvp.Plo ./$(DEPDIR)/amvp_base64.Plo \
-	./$(DEPDIR)/amvp_build_register.Plo ./$(DEPDIR)/amvp_error.Plo \
+	./$(DEPDIR)/amvp_build_register.Plo \
+	./$(DEPDIR)/amvp_endpoints.Plo ./$(DEPDIR)/amvp_error.Plo \
 	./$(DEPDIR)/amvp_operating_env.Plo \
 	./$(DEPDIR)/amvp_transport.Plo ./$(DEPDIR)/amvp_util.Plo \
 	./$(DEPDIR)/parson.Plo
@@ -231,6 +231,7 @@ CTAGS = @CTAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
+DLLTOOL = @DLLTOOL@
 DSYMUTIL = @DSYMUTIL@
 DUMPBIN = @DUMPBIN@
 ECHO_C = @ECHO_C@
@@ -240,6 +241,7 @@ EGREP = @EGREP@
 ETAGS = @ETAGS@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
+FILECMD = @FILECMD@
 GREP = @GREP@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
@@ -258,8 +260,10 @@ LIBTOOL = @LIBTOOL@
 LIPO = @LIPO@
 LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
+LT_SYS_LIBRARY_PATH = @LT_SYS_LIBRARY_PATH@
 MAINT = @MAINT@
 MAKEINFO = @MAKEINFO@
+MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
 NM = @NM@
 NMEDIT = @NMEDIT@
@@ -323,7 +327,6 @@ libdir = @libdir@
 libexecdir = @libexecdir@
 localedir = @localedir@
 localstatedir = @localstatedir@
-lt_ECHO = @lt_ECHO@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
 oldincludedir = @oldincludedir@
@@ -341,12 +344,12 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 lib_LTLIBRARIES = libamvp.la
-AM_CFLAGS = -I$(top_srcdir)/include/amvp $(SAFEC_CFLAGS) \
-	$(LIBCURL_CFLAGS) $(am__append_1)
+AM_CFLAGS = -I$(top_srcdir)/include/amvp $(SAFEC_CFLAGS) $(LIBCURL_CFLAGS)
 libamvp_la_SOURCES = amvp.c \
                     amvp_build_register.c \
                     amvp_operating_env.c \
                     amvp_transport.c \
+                    amvp_endpoints.c \
                     amvp_util.c \
                     amvp_error.c \
                     amvp_base64.c \
@@ -440,6 +443,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_base64.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_build_register.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_endpoints.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_error.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_operating_env.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_transport.Plo@am__quote@ # am--include-marker
@@ -634,6 +638,7 @@ distclean: distclean-am
 		-rm -f ./$(DEPDIR)/amvp.Plo
 	-rm -f ./$(DEPDIR)/amvp_base64.Plo
 	-rm -f ./$(DEPDIR)/amvp_build_register.Plo
+	-rm -f ./$(DEPDIR)/amvp_endpoints.Plo
 	-rm -f ./$(DEPDIR)/amvp_error.Plo
 	-rm -f ./$(DEPDIR)/amvp_operating_env.Plo
 	-rm -f ./$(DEPDIR)/amvp_transport.Plo
@@ -687,6 +692,7 @@ maintainer-clean: maintainer-clean-am
 		-rm -f ./$(DEPDIR)/amvp.Plo
 	-rm -f ./$(DEPDIR)/amvp_base64.Plo
 	-rm -f ./$(DEPDIR)/amvp_build_register.Plo
+	-rm -f ./$(DEPDIR)/amvp_endpoints.Plo
 	-rm -f ./$(DEPDIR)/amvp_error.Plo
 	-rm -f ./$(DEPDIR)/amvp_operating_env.Plo
 	-rm -f ./$(DEPDIR)/amvp_transport.Plo

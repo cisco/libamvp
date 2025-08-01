@@ -82,8 +82,6 @@ typedef struct app_config {
     int num_esv_certs;
     int mod_cert_req;
     int ingest_cert_info;
-    int create_module;
-    int get_module;
     int submit_ft_ev;
     int submit_sc_ev;
     int submit_sp;
@@ -92,7 +90,6 @@ typedef struct app_config {
     int check_status;
     int module_id;
     int vendor_id;
-    int testall; /* So the app can check whether the user indicated to test all possible algorithms */
 } APP_CONFIG;
 
 

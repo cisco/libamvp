@@ -72,12 +72,8 @@ static void print_usage(int code) {
     printf("      --save_to <file>\n");
     printf("      -s <file>\n");
     printf("\n");
-    printf("To create a module on the AMVP server:\n");
-    printf("      --create_module <module_file>\n");
-    printf("To get info about a created module from the AMVP server:\n");
-    printf("      --check_module_request <module_info_file>\n");
     printf("To request module certificate using a predefined request file:\n");
-    printf("      --module_cert_req --with_module <module_id_number> --with_vendor <vendor_id_number> --with-contact <CMVP contact ID> ...\n");
+    printf("      --module_cert_req <module_file> --with_vendor <vendor_id_number> --with-contact <CMVP contact ID> ...\n");
     printf("Optionally, the following fields can also be added to module_cert_req:\n");
     printf("      --with_acv_cert <CAVP algorithm certificate ID> --with_esv_cert <ESVP certificate ID>\n");
     printf("These options can also be used independently with --for_cert_request to add certs to an existing request.\n");
@@ -129,10 +125,7 @@ static ko_longopt_t longopts[] = {
     { "delete", ko_required_argument, 414 },
     { "cancel_session", ko_required_argument, 415 },
     { "debug", ko_no_argument, 417 },
-    { "module_cert_req", ko_no_argument, 419 },
-    { "create_module", ko_required_argument, 421 },
-    { "check_module_request", ko_required_argument, 422 },
-    { "with_module", ko_required_argument, 423 },
+    { "module_cert_req", ko_required_argument, 419 },
     { "with_vendor", ko_required_argument, 424} ,
     { "with_contact", ko_required_argument, 425 } ,
     { "submit_ft_evidence", ko_required_argument, 426 },
@@ -308,31 +301,10 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
 
         case 419:
             cfg->mod_cert_req = 1;
-            break;
-
-        case 421:
-            cfg->create_module = 1;
             if (!check_option_length(opt.arg, c, JSON_FILENAME_LENGTH)) {
                 return 1;
             }
             strcpy_s(cfg->create_module_file, JSON_FILENAME_LENGTH + 1, opt.arg);
-            break;
-
-        case 422:
-            cfg->get_module = 1;
-            if (!check_option_length(opt.arg, c, JSON_FILENAME_LENGTH)) {
-                return 1;
-            }
-            strcpy_s(cfg->get_module_file, JSON_FILENAME_LENGTH + 1, opt.arg);
-            break;
-
-        case 423:
-            tmp = atoi(opt.arg);
-            if (!tmp) {
-                printf("Invalid module ID format\n");
-                return 1;
-            }
-            cfg->module_id = tmp;
             break;
 
         case 424:
@@ -449,13 +421,9 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
         return 1;
     }
 
-    if (cfg->mod_cert_req && (!cfg->module_id || !cfg->vendor_id || !cfg->num_contacts)) {
+    if (cfg->mod_cert_req && (cfg->create_module_file[0] == '\0' || !cfg->vendor_id || !cfg->num_contacts)) {
         printf("Module cert request requires module module ID, vendor ID, and at least one contact ID to be provided\n");
         return 1;
-    }
-
-    if (!cfg->mod_cert_req && (cfg->module_id || cfg->vendor_id || cfg->num_contacts)) {
-        printf("Warning: Module ID/Vendor ID/Contact ID provided, but not performing a cert request. These options will be ignored\n");
     }
 
     if ((cfg->submit_ft_ev || cfg->submit_sc_ev || cfg->submit_sp) && !cfg->ingest_cert_info) {

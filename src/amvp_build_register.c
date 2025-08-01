@@ -26,7 +26,7 @@
  * This builds a cert req
  */
 AMVP_RESULT amvp_build_registration_json(AMVP_CTX *ctx, JSON_Value **reg) {
-    JSON_Value *val = NULL;
+    JSON_Value *val = NULL, *module_val = NULL;
     JSON_Array *req_arr = NULL;
     JSON_Object *cap_obj = NULL;
 
@@ -43,7 +43,6 @@ AMVP_RESULT amvp_build_registration_json(AMVP_CTX *ctx, JSON_Value **reg) {
     val = json_value_init_object();
     cap_obj = json_value_get_object(val);
 
-    json_object_set_number(cap_obj, "moduleId", ctx->cert_req_info.module_id);
     json_object_set_number(cap_obj, "vendorId", ctx->cert_req_info.vendor_id);
     json_object_set_value(cap_obj, "contacts", json_value_init_array());
     req_arr = json_object_get_array(cap_obj, "contacts");
@@ -67,6 +66,15 @@ AMVP_RESULT amvp_build_registration_json(AMVP_CTX *ctx, JSON_Value **reg) {
             json_array_append_string(req_arr, ctx->cert_req_info.esv_cert[i]);
         }
     }
+
+    module_val = json_parse_file(ctx->cert_req_info.module_file);
+    if (!module_val) {
+        AMVP_LOG_ERR("Provided module file is invalid or does not exist");
+        json_value_free(val);
+        return AMVP_INVALID_ARG;
+    }
+
+    json_object_set_value(cap_obj, "module", module_val);
 
     *reg = val;
 
