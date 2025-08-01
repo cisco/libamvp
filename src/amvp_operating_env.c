@@ -3019,7 +3019,7 @@ static AMVP_RESULT amvp_oe_metadata_parse_vendors(AMVP_CTX *ctx, JSON_Object *ob
     vendors_count = json_array_get_count(vendors_array);
     if (vendors_count == 0) {
         AMVP_LOG_ERR("Need at least one object in the 'vendors' array");
-        return AMVP_MALFORMED_JSON;
+        return AMVP_JSON_ERR;
     }
     for (i = 0; i < vendors_count; i++) {
         JSON_Object *vendor_obj = json_array_get_object(vendors_array, i);

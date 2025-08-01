@@ -119,6 +119,8 @@
 #define AMVP_SP_STATUS_STR_SUCCESS "success"
 #define AMVP_SP_STATUS_STR_ERROR "error"
 
+#define AMVP_CERTIFY_ENDPOINT "certify"
+
 #define AMVP_ANSI_COLOR_GREEN "\e[0;32m"
 #define AMVP_ANSI_COLOR_YELLOW "\x1b[33m"
 #define AMVP_ANSI_COLOR_RESET "\x1b[0m"
@@ -318,6 +320,16 @@ typedef enum amvp_cert_req_status {
     AMVP_CERT_REQ_STATUS_ERROR
 } AMVP_CERT_REQ_STATUS;
 
+typedef enum amvp_sp_status {
+    AMVP_SP_STATUS_UNKNOWN = 0,
+    AMVP_SP_STATUS_UNSUBMITTED,
+    AMVP_SP_STATUS_PROCESSING,
+    AMVP_SP_STATUS_WAITING_GENERATION,
+    AMVP_SP_STATUS_GENERATING,
+    AMVP_SP_STATUS_SUCCESS,
+    AMVP_SP_STATUS_ERROR
+} AMVP_SP_STATUS;
+
 typedef struct amvp_oe_dependencies_t {
     AMVP_DEPENDENCY *deps[LIBAMVP_DEPENDENCIES_MAX]; /* Array to pointers of linked dependencies */
     unsigned int count;
@@ -438,22 +450,6 @@ struct amvp_ctx_t {
     AMVP_PROTOCOL_ERR *error; /**< Object to store info related to protocol error. Should be freed and set null when handled */
 };
 
-AMVP_RESULT amvp_process_tests(AMVP_CTX *ctx);
-
-AMVP_RESULT amvp_send_test_session_registration(AMVP_CTX *ctx, char *reg, int len);
-
-AMVP_RESULT amvp_send_login(AMVP_CTX *ctx, char *login, int len);
-
-AMVP_RESULT amvp_send_module_creation(AMVP_CTX *ctx, char *module, int len);
-
-AMVP_RESULT amvp_send_evidence(AMVP_CTX *ctx, AMVP_EVIDENCE_TYPE type, const char *url, char *ev, int ev_len);
-
-AMVP_RESULT amvp_request_security_policy_generation(AMVP_CTX *ctx, const char *url, char *data);
-
-AMVP_RESULT amvp_send_security_policy(AMVP_CTX *ctx, const char *url, char *sp, int sp_len);
-
-AMVP_RESULT amvp_get_security_policy_json(AMVP_CTX *ctx, const char *url);
-
 /* Network action types for transport layer */
 typedef enum amvp_net_action {
     AMVP_NET_GET = 1, /**< Generic (get) */
@@ -462,82 +458,59 @@ typedef enum amvp_net_action {
     AMVP_NET_DELETE   /**< delete vector set results, data */
 } AMVP_NET_ACTION;
 
+AMVP_RESULT amvp_send_test_session_registration(AMVP_CTX *ctx, char *reg, int len);
+AMVP_RESULT amvp_send_login(AMVP_CTX *ctx, char *login, int len);
+AMVP_RESULT amvp_refresh(AMVP_CTX *ctx);
+
+AMVP_RESULT amvp_send_evidence(AMVP_CTX *ctx, AMVP_EVIDENCE_TYPE type, const char *url, char *ev, int ev_len);
+AMVP_RESULT amvp_request_security_policy_generation(AMVP_CTX *ctx, const char *url, char *data);
+AMVP_RESULT amvp_send_security_policy(AMVP_CTX *ctx, const char *url, char *sp, int sp_len);
+AMVP_RESULT amvp_get_security_policy_json(AMVP_CTX *ctx, const char *url);
+
 AMVP_RESULT amvp_network_action(AMVP_CTX *ctx, AMVP_NET_ACTION action, const char *url, const char *data, int data_len);
-
-AMVP_RESULT amvp_transport_put_validation(AMVP_CTX *ctx, const char *data, int data_len);
-
 AMVP_RESULT amvp_transport_get(AMVP_CTX *ctx, const char *url, const AMVP_KV_LIST *parameters);
-
 AMVP_RESULT amvp_transport_post(AMVP_CTX *ctx, const char *uri, char *data, int data_len);
-
 AMVP_RESULT amvp_transport_put(AMVP_CTX *ctx, const char *endpoint, const char *data, int data_len);
-
+AMVP_RESULT amvp_transport_put_validation(AMVP_CTX *ctx, const char *data, int data_len);
 AMVP_RESULT amvp_transport_delete(AMVP_CTX *ctx, const char *endpoint);
 
-AMVP_RESULT amvp_retrieve_vector_set(AMVP_CTX *ctx, char *vsid_url);
+AMVP_RESULT amvp_build_registration_json(AMVP_CTX *ctx, JSON_Value **reg);
+AMVP_RESULT amvp_build_validation(AMVP_CTX *ctx, char **out, int *out_len);
+AMVP_RESULT amvp_create_response_obj(JSON_Object **obj, JSON_Value **val);
+AMVP_RESULT amvp_add_version_to_obj(JSON_Object *obj);
+JSON_Object *amvp_get_obj_from_rsp(AMVP_CTX *ctx, JSON_Value *arry_val);
+void amvp_release_json(JSON_Value *r_vs_val, JSON_Value *r_gval);
 
-AMVP_RESULT amvp_retrieve_vector_set_result(AMVP_CTX *ctx, const char *vsid_url);
-
-AMVP_RESULT amvp_retrieve_expected_result(AMVP_CTX *ctx, const char *api_url);
-
-AMVP_RESULT amvp_submit_vector_responses(AMVP_CTX *ctx, char *vsid_url);
+void amvp_oe_free_operating_env(AMVP_CTX *ctx);
+AMVP_RESULT amvp_verify_fips_validation_metadata(AMVP_CTX *ctx);
 
 void amvp_log_msg(AMVP_CTX *ctx, AMVP_LOG_LVL level, const char *func, int line, const char *format, ...);
 void amvp_log_newline(AMVP_CTX *ctx);
 
-/* AMVP build registration functions used internally */
-AMVP_RESULT amvp_build_registration_json(AMVP_CTX *ctx, JSON_Value **reg);
-
-AMVP_RESULT amvp_build_validation(AMVP_CTX *ctx, char **out, int *out_len);
-
-/*
- * Operating Environment functions
- */
-void amvp_oe_free_operating_env(AMVP_CTX *ctx);
-
-AMVP_RESULT amvp_verify_fips_validation_metadata(AMVP_CTX *ctx);
-
-AMVP_RESULT amvp_create_response_obj(JSON_Object **obj, JSON_Value **val);
-AMVP_RESULT amvp_add_version_to_obj(JSON_Object *obj);
-
-AMVP_RESULT is_valid_tf_param(int value);
-
-AMVP_RESULT amvp_refresh(AMVP_CTX *ctx);
-
-void amvp_http_user_agent_handler(AMVP_CTX *ctx);
-
-void amvp_release_json(JSON_Value *r_vs_val,
-                       JSON_Value *r_gval);
-
-JSON_Object *amvp_get_obj_from_rsp(AMVP_CTX *ctx, JSON_Value *arry_val);
-
-int string_fits(const char *string, unsigned int max_allowed);
-
-AMVP_RESULT amvp_kv_list_append(AMVP_KV_LIST **kv_list,
-                                const char *key,
-                                const char *value);
-
+AMVP_RESULT amvp_kv_list_append(AMVP_KV_LIST **kv_list, const char *key, const char *value);
 void amvp_kv_list_free(AMVP_KV_LIST *kv_list);
-
 void amvp_free_str_list(AMVP_STRING_LIST **list);
 AMVP_RESULT amvp_append_sl_list(AMVP_SL_LIST **list, int length);
 AMVP_RESULT amvp_append_param_list(AMVP_PARAM_LIST **list, int param);
 AMVP_RESULT amvp_append_name_list(AMVP_NAME_LIST **list, const char *string);
-int amvp_is_in_name_list(AMVP_NAME_LIST *list, const char *string);
 AMVP_RESULT amvp_append_str_list(AMVP_STRING_LIST **list, const char *string);
+int amvp_is_in_name_list(AMVP_NAME_LIST *list, const char *string);
 int amvp_lookup_str_list(AMVP_STRING_LIST **list, const char *string);
 int amvp_lookup_param_list(AMVP_PARAM_LIST *list, int value);
 int amvp_is_domain_already_set(AMVP_JSON_DOMAIN_OBJ *domain);
-
 void amvp_free_sl(AMVP_SL_LIST *list);
 void amvp_free_nl(AMVP_NAME_LIST *list);
 
+int string_fits(const char *string, unsigned int max_allowed);
+void amvp_http_user_agent_handler(AMVP_CTX *ctx);
+
 AMVP_RESULT amvp_retry_handler(AMVP_CTX *ctx, int *retry_period, unsigned int *waited_so_far, int modifier, AMVP_WAITING_STATUS situation);
 AMVP_RESULT amvp_handle_protocol_error(AMVP_CTX *ctx, AMVP_PROTOCOL_ERR *err);
+int amvp_get_request_status(AMVP_CTX *ctx, char **output);
+
 AMVP_RESULT amvp_save_cert_req_info_file(AMVP_CTX *ctx, JSON_Object *contents);
 AMVP_RESULT amvp_json_serialize_to_file_pretty_a(const JSON_Value *value, const char *filename);
 AMVP_RESULT amvp_json_serialize_to_file_pretty_w(const JSON_Value *value, const char *filename);
-int amvp_get_request_status(AMVP_CTX *ctx, char **output);
 
 
 #endif

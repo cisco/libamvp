@@ -139,18 +139,6 @@ AC_ARG_WITH([criterion-dir],
     [criteriondir="$withval"],
     [with_criteriondir="no"])
 
-# Disable check for library presence during configure stage
-AC_MSG_CHECKING([disable lib check])
-AC_ARG_ENABLE(lib-check,
-    [AS_HELP_STRING([--disable-lib-check],[Disables checking for presence of libraries during configure. This is ONLY recommended if you have issues with detection and you know the library exists])],
-    [disable_lib_detection="yes"],
-    [disable_lib_detection="no"])
-if test "x$disable_lib_detection" = "xyes"; then
-    AC_MSG_RESULT(yes)
-else
-    AC_MSG_RESULT(no)
-fi
-
 ########################################################################################
 # End reading arguments. Begin testing presence of libs and setting certain make vars. #
 ########################################################################################
@@ -164,67 +152,47 @@ found_crypto="false"
 found_ssl="false"
 ssl_lib64="false"
 
-if test "x$disable_lib_detection" = "xno"; then
-    # Be more lenient in library detection stage
-    LDFLAGS=" -Wl,--allow-multiple-definition $LDFLAGS"
+# Be more lenient in library detection stage
+LDFLAGS=" -Wl,--allow-multiple-definition $LDFLAGS"
 
-    lib_dependencies=""
-    # OpenSSL can depend on libdl; Curl can depend on libz. Check if these are present
-    # and add them to LIBS if so.
-    AC_SEARCH_LIBS([dlopen], [dl], [lib_dependencies+="-ldl "], [], [])
-    AC_SEARCH_LIBS([gzdopen], [z], [lib_dependencies+="-lz "], [], [])
-    AC_SUBST([ADDL_LIB_DEPENDENCIES], "$lib_dependencies")
+lib_dependencies=""
+# OpenSSL can depend on libdl; Curl can depend on libz. Check if these are present
+# and add them to LIBS if so.
+AC_SEARCH_LIBS([dlopen], [dl], [lib_dependencies+="-ldl "], [], [])
+AC_SEARCH_LIBS([gzdopen], [z], [lib_dependencies+="-lz "], [], [])
+AC_SUBST([ADDL_LIB_DEPENDENCIES], "$lib_dependencies")
 
-    # Check what version of SSL is being linked. Determines how any FIPS stuff is handled, and what APIs are used in some places
-    proj_temp_cppflags="$CPPFLAGS"
-    CPPFLAGS="-I$ssldir/include"
-    AC_CHECK_HEADER([openssl/opensslv.h], [], [AC_MSG_FAILURE([Unable to read opensslslv.h to determine SSL library version])])
-    AC_COMPILE_IFELSE(
-        [AC_LANG_PROGRAM([[
-            #include <openssl/opensslv.h>
-            #if OPENSSL_VERSION_NUMBER >= 0x30000000L
-            #error "Detected OpenSSL version 3.0.0 or greater"
-            #endif
-        ]])],
-        [use_ssl_3="false"],
-        [use_ssl_3="true"])
-    CPPFLAGS="$proj_temp_cppflags"
+# Search for SSL and Crypto libs, and if it doesn't fail set the make vars accordingly
+if test "x$disable_app" = "xno" ; then
+    LDFLAGS="$LDFLAGS -L$ssldir/lib"
+    AC_SEARCH_LIBS([EVP_EncryptInit], [crypto], [found_crypto="true"], [
+        LDFLAGS="$LDFLAGS -L$ssldir/lib64"
+        unset ac_cv_search_EVP_EncryptInit # This value gets referenced as a cache so needs unsetting
+        AC_SEARCH_LIBS([EVP_EncryptInit], [crypto], [found_crypto="true" && ssl_lib64="true"], 
+                       [AC_MSG_FAILURE([Cannot locate libcrypto])], ["$lib_dependencies"])],
+    [])
 
-    # Search for SSL and Crypto libs, and if it doesn't fail set the make vars accordingly
-    if test "x$disable_app" = "xno" ; then
-        LDFLAGS="$LDFLAGS -L$ssldir/lib"
-        AC_SEARCH_LIBS([EVP_EncryptInit], [crypto], [found_crypto="true"], [
-            LDFLAGS="$LDFLAGS -L$ssldir/lib64"
-            unset ac_cv_search_EVP_EncryptInit # This value gets referenced as a cache so needs unsetting
-            AC_SEARCH_LIBS([EVP_EncryptInit], [crypto], [found_crypto="true" && ssl_lib64="true"], 
-                           [AC_MSG_FAILURE([Cannot locate libcrypto])], ["$lib_dependencies"])],
-        [])
-
-        AC_SEARCH_LIBS([SSL_CTX_new], [ssl], [],
-                    [AC_MSG_FAILURE([Cannot locate libssl])], ["$lib_dependencies"])
-    fi
-
-    if test "x$disable_lib" = "xyes" ; then
-        if test "x$libamvpdir" != "x" ; then
-            LDFLAGS="$LDFLAGS -L$libalibcvpdir/lib"
-        else
-            LDFLAGS="$LDFLAGS -Lsrc/.libs"
-        fi
-        AC_CHECK_LIB([amvp], [amvp_init_cert_request], [],
-                [AC_MSG_FAILURE([Cannot find libamvp library])], [])
-    fi
-
-    # Check for curl
-    if test "x$libcurldir" != "x" ; then
-        LDFLAGS="$LDFLAGS -L$libcurldir/lib"
-        AC_CHECK_LIB([curl], [curl_easy_init], [],
-            [AC_MSG_FAILURE(Curl not found in provided curl dir)], ["$lib_dependencies"])
-    fi
-
-else
-    #assume we are using openssl < 3 if lib check is disabled
-    use_ssl_3="false"
+    AC_SEARCH_LIBS([SSL_CTX_new], [ssl], [],
+                [AC_MSG_FAILURE([Cannot locate libssl])], ["$lib_dependencies"])
 fi
+
+if test "x$disable_lib" = "xyes" ; then
+    if test "x$libamvpdir" != "x" ; then
+        LDFLAGS="$LDFLAGS -L$libalibcvpdir/lib"
+    else
+        LDFLAGS="$LDFLAGS -Lsrc/.libs"
+    fi
+    AC_CHECK_LIB([amvp], [amvp_init_cert_request], [],
+            [AC_MSG_FAILURE([Cannot find libamvp library])], [])
+fi
+
+# Check for curl
+if test "x$libcurldir" != "x" ; then
+    LDFLAGS="$LDFLAGS -L$libcurldir/lib"
+    AC_CHECK_LIB([curl], [curl_easy_init], [],
+        [AC_MSG_FAILURE(Curl not found in provided curl dir)], ["$lib_dependencies"])
+fi
+
 
 if test "x$disable_app" = "xno" ; then
     AC_SUBST([SSL_CFLAGS], "-I$ssldir/include")
