@@ -19,11 +19,7 @@
 #include "amvp_error.h"
 #include "safe_lib.h"
 
-#ifdef USE_MURL
-#include "murl.h"
-#elif !defined AMVP_OFFLINE
 #include <curl/curl.h>
-#endif
 
 /*
  * Basic logging for libamvp
@@ -98,9 +94,7 @@ AMVP_RESULT amvp_cleanup(AMVP_CTX *ctx) {
             AMVP_LOG_ERR("Failed to free parameter 'ctx'");
         }
     }
-#ifndef AMVP_OFFLINE
     curl_global_cleanup();
-#endif
     return rv;
 }
 
@@ -842,7 +836,7 @@ AMVP_RESULT amvp_handle_protocol_error(AMVP_CTX *ctx, AMVP_PROTOCOL_ERR *err) {
             case AMVP_ERR_CODE_AUTH_EXPIRED_JWT:
                 AMVP_LOG_STATUS("Attempting to refresh JWT and continue...");
                 if (amvp_refresh(ctx) == AMVP_SUCCESS) {
-                    AMVP_LOG_STATUS("JWT succesfully refreshed. Trying again...");
+                    AMVP_LOG_STATUS("JWT successfully refreshed. Trying again...");
                     rv = AMVP_RETRY_OPERATION;
                 } else {
                     AMVP_LOG_ERR("Attempted to refresh JWT but failed");

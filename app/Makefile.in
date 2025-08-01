@@ -90,8 +90,6 @@ build_triplet = @build@
 host_triplet = @host@
 bin_PROGRAMS = amvp_app$(EXEEXT)
 @FORCE_STATIC_TRUE@am__append_1 = -all-static
-@BUILDING_OFFLINE_FALSE@am__append_2 = $(LIBCURL_LDFLAGS)
-@BUILDING_OFFLINE_FALSE@am__append_3 = $(LIBCURL_CFLAGS)
 subdir = app
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/libtool.m4 \
@@ -322,10 +320,9 @@ tmp_sources = app_main.c \
 
 amvp_app_includedir = $(includedir)/amvp
 amvp_app_SOURCES = ${tmp_sources}
-amvp_app_CFLAGS = -g -fPIE $(LIBAMVP_CFLAGS) $(SSL_CFLAGS) \
-	$(SAFEC_CFLAGS) $(COND_ALG_CFLAGS) $(am__append_3)
-amvp_app_LDFLAGS = $(LIBAMVP_LDFLAGS) $(SSL_LDFLAGS) $(am__append_1) \
-	$(am__append_2)
+amvp_app_CFLAGS = -g -fPIE $(LIBAMVP_CFLAGS) $(SSL_CFLAGS) $(SAFEC_CFLAGS) $(COND_ALG_CFLAGS) $(LIBCURL_CFLAGS)
+amvp_app_LDFLAGS = $(LIBAMVP_LDFLAGS) $(SSL_LDFLAGS) \
+	$(LIBCURL_LDFLAGS) $(am__append_1)
 amvp_app_LDADD = $(ADDL_LIB_DEPENDENCIES)
 all: all-am
 

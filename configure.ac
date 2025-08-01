@@ -97,14 +97,6 @@ if test "x$disable_app" = "xno" ; then
         [ssldir="/usr"])
 fi
 
-# Offline mode
-AC_ARG_ENABLE([offline],
-[AS_HELP_STRING([--enable-offline],
-[Flag to indicate use of offline mode])],
-[offline="$enableval"],
-[enable_offline=false])
-AM_CONDITIONAL([BUILDING_OFFLINE], [test "x$offline" != "x"])
-
 #Link dependencies statically where possible
 AC_ARG_ENABLE([force-static-linking],
 [AS_HELP_STRING([--enable-force-static-linking],
@@ -113,16 +105,16 @@ AC_ARG_ENABLE([force-static-linking],
 [static="false"])
 AM_CONDITIONAL([FORCE_STATIC], [test "x$static" == "xtrue"])
 
-# Libcurl/murl installation path. Check for Curl first, use murl if no curl
-if test "x$enable_offline" = "xfalse" && test "x$disable_lib" != "xyes" ; then
+# Libcurl installation path
+if test "x$disable_lib" != "xyes" ; then
     AC_ARG_WITH([libcurl-dir],
         [AS_HELP_STRING([--with-libcurl-dir],
         [enable support for client proxy using libcurl])],
         [libcurldir="$withval"],
         [libcurldir="/usr"])
 
-    if test "x$libcurldir" = "x" && test "x$offline" = "xfalse" ; then
-        AC_MSG_FAILURE([libcurl or libmurl directory must be set if building library for online use])
+    if test "x$libcurldir" = "x" ; then
+        AC_MSG_FAILURE([libcurl directory must be set])
     fi
 fi
 
@@ -246,9 +238,6 @@ fi
 if test "x$libcurldir" != "x" ; then
     AC_SUBST([LIBCURL_CFLAGS], "-I$libcurldir/include")
     AC_SUBST([LIBCURL_LDFLAGS], "-L$libcurldir/lib -lcurl")
-elif test "x$usemurl" != "x" ; then
-    AC_SUBST([LIBCURL_CFLAGS], "-I$libmurldir/include")
-    AC_SUBST([LIBCURL_LDFLAGS], "-L$libmurldir/lib -lcurl")
 fi
 
 #########################################################################

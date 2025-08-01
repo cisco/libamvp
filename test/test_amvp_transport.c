@@ -8,7 +8,6 @@
  * https://github.com/cisco/libamvp/LICENSE
  */
 
-#ifndef AMVP_OFFLINE
 #include "ut_common.h"
 #include "amvp/amvp_lcl.h"
 
@@ -666,6 +665,3 @@ Test(TRANSPORT_SEND_OE_REG, good, .init = setup, .fini = teardown) {
     rv = amvp_send_oe_registration(ctx, reg);
     cr_assert(rv == AMVP_SUCCESS);
 }
-#endif
-
-#endif //AMVP_OFFLINE

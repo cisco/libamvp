@@ -22,8 +22,8 @@ To do so, use the procedure documented by the package, typically 'autoreconf'.])
 
 # lt~obsolete.m4 -- aclocal satisfying obsolete definitions.    -*-Autoconf-*-
 #
-#   Copyright (C) 2004-2005, 2007, 2009, 2011-2015 Free Software
-#   Foundation, Inc.
+#   Copyright (C) 2004-2005, 2007, 2009, 2011-2019, 2021-2022 Free
+#   Software Foundation, Inc.
 #   Written by Scott James Remnant, 2004.
 #
 # This file is free software; the Free Software Foundation gives

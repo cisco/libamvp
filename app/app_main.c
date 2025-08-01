@@ -62,12 +62,12 @@ static void setup_session_parameters(void) {
 
     printf("Using the following parameters:\n\n");
   //  printf("    AMV_SERVER:     %s\n", server);
-    printf("    AMV_SERVER:     [Redacted for demo]\n");
+    printf("    AMV_SERVER:     %s\n", server);
     printf("    AMV_PORT:       %d\n", port);
     printf("    AMV_URI_PREFIX: %s\n", path_segment);
-    if (ca_chain_file) printf("    AMV_CA_FILE:    [Redacted for demo]\n");
-    if (cert_file) printf("    AMV_CERT_FILE:  [Redacted for demo]\n");
-    if (key_file) printf("    AMV_KEY_FILE:   [Redacted for demo]\n");
+    if (ca_chain_file) printf("    AMV_CA_FILE:    %s\n", ca_chain_file);
+    if (cert_file) printf("    AMV_CERT_FILE:  %s\n", cert_file);
+    if (key_file) printf("    AMV_KEY_FILE:   %s\n", key_file);
     printf("\n");
 }
 
@@ -220,7 +220,7 @@ int main(int argc, char **argv) {
     }
 
     if (cfg.mod_cert_req) {
-        rv = amvp_mark_as_cert_req(ctx, cfg.module_id, cfg.vendor_id);
+        rv = amvp_mark_as_cert_req(ctx, cfg.create_module_file, cfg.vendor_id);
         for (diff = 0; diff < cfg.num_contacts; diff++) {
             amvp_cert_req_add_contact(ctx, cfg.contact_ids[diff]);
         }
@@ -232,16 +232,6 @@ int main(int argc, char **argv) {
         for (diff = 0; diff < cfg.num_esv_certs; diff++) {
             amvp_cert_req_add_sub_cert(ctx, cfg.esv_certs[diff], AMVP_CERT_TYPE_ESV);
         }
-    }
-
-    if (cfg.create_module) {
-        rv = amvp_create_module(ctx, cfg.create_module_file);
-        goto end;
-    }
-
-    if (cfg.get_module) {
-        rv = amvp_get_module_request(ctx, cfg.get_module_file);
-        goto end;
     }
 
     if (cfg.ingest_cert_info) {

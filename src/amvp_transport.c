@@ -8,11 +8,7 @@
  * https://github.com/cisco/libamvp/LICENSE
  */
 
-#ifdef USE_MURL
-#include "../murl/murl.h"
-#elif !defined AMVP_OFFLINE
 #include <curl/curl.h>
-#endif
 
 #include <stdio.h>
 #include <string.h>
@@ -60,18 +56,10 @@ typedef enum amvp_user_agent_env_type {
 
 #define AMVP_AUTH_BEARER_TITLE_LEN 23
 
-typedef enum amvp_net_action {
-    AMVP_NET_GET = 1, /**< Generic (get) */
-    AMVP_NET_POST, /**< Generic (post) */
-    AMVP_NET_PUT, /**< Generic (put) */
-    AMVP_NET_DELETE /**< delete vector set results, data */
-} AMVP_NET_ACTION;
-
-#ifndef AMVP_OFFLINE
 /*
  * Prototypes
  */
-static AMVP_RESULT amvp_network_action(AMVP_CTX *ctx, AMVP_NET_ACTION action,
+AMVP_RESULT amvp_network_action(AMVP_CTX *ctx, AMVP_NET_ACTION action,
                                        const char *url, const char *data, int data_len);
 
 static struct curl_slist *amvp_add_auth_hdr(AMVP_CTX *ctx, struct curl_slist *slist) {
@@ -616,206 +604,11 @@ static AMVP_RESULT sanity_check_ctx(AMVP_CTX *ctx) {
     return AMVP_SUCCESS;
 }
 
-static AMVP_RESULT amvp_send_with_path_seg(AMVP_CTX *ctx,
-                                           AMVP_NET_ACTION action,
-                                           const char *uri,
-                                           char *data,
-                                           int data_len) {
-    AMVP_RESULT rv = 0;
-    char url[AMVP_ATTR_URL_MAX] = {0};
-
-    rv = sanity_check_ctx(ctx);
-    if (AMVP_SUCCESS != rv) return rv;
-
-    if (!ctx->path_segment) {
-        AMVP_LOG_ERR("No path segment, need to call amvp_set_path_segment first");
-        return AMVP_MISSING_ARG;
-    }
-
-    snprintf(url, AMVP_ATTR_URL_MAX - 1, "https://%s:%d%s%s", ctx->server_name,
-             ctx->server_port, ctx->path_segment, uri);
-
-    return amvp_network_action(ctx, action, url, data, data_len);
-}
-#endif
-
-/*
- * This is the transport function used within libamvp to register
- * the DUT attributes with the AMVP server.
- *
- * The reg parameter is the JSON encoded registration message that
- * will be sent to the server.
- */
-#define AMVP_TEST_SESSIONS_URI "testSessions"
-AMVP_RESULT amvp_send_test_session_registration(AMVP_CTX *ctx,
-                                                char *reg,
-                                                int len) {
-#ifdef AMVP_OFFLINE 
-    AMVP_LOG_ERR("Curl not linked, exiting function"); 
-    return AMVP_TRANSPORT_FAIL;
-#else
-    return amvp_send_with_path_seg(ctx, AMVP_NET_POST,
-                                   AMVP_TEST_SESSIONS_URI, reg, len);
-#endif
-}
-
-#define AMVP_FT_EVIDENCE_URI "evidence"
-#define AMVP_SC_EVIDENCE_URI "sourceCode"
-AMVP_RESULT amvp_send_evidence(AMVP_CTX *ctx,
-                                        AMVP_EVIDENCE_TYPE type,
-                                        const char *url,
-                                        char *ev,
-                                        int ev_len) {
-    char *full_url = NULL;
-    const char *type_endpoint = NULL;
-    size_t type_len = 0;
-
-    switch (type) {
-    case AMVP_EVIDENCE_TYPE_FUNCTIONAL_TEST:
-        type_endpoint = AMVP_FT_EVIDENCE_URI;
-        break;
-    case AMVP_EVIDENCE_TYPE_SOURCE_CODE:
-        type_endpoint = AMVP_SC_EVIDENCE_URI;
-        break;
-    case AMVP_EVIDENCE_TYPE_NA:
-    case AMVP_EVIDENCE_TYPE_MAX:
-    default:
-        AMVP_LOG_ERR("Cannot create evidence URL with given type");
-    }
-
-    type_len = strnlen_s(type_endpoint, AMVP_ATTR_URL_MAX);
-
-    int url_len = strnlen_s(url, AMVP_ATTR_URL_MAX + 1);
-    if (url_len > AMVP_ATTR_URL_MAX - type_len) {
-        AMVP_LOG_ERR("Invalid URL provided for submitting evidence (too long)");
-        return AMVP_TRANSPORT_FAIL;
-    }
-
-    full_url = calloc(AMVP_ATTR_URL_MAX + 1, sizeof(char));
-    if (!full_url) {
-        AMVP_LOG_ERR("Failed to allocate memory while sending evidence file");
-        return AMVP_TRANSPORT_FAIL;
-    }
-    snprintf(full_url, AMVP_ATTR_URL_MAX, "%s/%s", url, type_endpoint);
-
-    return amvp_transport_post(ctx, full_url, ev, ev_len);
-}
-
-#define AMVP_SP_URI "securityPolicy"
-
-static char* generate_sp_url(const char *url) {
-    char *full_url = NULL;
-    int url_len = strnlen_s(url, AMVP_ATTR_URL_MAX + 1);
-
-    if (url_len > AMVP_ATTR_URL_MAX - sizeof(AMVP_SP_URI)) {
-        return NULL;
-    }
-
-    full_url = calloc(AMVP_ATTR_URL_MAX + 1, sizeof(char));
-    if (!full_url) {
-        return NULL;
-    }
-    snprintf(full_url, AMVP_ATTR_URL_MAX, "%s/%s", url, AMVP_SP_URI);
-
-    return full_url;
-}
-AMVP_RESULT amvp_send_security_policy(AMVP_CTX *ctx,
-                                        const char *url,
-                                        char *sp,
-                                        int sp_len) {
-    char *full_url = NULL;
-
-    full_url = generate_sp_url(url);
-    if (!full_url) {
-        AMVP_LOG_ERR("Error occured while creating URL for SP operation");
-        return AMVP_TRANSPORT_FAIL;
-    }
-
-    return amvp_transport_post(ctx, full_url, sp, sp_len);
-}
-
-AMVP_RESULT amvp_request_security_policy_generation(AMVP_CTX *ctx,
-                                                    const char *url,
-                                                    char *data) {
-    char *full_url = NULL;
-
-    full_url = generate_sp_url(url);
-    if (!full_url) {
-        AMVP_LOG_ERR("Error occured while creating URL for SP operation");
-        return AMVP_TRANSPORT_FAIL;
-    }
-
-    return amvp_transport_put(ctx, full_url, data, strnlen_s(data, AMVP_CURL_BUF_MAX));
-}
-
-AMVP_RESULT amvp_get_security_policy_json(AMVP_CTX *ctx,
-                                        const char *url) {
-    AMVP_RESULT rv = AMVP_SUCCESS;
-    char *full_url = NULL;
-    int url_len = strnlen_s(url, AMVP_ATTR_URL_MAX + 1);
-    if (url_len > AMVP_ATTR_URL_MAX - sizeof(AMVP_SP_URI)) {
-        AMVP_LOG_ERR("Invalid URL provided for getting security policy (too long)");
-        return AMVP_TRANSPORT_FAIL;
-    }
-
-    full_url = calloc(AMVP_ATTR_URL_MAX + 1, sizeof(char));
-    if (!full_url) {
-        AMVP_LOG_ERR("Failed to allocate memory while getting security policy");
-        return AMVP_TRANSPORT_FAIL;
-    }
-    snprintf(full_url, AMVP_ATTR_URL_MAX, "%s/%s", url, AMVP_SP_URI);
-
-    rv = amvp_transport_get(ctx, full_url, NULL);
-    free(full_url);
-    return rv;
-}
-
-/*
- * This is the transport function used within libamvp to login before
- * it is able to register parameters with the server
- *
- * The reg parameter is the JSON encoded registration message that
- * will be sent to the server.
- */
-#define AMVP_LOGIN_URI "login"
-AMVP_RESULT amvp_send_login(AMVP_CTX *ctx,
-                            char *login,
-                            int len) {
-#ifdef AMVP_OFFLINE 
-    AMVP_LOG_ERR("Curl not linked, exiting function"); 
-    return AMVP_TRANSPORT_FAIL;
-#else
-    return amvp_send_with_path_seg(ctx, AMVP_NET_POST,
-                                   AMVP_LOGIN_URI, login, len);
-#endif
-}
-
-/*
- * This is the transport function used within libamvp to submit a module
- * payload for creation on the server
- */
-AMVP_RESULT amvp_send_module_creation(AMVP_CTX *ctx,
-                            char *module,
-                            int len) {
-#ifdef AMVP_OFFLINE 
-    AMVP_LOG_ERR("Curl not linked, exiting function"); 
-    return AMVP_TRANSPORT_FAIL;
-#else
-    return amvp_send_with_path_seg(ctx, AMVP_NET_POST,
-                                   AMVP_MODULE_ENDPOINT, module, len);
-#endif
-}
-
-
 /*
  * This function is used to submit a vector set response
  * to the ACV server.
  */
 AMVP_RESULT amvp_submit_vector_responses(AMVP_CTX *ctx, char *vsid_url) {
-#ifdef AMVP_OFFLINE 
-    AMVP_LOG_ERR("Curl not linked, exiting function"); 
-    return AMVP_TRANSPORT_FAIL;
-#else
     AMVP_RESULT rv = 0;
     char url[AMVP_ATTR_URL_MAX] = {0};
 
@@ -832,17 +625,12 @@ AMVP_RESULT amvp_submit_vector_responses(AMVP_CTX *ctx, char *vsid_url) {
             ctx->server_name, ctx->server_port, vsid_url);
 
     return amvp_network_action(ctx, AMVP_NET_POST, url, NULL, 0);
-#endif
 }
 
 AMVP_RESULT amvp_transport_post(AMVP_CTX *ctx,
                                 const char *uri,
                                 char *data,
                                 int data_len) {
-#ifdef AMVP_OFFLINE 
-    AMVP_LOG_ERR("Curl not linked, exiting function"); 
-    return AMVP_TRANSPORT_FAIL;
-#else
     AMVP_RESULT rv = 0;
     char url[AMVP_ATTR_URL_MAX] = {0};
 
@@ -859,7 +647,6 @@ AMVP_RESULT amvp_transport_post(AMVP_CTX *ctx,
             ctx->server_name, ctx->server_port, uri);
 
     return amvp_network_action(ctx, AMVP_NET_POST, url, data, data_len);
-#endif
 }
 
 
@@ -868,10 +655,6 @@ AMVP_RESULT amvp_transport_post(AMVP_CTX *ctx,
  * a KAT vector set from the AMVP server.
  */
 AMVP_RESULT amvp_retrieve_vector_set(AMVP_CTX *ctx, char *vsid_url) {
-#ifdef AMVP_OFFLINE 
-    AMVP_LOG_ERR("Curl not linked, exiting function"); 
-    return AMVP_TRANSPORT_FAIL;
-#else
     AMVP_RESULT rv = 0;
     char url[AMVP_ATTR_URL_MAX] = {0};
 
@@ -890,7 +673,6 @@ AMVP_RESULT amvp_retrieve_vector_set(AMVP_CTX *ctx, char *vsid_url) {
    AMVP_LOG_STATUS("GET %s", vsid_url);
 
     return amvp_network_action(ctx, AMVP_NET_GET, url, NULL, 0);
-#endif
 }
 
 /*
@@ -898,10 +680,6 @@ AMVP_RESULT amvp_retrieve_vector_set(AMVP_CTX *ctx, char *vsid_url) {
  * documentation package 
  */
 AMVP_RESULT amvp_retrieve_docs(AMVP_CTX *ctx, char *vsid_url) {
-#ifdef AMVP_OFFLINE 
-    AMVP_LOG_ERR("Curl not linked, exiting function"); 
-    return AMVP_TRANSPORT_FAIL;
-#else
     AMVP_RESULT rv = 0;
     char url[AMVP_ATTR_URL_MAX] = {0};
 
@@ -919,7 +697,6 @@ AMVP_RESULT amvp_retrieve_docs(AMVP_CTX *ctx, char *vsid_url) {
 
 
     return amvp_network_action(ctx, AMVP_NET_GET, url, NULL, 0);
-#endif
 }
 
 /*
@@ -928,10 +705,6 @@ AMVP_RESULT amvp_retrieve_docs(AMVP_CTX *ctx, char *vsid_url) {
  * more specifically for a vectorSet
  */
 AMVP_RESULT amvp_retrieve_vector_set_result(AMVP_CTX *ctx, const char *api_url) {
-#ifdef AMVP_OFFLINE 
-    AMVP_LOG_ERR("Curl not linked, exiting function"); 
-    return AMVP_TRANSPORT_FAIL;
-#else
     AMVP_RESULT rv = 0;
     char url[AMVP_ATTR_URL_MAX] = {0};
 
@@ -948,14 +721,9 @@ AMVP_RESULT amvp_retrieve_vector_set_result(AMVP_CTX *ctx, const char *api_url) 
             ctx->server_name, ctx->server_port, api_url);
 
     return amvp_network_action(ctx, AMVP_NET_GET, url, NULL, 0);
-#endif
 }
 
 AMVP_RESULT amvp_retrieve_expected_result(AMVP_CTX *ctx, const char *api_url) {
-#ifdef AMVP_OFFLINE 
-    AMVP_LOG_ERR("Curl not linked, exiting function"); 
-    return AMVP_TRANSPORT_FAIL;
-#else
     AMVP_RESULT rv = 0;
     char url[AMVP_ATTR_URL_MAX + 1] = {0};
 
@@ -972,17 +740,12 @@ AMVP_RESULT amvp_retrieve_expected_result(AMVP_CTX *ctx, const char *api_url) {
             ctx->server_name, ctx->server_port, api_url);
 
     return amvp_network_action(ctx, AMVP_NET_GET, url, NULL, 0);
-#endif
 }
 
 AMVP_RESULT amvp_transport_put(AMVP_CTX *ctx,
                                const char *endpoint,
                                const char *data,
                                int data_len) {
-#ifdef AMVP_OFFLINE 
-    AMVP_LOG_ERR("Curl not linked, exiting function"); 
-    return AMVP_TRANSPORT_FAIL;
-#else
     AMVP_RESULT rv = 0;
     char url[AMVP_ATTR_URL_MAX] = {0};
 
@@ -999,15 +762,10 @@ AMVP_RESULT amvp_transport_put(AMVP_CTX *ctx,
             ctx->server_name, ctx->server_port, endpoint);
 
     return amvp_network_action(ctx, AMVP_NET_PUT, url, data, data_len);
-#endif
 }
 
 AMVP_RESULT amvp_transport_delete(AMVP_CTX *ctx,
                                const char *endpoint) {
-#ifdef AMVP_OFFLINE
-    AMVP_LOG_ERR("Curl not linked, exiting function");
-    return AMVP_TRANSPORT_FAIL;
-#else
     AMVP_RESULT rv = 0;
     char url[AMVP_ATTR_URL_MAX] = {0};
 
@@ -1024,7 +782,6 @@ AMVP_RESULT amvp_transport_delete(AMVP_CTX *ctx,
             ctx->server_name, ctx->server_port, endpoint);
 
     return amvp_network_action(ctx, AMVP_NET_DELETE, url, NULL, 0);
-#endif
 }
 
 AMVP_RESULT amvp_transport_put_validation(AMVP_CTX *ctx,
@@ -1039,18 +796,12 @@ AMVP_RESULT amvp_transport_put_validation(AMVP_CTX *ctx,
 AMVP_RESULT amvp_transport_get(AMVP_CTX *ctx,
                                const char *url,
                                const AMVP_KV_LIST *parameters) {
-#ifdef AMVP_OFFLINE 
-    AMVP_LOG_ERR("Curl not linked, exiting function"); 
-    return AMVP_TRANSPORT_FAIL;
-#else
     AMVP_RESULT rv = 0;
     CURL *curl_hnd = NULL;
     char *full_url = NULL, *escaped_value = NULL;
     int max_url = AMVP_ATTR_URL_MAX;
     int rem_space = 0;
-#ifndef USE_MURL
     int join = 0;
-#endif
     int len = 0;
 
     rv = sanity_check_ctx(ctx);
@@ -1079,7 +830,6 @@ AMVP_RESULT amvp_transport_get(AMVP_CTX *ctx,
             rv = AMVP_TRANSPORT_FAIL;
             goto end;
         }
-#ifndef USE_MURL
         const AMVP_KV_LIST *param = parameters;
         while (1) {
             if (join) {
@@ -1105,7 +855,6 @@ AMVP_RESULT amvp_transport_get(AMVP_CTX *ctx,
             if (param->next == NULL || rem_space <= 0) break;
             param = param->next;
         }
-#endif
         /* Don't need these anymore */
         curl_easy_cleanup(curl_hnd); curl_hnd = NULL;
     }
@@ -1116,10 +865,8 @@ end:
     if (curl_hnd) curl_easy_cleanup(curl_hnd);
     if (full_url) free(full_url);
     return rv;
-#endif
 }
 
-#ifndef AMVP_OFFLINE
 #define JWT_EXPIRED_STR "JWT expired"
 #define JWT_EXPIRED_STR_LEN 11
 #define JWT_INVALID_STR "JWT signature does not match"
@@ -1334,8 +1081,17 @@ static void log_network_status(AMVP_CTX *ctx,
     if (curl_code == 0) {
         AMVP_LOG_ERR("Received no response from server.");
     } else if (curl_code < 200 || curl_code >= 300) {
-        AMVP_LOG_ERR("%d error received from server. Message:", curl_code);
-        AMVP_LOG_ERR("%s", ctx->curl_buf);
+        /* Check if this might be a protocol error that can be handled automatically.
+         * If so, suppress the error log to avoid confusing users when the error
+         * is successfully handled by the protocol error system. */
+        if (ctx && amvp_is_protocol_error_message(ctx->curl_buf)) {
+            /* This is likely a protocol error - let the handler log appropriately */
+            AMVP_LOG_VERBOSE("HTTP %d response contains protocol error message", curl_code);
+        } else {
+            /* This is a non-protocol error that should be logged */
+            AMVP_LOG_ERR("%d error received from server. Message:", curl_code);
+            AMVP_LOG_ERR("%s", ctx->curl_buf);
+        }
     }
 
 }
@@ -1345,7 +1101,7 @@ static void log_network_status(AMVP_CTX *ctx,
  * parameter. This removes repeated code without having to change the
  * API that the library uses to send registrations
  */
-static AMVP_RESULT amvp_network_action(AMVP_CTX *ctx,
+AMVP_RESULT amvp_network_action(AMVP_CTX *ctx,
                                        AMVP_NET_ACTION action,
                                        const char *url,
                                        const char *data,
@@ -1402,9 +1158,6 @@ static AMVP_RESULT amvp_network_action(AMVP_CTX *ctx,
     return rv;
 }
 
-#endif
-
-#ifndef AMVP_OFFLINE
 /**
  * This function is called to look for operating enivronment info in the environment
  * for the HTTP user-agent string when the library cannot automatically find it
@@ -1505,13 +1258,8 @@ static void amvp_http_user_agent_string_clean(char *str) {
         }
     }
 }
-#endif //for ifndef AMVP_OFFLINE
 
 void amvp_http_user_agent_handler(AMVP_CTX *ctx) {
-#ifdef AMVP_OFFLINE
-    AMVP_LOG_INFO("Offline mode, skipping user agent...");
-    return;
-#else
     if (!ctx || ctx->http_user_agent) {
         AMVP_LOG_WARN("Error generating HTTP user-agent - no CTX or string already exists\n");
         return;
@@ -1738,5 +1486,4 @@ end:
     free(arch);
     free(proc);
     free(comp);
-#endif
 }

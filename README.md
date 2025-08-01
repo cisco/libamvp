@@ -31,7 +31,9 @@ under construction and based upon the work done for libacvp. We will happily acc
 and code contributions at this time. We also encourage developers to use this project
 as a basis for ports to languages of their preference.
 
-More information will be added as more details are finalized.
+This client is not intended to collect or process any data related to the AMVP process itself.
+It is intended only to facilitate the transfer of the data through the AMVP protocol and display
+user-relevant data in an easier to read way.
 
 ## Contributing
 
