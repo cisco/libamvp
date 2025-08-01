@@ -604,29 +604,6 @@ static AMVP_RESULT sanity_check_ctx(AMVP_CTX *ctx) {
     return AMVP_SUCCESS;
 }
 
-/*
- * This function is used to submit a vector set response
- * to the ACV server.
- */
-AMVP_RESULT amvp_submit_vector_responses(AMVP_CTX *ctx, char *vsid_url) {
-    AMVP_RESULT rv = 0;
-    char url[AMVP_ATTR_URL_MAX] = {0};
-
-    rv = sanity_check_ctx(ctx);
-    if (AMVP_SUCCESS != rv) return rv;
-
-    if (!vsid_url) {
-        AMVP_LOG_ERR("Missing vsid_url");
-        return AMVP_MISSING_ARG;
-    }
-
-    snprintf(url, AMVP_ATTR_URL_MAX - 1,
-            "https://%s:%d%s/results",
-            ctx->server_name, ctx->server_port, vsid_url);
-
-    return amvp_network_action(ctx, AMVP_NET_POST, url, NULL, 0);
-}
-
 AMVP_RESULT amvp_transport_post(AMVP_CTX *ctx,
                                 const char *uri,
                                 char *data,
@@ -649,32 +626,6 @@ AMVP_RESULT amvp_transport_post(AMVP_CTX *ctx,
     return amvp_network_action(ctx, AMVP_NET_POST, url, data, data_len);
 }
 
-
-/*
- * This is the top level function used within libamvp to retrieve
- * a KAT vector set from the AMVP server.
- */
-AMVP_RESULT amvp_retrieve_vector_set(AMVP_CTX *ctx, char *vsid_url) {
-    AMVP_RESULT rv = 0;
-    char url[AMVP_ATTR_URL_MAX] = {0};
-
-    rv = sanity_check_ctx(ctx);
-    if (AMVP_SUCCESS != rv) return rv;
-
-    if (!vsid_url) {
-        AMVP_LOG_ERR("Missing vsid_url");
-        return AMVP_MISSING_ARG;
-    }
-
-    snprintf(url, AMVP_ATTR_URL_MAX - 1,
-            "https://%s:%d%s",
-            ctx->server_name, ctx->server_port, vsid_url);
-
-   AMVP_LOG_STATUS("GET %s", vsid_url);
-
-    return amvp_network_action(ctx, AMVP_NET_GET, url, NULL, 0);
-}
-
 /*
  * This is the top level function used within libamvp to retrieve
  * documentation package 
@@ -695,49 +646,6 @@ AMVP_RESULT amvp_retrieve_docs(AMVP_CTX *ctx, char *vsid_url) {
             "https://%s:%d%s/docs",
             ctx->server_name, ctx->server_port, vsid_url);
 
-
-    return amvp_network_action(ctx, AMVP_NET_GET, url, NULL, 0);
-}
-
-/*
- * This is the top level function used within libamvp to retrieve
- * It can be used to get the results for an entire session, or
- * more specifically for a vectorSet
- */
-AMVP_RESULT amvp_retrieve_vector_set_result(AMVP_CTX *ctx, const char *api_url) {
-    AMVP_RESULT rv = 0;
-    char url[AMVP_ATTR_URL_MAX] = {0};
-
-    rv = sanity_check_ctx(ctx);
-    if (AMVP_SUCCESS != rv) return rv;
-
-    if (!api_url) {
-        AMVP_LOG_ERR("Missing api_url");
-        return AMVP_MISSING_ARG;
-    }
-
-    snprintf(url, AMVP_ATTR_URL_MAX - 1,
-            "https://%s:%d%s/results",
-            ctx->server_name, ctx->server_port, api_url);
-
-    return amvp_network_action(ctx, AMVP_NET_GET, url, NULL, 0);
-}
-
-AMVP_RESULT amvp_retrieve_expected_result(AMVP_CTX *ctx, const char *api_url) {
-    AMVP_RESULT rv = 0;
-    char url[AMVP_ATTR_URL_MAX + 1] = {0};
-
-    rv = sanity_check_ctx(ctx);
-    if (AMVP_SUCCESS != rv) return rv;
-
-    if (!api_url) {
-        AMVP_LOG_ERR("Missing api_url");
-        return AMVP_MISSING_ARG;
-    }
-
-    snprintf(url, AMVP_ATTR_URL_MAX,
-            "https://%s:%d%s/expected",
-            ctx->server_name, ctx->server_port, api_url);
 
     return amvp_network_action(ctx, AMVP_NET_GET, url, NULL, 0);
 }

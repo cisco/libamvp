@@ -231,14 +231,3 @@ AMVP_RESULT amvp_send_login(AMVP_CTX *ctx,
     return amvp_send_with_path_seg(ctx, AMVP_NET_POST,
                                    AMVP_LOGIN_URI, login, len);
 }
-
-/*
- * This is the transport function used within libamvp to submit a module
- * payload for creation on the server
- */
-AMVP_RESULT amvp_send_module_creation(AMVP_CTX *ctx,
-                            char *module,
-                            int len) {
-    return amvp_send_with_path_seg(ctx, AMVP_NET_POST,
-                                   AMVP_MODULE_ENDPOINT, module, len);
-}

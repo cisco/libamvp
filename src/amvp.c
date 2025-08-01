@@ -35,21 +35,6 @@ static AMVP_CERT_REQ_STATUS amvp_parse_cert_req_status_str(JSON_Object *json);
 
 static AMVP_RESULT amvp_output_test_evidence_table(AMVP_CTX *ctx, JSON_Array *missing_te_array);
 
-#define MODULES "modules/"
-#define REQUESTS "requests/"
-#define AMVP_CERTIFY_ENDPOINT "certify"
-
-typedef enum amvp_sp_status {
-    AMVP_SP_STATUS_UNKNOWN = 0,
-    AMVP_SP_STATUS_UNSUBMITTED,
-    AMVP_SP_STATUS_PROCESSING,
-    AMVP_SP_STATUS_WAITING_GENERATION,
-    AMVP_SP_STATUS_GENERATING,
-    AMVP_SP_STATUS_SUCCESS,
-    AMVP_SP_STATUS_ERROR
-} AMVP_SP_STATUS;
-
-
 /*
  * This is the first function the user should invoke to allocate
  * a new context to be used for the test session.

@@ -105,27 +105,12 @@ typedef enum amvp_result {
     AMVP_UNSUPPORTED_OP,     /**< An operation has been requested that is not supported. This can
                                   either be because parameters are not valid or because the library
                                   does not support something at the time */
-    AMVP_CLEANUP_FAIL,       /**< Failure when cleaning up (e.g. freeing memory) after operations */
     AMVP_KAT_DOWNLOAD_RETRY, /**< Does not neccessarily indicate an error, but that data requested
                                   from server is not yet ready to be accessed */
     AMVP_RETRY_OPERATION,    /**< Indiciate to a caller to attempt to retry an operation */
     AMVP_INVALID_ARG,        /**< A provided argument or parameter is not valid for the given operation */
     AMVP_MISSING_ARG,        /**< A required argument or parameter is not provided/null/0 */
-    AMVP_CRYPTO_MODULE_FAIL, /**< A non-zero return code was provided by the application callback 
-                                  for test case processin; this should indicate that the application
-                                  failed to process the test case*/
-    AMVP_NO_CAP,             /**< A registered capability object for the given algorithm does not exist. This
-                                  usually means an operation is being requested for an algorithm that is not yet
-                                  registered */
-    AMVP_MALFORMED_JSON,     /**< The given JSON is not properly formatted/readable JSON */
     AMVP_JSON_ERR,           /**< Error occurred attempting to parse JSON into data stuctures */
-    AMVP_TC_MISSING_DATA,    /**< Data is missing from test case JSON */
-    AMVP_TC_INVALID_DATA,    /**< Test case JSON is formatted properly, but the data is bad, does not
-                                  match the registration, or does not match the spec */
-    AMVP_DATA_TOO_LARGE,     /**< The given parameter larger than the library allows. This can apply to strings,
-                                  server responses, files, etc */
-    AMVP_CONVERT_DATA_ERR,   /**< Error converting data between hexidecimal and binary (either direction) */
-    AMVP_DUP_CIPHER,         /**< The client is attempting to register an algorithm that has already been registered */
     AMVP_TOTP_FAIL,          /**< A failure occurred attempting to generate a TOTP */
     AMVP_CTX_NOT_EMPTY,      /**< Occurs specifically when an attempt is made to initialize a CTX that is already initialized */
     AMVP_JWT_MISSING,        /**< A JSON web token is missing from a file or from memory but was expected */
