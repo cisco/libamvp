@@ -154,10 +154,18 @@
 #define AMVP_USER_AGENT_PROC_ENV "AMV_OE_PROCESSOR"
 #define AMVP_USER_AGENT_COMP_ENV "AMV_OE_COMPILER"
 
+#define AMVP_SP_SECTION_COUNT 12
+
 struct amvp_result_desc_t {
     AMVP_RESULT rv;
     const char *desc;
 };
+
+struct amvp_sp_section_name_t {
+    int id; /**< ID of the section */
+    const char *name; /**< Name of the section */
+};
+
 
 /*
  * Supported length list
@@ -503,6 +511,7 @@ void amvp_free_nl(AMVP_NAME_LIST *list);
 
 int string_fits(const char *string, unsigned int max_allowed);
 void amvp_http_user_agent_handler(AMVP_CTX *ctx);
+const char *amvp_lookup_sp_section_name(int id);
 
 AMVP_RESULT amvp_retry_handler(AMVP_CTX *ctx, int *retry_period, unsigned int *waited_so_far, int modifier, AMVP_WAITING_STATUS situation);
 AMVP_RESULT amvp_handle_protocol_error(AMVP_CTX *ctx, AMVP_PROTOCOL_ERR *err);

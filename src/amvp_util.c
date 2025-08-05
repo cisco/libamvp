@@ -151,6 +151,31 @@ const char *amvp_lookup_error_string(AMVP_RESULT rv) {
     return "Unknown error";
 }
 
+const char *amvp_lookup_sp_section_name(int id) {
+    int i;
+    struct amvp_sp_section_name_t section_name_tbl[AMVP_SP_SECTION_COUNT] = {
+        {1, "General"},
+        {2, "Cryptographic Module Specification"},
+        {3, "Cryptographic Module Interfaces"},
+        {4, "Roles, Services, and Authentication"},
+        {5, "Software/Firmware Security"},
+        {6, "Operational Environment"},
+        {7, "Physical Security"},
+        {8, "Non-invasive Security"},
+        {9, "Sensitive Security Parameter Management"},
+        {10, "Self Tests"},
+        {11, "Life Cycle Assurance"},
+        {12, "Mitigation of Other Attacks"}
+    };
+    for (i = 0; i < AMVP_SP_SECTION_COUNT; i++) {
+        if (id == section_name_tbl[i].id) {
+            return section_name_tbl[i].name;
+        }
+    }
+    return "Unknown Section";
+}
+
+
 #define AMVP_UTIL_KV_STR_MAX 256
 
 AMVP_RESULT amvp_kv_list_append(AMVP_KV_LIST **kv_list,

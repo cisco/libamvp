@@ -634,7 +634,7 @@ AMVP_RESULT amvp_read_cert_req_info_file(AMVP_CTX *ctx, const char *filename) {
     }
     strcpy_s(ctx->jwt_token, AMVP_JWT_TOKEN_MAX + 1, access_token);
 
-    /* Determine if this session has already retreived its expected TE list */
+    /* Determine if this session has already retrieved its expected TE list */
     status = json_object_get_string(obj, "status");
     if (status) {
         cert_req_status = amvp_parse_cert_req_status_str(obj);
@@ -706,7 +706,7 @@ static AMVP_RESULT amvp_output_test_evidence_table(AMVP_CTX *ctx, JSON_Array *mi
     }
 
     /* Output table header */
-    AMVP_LOG_STATUS("        %-30s   %s", "Test Requirement", "Tags");
+    AMVP_LOG_STATUS("        %-30s %s", "Test Requirement", "Tags");
     AMVP_LOG_STATUS("        %s", "--------------------------------------------------------------");
 
     /* Process each test evidence item */
@@ -882,11 +882,13 @@ static AMVP_RESULT amvp_output_cert_request_status(AMVP_CTX *ctx, JSON_Object *s
             amvp_append_sl_list(&sp_list, json_array_get_number(arr, i));
         }
     }
+    AMVP_LOG_STATUS("");
     AMVP_LOG_STATUS("    List of unsubmitted security policy sections:");
     if (sp_list) {
         sp_iter = sp_list;
         while (sp_iter) {
-            AMVP_LOG_STATUS(AMVP_ANSI_COLOR_YELLOW "        %d" AMVP_ANSI_COLOR_RESET, sp_iter->length);
+            AMVP_LOG_STATUS("        " AMVP_ANSI_COLOR_YELLOW "%-8d" AMVP_ANSI_COLOR_RESET "   %s",
+                          sp_iter->length, amvp_lookup_sp_section_name(sp_iter->length));
             sp_iter = sp_iter->next;
         }
     } else {
