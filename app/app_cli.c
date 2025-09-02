@@ -73,10 +73,11 @@ static void print_usage(int code) {
     printf("      -s <file>\n");
     printf("\n");
     printf("To request module certificate using a predefined request file:\n");
-    printf("      --module_cert_req <module_file> --with_vendor <vendor_id_number> --with-contact <CMVP contact ID> ...\n");
+    printf("      --module_cert_req <module_file> --with_vendor <vendor_id_number> --with_tester <CMVP contact ID> ...\n");
+    printf("      or use --with_reviewer <CMVP contact ID> to specify reviewers\n");
     printf("Optionally, the following fields can also be added to module_cert_req:\n");
     printf("      --with_acv_cert <CAVP algorithm certificate ID> --with_esv_cert <ESVP certificate ID>\n");
-    printf("These options can also be used independently with --for_cert_request to add certs to an existing request.\n");
+    printf("These options can be used independently with --for_cert_request to add certs to an existing request.\n");
     printf("\n");
 
     printf("In addition some options are passed to amvp_app using\n");
@@ -124,14 +125,18 @@ static ko_longopt_t longopts[] = {
     { "debug", ko_no_argument, 417 },
     { "module_cert_req", ko_required_argument, 419 },
     { "with_vendor", ko_required_argument, 424} ,
-    { "with_contact", ko_required_argument, 425 } ,
+    { "with_tester", ko_required_argument, 440 } ,
+    { "with_reviewer", ko_required_argument, 441 } ,
     { "submit_ft_evidence", ko_required_argument, 426 },
     { "submit_security_policy", ko_required_argument, 427 },
+    { "submit_sp_template", ko_required_argument, 435 },
     { "for_cert_request", ko_required_argument, 428 },
     { "get_security_policy", ko_no_argument, 429 } ,
     { "with_acv_cert", ko_required_argument, 430 },
     { "with_esv_cert", ko_required_argument, 431 },
     { "submit_sc_evidence", ko_required_argument, 432 },
+    { "submit_od_evidence", ko_required_argument, 436 },
+    { "submit_fsm_evidence", ko_required_argument, 437 },
     { "finalize", ko_no_argument, 433 },
     { "check_cert_req_status", ko_no_argument, 434 },
     { NULL, 0, 0 }
@@ -288,16 +293,28 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
             cfg->vendor_id = tmp;
             break;
 
-        case 425:
-            if (cfg->num_contacts >= AMVP_MAX_CONTACTS_PER_CERT_REQ) {
-                printf("Too many contacts provided for cert req\n");
+        case 440:
+            if (cfg->num_testers >= AMVP_MAX_CONTACTS_PER_CERT_REQ) {
+                printf("Too many tester contacts provided for cert req\n");
                 return 1;
             }
             if (!check_option_length(opt.arg, c, AMVP_CONTACT_STR_MAX_LEN)) {
                 return 1;
             }
-            strcpy_s(cfg->contact_ids[cfg->num_contacts], AMVP_CONTACT_STR_MAX_LEN + 1, opt.arg);
-            cfg->num_contacts++;
+            strcpy_s(cfg->tester_ids[cfg->num_testers], AMVP_CONTACT_STR_MAX_LEN + 1, opt.arg);
+            cfg->num_testers++;
+            break;
+
+        case 441:
+            if (cfg->num_reviewers >= AMVP_MAX_CONTACTS_PER_CERT_REQ) {
+                printf("Too many reviewer contacts provided for cert req\n");
+                return 1;
+            }
+            if (!check_option_length(opt.arg, c, AMVP_CONTACT_STR_MAX_LEN)) {
+                return 1;
+            }
+            strcpy_s(cfg->reviewer_ids[cfg->num_reviewers], AMVP_CONTACT_STR_MAX_LEN + 1, opt.arg);
+            cfg->num_reviewers++;
             break;
 
         case 426:
@@ -314,6 +331,14 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
                 return 1;
             }
             strcpy_s(cfg->sp_file, JSON_FILENAME_LENGTH + 1, opt.arg);
+            break;
+
+        case 435:
+            cfg->submit_sp_template = 1;
+            if (!check_option_length(opt.arg, c, JSON_FILENAME_LENGTH)) {
+                return 1;
+            }
+            strcpy_s(cfg->sp_template_file, JSON_FILENAME_LENGTH + 1, opt.arg);
             break;
 
         case 428:
@@ -360,6 +385,22 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
             strcpy_s(cfg->ev_file, JSON_FILENAME_LENGTH + 1, opt.arg);
             break;
 
+        case 436:
+            cfg->submit_od_ev = 1;
+            if (!check_option_length(opt.arg, c, JSON_FILENAME_LENGTH)) {
+                return 1;
+            }
+            strcpy_s(cfg->ev_file, JSON_FILENAME_LENGTH + 1, opt.arg);
+            break;
+
+        case 437:
+            cfg->submit_fsm_ev = 1;
+            if (!check_option_length(opt.arg, c, JSON_FILENAME_LENGTH)) {
+                return 1;
+            }
+            strcpy_s(cfg->ev_file, JSON_FILENAME_LENGTH + 1, opt.arg);
+            break;
+
         case 433:
             cfg->finalize = 1;
             break;
@@ -393,12 +434,12 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
         return 1;
     }
 
-    if (cfg->mod_cert_req && (cfg->create_module_file[0] == '\0' || !cfg->vendor_id || !cfg->num_contacts)) {
-        printf("Module cert request requires module module ID, vendor ID, and at least one contact ID to be provided\n");
+    if (cfg->mod_cert_req && (cfg->create_module_file[0] == '\0' || !cfg->vendor_id || (cfg->num_testers == 0 && cfg->num_reviewers == 0))) {
+        printf("Module cert request requires module ID, vendor ID, and at least one contact (tester or reviewer) to be provided\n");
         return 1;
     }
 
-    if ((cfg->submit_ft_ev || cfg->submit_sc_ev || cfg->submit_sp) && !cfg->ingest_cert_info) {
+    if ((cfg->submit_ft_ev || cfg->submit_sc_ev || cfg->submit_od_ev || cfg->submit_fsm_ev || cfg->submit_sp || cfg->submit_sp_template) && !cfg->ingest_cert_info) {
         printf("Submitting evidence or security policy info requires specifying a cert request info file\n");
         return 1;
     }

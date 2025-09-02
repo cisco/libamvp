@@ -40,10 +40,18 @@ typedef enum amvp_cert_type {
     AMVP_CERT_TYPE_MAX
 } AMVP_CERT_TYPE;
 
+typedef enum amvp_contact_type {
+    AMVP_CONTACT_TYPE_TESTER = 0,
+    AMVP_CONTACT_TYPE_REVIEWER,
+    AMVP_CONTACT_TYPE_MAX
+} AMVP_CONTACT_TYPE;
+
 typedef enum amvp_evidence_type {
     AMVP_EVIDENCE_TYPE_NA = 0,
     AMVP_EVIDENCE_TYPE_FUNCTIONAL_TEST,
     AMVP_EVIDENCE_TYPE_SOURCE_CODE,
+    AMVP_EVIDENCE_TYPE_OTHER_DOC,
+    AMVP_EVIDENCE_TYPE_FSM,
     AMVP_EVIDENCE_TYPE_MAX
 } AMVP_EVIDENCE_TYPE;
 
@@ -353,11 +361,12 @@ const char *amvp_protocol_version(void);
 AMVP_RESULT amvp_check_cert_req_status(AMVP_CTX *ctx);
 AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx);
 AMVP_RESULT amvp_mark_as_cert_req(AMVP_CTX *ctx, const char *module_name, int vendor_id);
-AMVP_RESULT amvp_cert_req_add_contact(AMVP_CTX *ctx, const char *contact_id);
+AMVP_RESULT amvp_cert_req_add_contact(AMVP_CTX *ctx, const char *contact_id, AMVP_CONTACT_TYPE contact_type);
 AMVP_RESULT amvp_cert_req_add_sub_cert(AMVP_CTX *ctx, const char *cert_id, AMVP_CERT_TYPE type);
 AMVP_RESULT amvp_get_module_request(AMVP_CTX *ctx, char *filename);
 AMVP_RESULT amvp_submit_evidence(AMVP_CTX *ctx, const char *filename, AMVP_EVIDENCE_TYPE type);
 AMVP_RESULT amvp_submit_security_policy(AMVP_CTX *ctx, const char *filename);
+AMVP_RESULT amvp_submit_security_policy_template(AMVP_CTX *ctx, const char *filename);
 AMVP_RESULT amvp_get_security_policy(AMVP_CTX *ctx);
 AMVP_RESULT amvp_read_cert_req_info_file(AMVP_CTX *ctx, const char *filename);
 AMVP_RESULT amvp_finalize_cert_request(AMVP_CTX *ctx);

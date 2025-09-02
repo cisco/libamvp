@@ -1,9 +1,9 @@
 {
     "schemaVersion": "initial",
     "moduleInfo": {
-        "name": "Cisco Example AMVP Cryptographic Module",
+        "name": "Example AMVP Cryptographic Module",
         "count": 1,
-        "description": "This module represents a basic small software module. It is for example use only and does not intentionally represent any existing or future module.",
+        "description": "This module represents a basic software module. It is for example use only and does not intentionally represent any existing or future module.",
         "embodiment": "Single Chip",
         "type": "software",
         "opEnvType": "Intel X86_64",

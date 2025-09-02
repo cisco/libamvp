@@ -58,7 +58,7 @@
 #define AMVP_LOG_TRUNCATED_STR "...[truncated]"
 //This MUST be the length of the above string (want to avoid calculating at runtime frequently)
 #define AMVP_LOG_TRUNCATED_STR_LEN 14
-#define AMVP_LOG_MAX_MSG_LEN 2048
+#define AMVP_LOG_MAX_MSG_LEN 64000
 
 #define AMVP_MODULE_FILENAME_MAX_LEN 32 /* Arbitrary */
 #define AMVP_MODULE_FILENAME_DEFAULT "module"
@@ -72,6 +72,31 @@
 
 #define AMVP_REQ_STATUS_STR_INITIAL "initial"
 #define AMVP_REQ_STATUS_STR_APPROVED "approved"
+
+/* JSON field names for parsing */
+#define AMVP_JSON_FIELD_NAME "name"
+#define AMVP_JSON_FIELD_TE "te"
+#define AMVP_JSON_FIELD_COMPLETE "complete"
+#define AMVP_JSON_FIELD_REQUIRED "required"
+#define AMVP_JSON_FIELD_ONEOF "oneOf"
+#define AMVP_JSON_FIELD_TYPES "types"
+#define AMVP_JSON_FIELD_SUBMITTED "submitted"
+#define AMVP_JSON_FIELD_URL "url"
+#define AMVP_JSON_FIELD_CERT_REQUEST_ID "certRequestId"
+#define AMVP_JSON_FIELD_MODULE_ID "moduleId"
+#define AMVP_JSON_FIELD_VENDOR_ID "vendorId"
+#define AMVP_JSON_FIELD_VALIDATION_CERTIFICATE "validationCertificate"
+#define AMVP_JSON_FIELD_RULE_FEEDBACK "ruleFeedback"
+#define AMVP_JSON_FIELD_EVIDENCE_LIST "evidenceList"
+#define AMVP_JSON_FIELD_MISSING_SP_TEMPLATE "missingSPTemplate"
+#define AMVP_JSON_FIELD_MISSING_SP_SUBMISSION "missingSecurityPolicySubmission"
+#define AMVP_JSON_FIELD_SP_STATUS "securityPolicyStatus"
+
+/* Security policy status values */
+#define AMVP_SP_STATUS_PENDING "acceptingSubmissions"
+#define AMVP_SP_STATUS_APPROVED "approved"
+#define AMVP_SP_STATUS_REJECTED "rejected"
+#define AMVP_SP_STATUS_INCOMPLETE "incomplete"
 
 #define AMVP_BIT2BYTE(x) ((x + 7) >> 3) /**< Convert bit length (x, of type integer) into byte length */
 
@@ -143,6 +168,11 @@
 #define AMVP_USER_AGENT_COMP_STR_MAX 32
 
 #define AMVP_STRING_LIST_MAX_LEN 256 //arbitrary max character count for a string in AMVP_STRING_LIST
+
+/* Buffer size constants for test evidence table output */
+#define AMVP_EVIDENCE_TYPES_BUFFER_SIZE 512
+#define AMVP_EVIDENCE_ALL_TYPES_BUFFER_SIZE 1024
+#define AMVP_EVIDENCE_STATUS_BUFFER_SIZE 64
 
 /*
  * If library cannot detect hardware or software info for HTTP user-agent string, we can check for them
@@ -381,10 +411,12 @@ typedef struct amvp_fips_t {
 typedef struct amvp_cert_req_t {
     char module_file[AMVP_JSON_FILENAME_MAX + 1];
     int vendor_id;
-    int contact_count;
+    int tester_count;
+    int reviewer_count;
     int acv_cert_count;
     int esv_cert_count; 
-    char *contact_id[AMVP_MAX_CONTACTS_PER_CERT_REQ];
+    char *tester_id[AMVP_MAX_CONTACTS_PER_CERT_REQ];
+    char *reviewer_id[AMVP_MAX_CONTACTS_PER_CERT_REQ];
     char *acv_cert[AMVP_MAX_ACV_CERTS_PER_CERT_REQ];
     char *esv_cert[AMVP_MAX_ESV_CERTS_PER_CERT_REQ];
 } AMVP_CERT_REQ;
@@ -463,6 +495,7 @@ typedef enum amvp_net_action {
     AMVP_NET_GET = 1, /**< Generic (get) */
     AMVP_NET_POST,    /**< Generic (post) */
     AMVP_NET_PUT,     /**< Generic (put) */
+    AMVP_NET_PUT_MULTIPART, /**< Multipart form-data (put) */
     AMVP_NET_DELETE   /**< delete vector set results, data */
 } AMVP_NET_ACTION;
 
@@ -481,6 +514,9 @@ AMVP_RESULT amvp_transport_post(AMVP_CTX *ctx, const char *uri, char *data, int 
 AMVP_RESULT amvp_transport_put(AMVP_CTX *ctx, const char *endpoint, const char *data, int data_len);
 AMVP_RESULT amvp_transport_put_validation(AMVP_CTX *ctx, const char *data, int data_len);
 AMVP_RESULT amvp_transport_delete(AMVP_CTX *ctx, const char *endpoint);
+AMVP_RESULT amvp_transport_put_sp_template(AMVP_CTX *ctx, const char *endpoint, const char *file_path);
+AMVP_RESULT amvp_transport_post_sp_template(AMVP_CTX *ctx, const char *endpoint, const char *file_path);
+AMVP_RESULT amvp_send_sp_template(AMVP_CTX *ctx, const char *url, const char *file_path);
 
 AMVP_RESULT amvp_build_registration_json(AMVP_CTX *ctx, JSON_Value **reg);
 AMVP_RESULT amvp_build_validation(AMVP_CTX *ctx, char **out, int *out_len);
@@ -520,6 +556,12 @@ int amvp_get_request_status(AMVP_CTX *ctx, char **output);
 AMVP_RESULT amvp_save_cert_req_info_file(AMVP_CTX *ctx, JSON_Object *contents);
 AMVP_RESULT amvp_json_serialize_to_file_pretty_a(const JSON_Value *value, const char *filename);
 AMVP_RESULT amvp_json_serialize_to_file_pretty_w(const JSON_Value *value, const char *filename);
+
+/* Display/output functions */
+AMVP_RESULT amvp_output_cert_request_status(AMVP_CTX *ctx, JSON_Object *status_json);
+
+/* Utility functions */
+AMVP_CERT_REQ_STATUS amvp_parse_cert_req_status_str(JSON_Object *json);
 
 
 #endif

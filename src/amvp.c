@@ -31,10 +31,6 @@ static AMVP_RESULT amvp_login(AMVP_CTX *ctx, int refresh);
 
 static AMVP_RESULT amvp_parse_login(AMVP_CTX *ctx);
 
-static AMVP_CERT_REQ_STATUS amvp_parse_cert_req_status_str(JSON_Object *json);
-
-static AMVP_RESULT amvp_output_test_evidence_table(AMVP_CTX *ctx, JSON_Array *missing_te_array);
-
 /*
  * This is the first function the user should invoke to allocate
  * a new context to be used for the test session.
@@ -111,9 +107,14 @@ AMVP_RESULT amvp_free_test_session(AMVP_CTX *ctx) {
     if (ctx->registration) {
             json_value_free(ctx->registration);
     }
-    if (ctx->cert_req_info.contact_count > 0) {
-        for (i = 0; i < ctx->cert_req_info.contact_count; i++) {
-            free(ctx->cert_req_info.contact_id[i]);
+    if (ctx->cert_req_info.tester_count > 0) {
+        for (i = 0; i < ctx->cert_req_info.tester_count; i++) {
+            free(ctx->cert_req_info.tester_id[i]);
+        }
+    }
+    if (ctx->cert_req_info.reviewer_count > 0) {
+        for (i = 0; i < ctx->cert_req_info.reviewer_count; i++) {
+            free(ctx->cert_req_info.reviewer_id[i]);
         }
     }
     if (ctx->cert_req_info.acv_cert_count > 0) {
@@ -336,8 +337,10 @@ AMVP_RESULT amvp_mark_as_cert_req(AMVP_CTX *ctx, const char *module_file, int ve
     return AMVP_SUCCESS;
 }
 
-AMVP_RESULT amvp_cert_req_add_contact(AMVP_CTX *ctx, const char *contact_id) {
+AMVP_RESULT amvp_cert_req_add_contact(AMVP_CTX *ctx, const char *contact_id, AMVP_CONTACT_TYPE contact_type) {
     int len = 0;
+    int *count_ptr = NULL;
+    char **contact_array = NULL;
 
     if (!ctx) {
         return AMVP_NO_CTX;
@@ -347,12 +350,33 @@ AMVP_RESULT amvp_cert_req_add_contact(AMVP_CTX *ctx, const char *contact_id) {
         return AMVP_MISSING_ARG;
     }
 
+    if (contact_type >= AMVP_CONTACT_TYPE_MAX) {
+        AMVP_LOG_ERR("Invalid contact type provided");
+        return AMVP_INVALID_ARG;
+    }
+
     if (ctx->action != AMVP_ACTION_CERT_REQ) {
         AMVP_LOG_ERR("Session must be marked as a certify request to add contact info");
         return AMVP_UNSUPPORTED_OP;
     }
-    if (ctx->cert_req_info.contact_count >= AMVP_MAX_CONTACTS_PER_CERT_REQ) {
-        AMVP_LOG_ERR("Already at maximum number of contacts per cert request");
+
+    /* Set the appropriate count pointer and contact array based on contact type */
+    switch (contact_type) {
+        case AMVP_CONTACT_TYPE_TESTER:
+            count_ptr = &ctx->cert_req_info.tester_count;
+            contact_array = ctx->cert_req_info.tester_id;
+            break;
+        case AMVP_CONTACT_TYPE_REVIEWER:
+            count_ptr = &ctx->cert_req_info.reviewer_count;
+            contact_array = ctx->cert_req_info.reviewer_id;
+            break;
+        default:
+            AMVP_LOG_ERR("Unsupported contact type");
+            return AMVP_INVALID_ARG;
+    }
+
+    if (*count_ptr >= AMVP_MAX_CONTACTS_PER_CERT_REQ) {
+        AMVP_LOG_ERR("Already at maximum number of contacts per cert request for this contact type");
         return AMVP_UNSUPPORTED_OP;
     }
 
@@ -362,19 +386,19 @@ AMVP_RESULT amvp_cert_req_add_contact(AMVP_CTX *ctx, const char *contact_id) {
         return AMVP_INVALID_ARG;
     }
 
-    ctx->cert_req_info.contact_id[ctx->cert_req_info.contact_count] = calloc(len + 1, sizeof(char));
-    if (!ctx->cert_req_info.contact_id[ctx->cert_req_info.contact_count]) {
+    contact_array[*count_ptr] = calloc(len + 1, sizeof(char));
+    if (!contact_array[*count_ptr]) {
         AMVP_LOG_ERR("Error allocating memory for contact ID in cert request");
         return AMVP_MALLOC_FAIL;
     }
 
-    if (strncpy_s(ctx->cert_req_info.contact_id[ctx->cert_req_info.contact_count], len + 1, contact_id, len)) {
+    if (strncpy_s(contact_array[*count_ptr], len + 1, contact_id, len)) {
         AMVP_LOG_ERR("Error copying contact ID string into cert request");
-        free(ctx->cert_req_info.contact_id[ctx->cert_req_info.contact_count]);
+        free(contact_array[*count_ptr]);
         return AMVP_INTERNAL_ERR;
     }
 
-    ctx->cert_req_info.contact_count++;
+    (*count_ptr)++;
     return AMVP_SUCCESS;
 }
 
@@ -518,48 +542,9 @@ static AMVP_RESULT amvp_build_login(AMVP_CTX *ctx, char **login, int *login_len,
 
 err:
     *login = json_serialize_to_string(val, login_len);
+    if (val) json_value_free(val);
     if (token) free(token);
     return rv;
-}
-
-static char* amvp_get_module_name_from_id(AMVP_CTX *ctx, int id) {
-    char *url = NULL, *module_name = NULL;
-    AMVP_RESULT rv = AMVP_SUCCESS;
-    JSON_Value *val = NULL;
-    JSON_Object *obj = NULL;
-
-    url = calloc(AMVP_ATTR_URL_MAX + 1, sizeof(char));
-    if (!url) {
-        AMVP_LOG_ERR("Memory allocation error while fetching module name");
-        goto end;
-    }
-    snprintf(url, AMVP_ATTR_URL_MAX + 1, "/amvp/v1/modules/%d", id);
-    rv = amvp_transport_get(ctx, url, NULL);
-    if (rv != AMVP_SUCCESS) {
-        AMVP_LOG_ERR("Error fetching module name");
-        goto end;
-    }
-
-    val = json_parse_string(ctx->curl_buf);
-    if (!val) {
-        AMVP_LOG_ERR("Error reading response when getting module name");
-        goto end;
-    }
-    obj = amvp_get_obj_from_rsp(ctx, val);
-    if (json_object_has_value(obj, "name")) {
-        module_name = calloc(AMVP_MAX_MODULE_NAME_LEN + 1, sizeof(char));
-        if (!module_name) {
-            AMVP_LOG_ERR("Error allocating memory for module name");
-            goto end;
-        }
-        strncpy_s(module_name, AMVP_MAX_MODULE_NAME_LEN + 1, json_object_get_string(obj, "name"), json_object_get_string_len(obj, "name"));
-    }
-
-end:
-    if (val) json_value_free(val);
-    if (url) free(url);
-    return module_name;
-
 }
 
 AMVP_RESULT amvp_read_cert_req_info_file(AMVP_CTX *ctx, const char *filename) {
@@ -640,8 +625,7 @@ AMVP_RESULT amvp_read_cert_req_info_file(AMVP_CTX *ctx, const char *filename) {
         cert_req_status = amvp_parse_cert_req_status_str(obj);
         if (cert_req_status != AMVP_CERT_REQ_STATUS_INITIAL &&
                 json_object_has_value(obj, "securityPolicyStatus") &&
-                json_object_has_value(obj, "functionalTestStatus") &&
-                json_object_has_value(obj, "sourceCodeStatus")) {
+                json_object_has_value(obj, "evidenceStatus")) {
             ctx->session_file_has_te_list = 1;
         }
     }
@@ -649,258 +633,6 @@ AMVP_RESULT amvp_read_cert_req_info_file(AMVP_CTX *ctx, const char *filename) {
     rv = AMVP_SUCCESS;
 end:
     if (val) json_value_free(val);
-    return rv;
-}
-
-static AMVP_CERT_REQ_STATUS amvp_parse_cert_req_status_str(JSON_Object *json) {
-    const char *status = NULL;
-    int diff = 1;
-    size_t len = 0;
-
-    if (!json || !json_object_has_value_of_type(json, "status", JSONString)) {
-        return AMVP_CERT_REQ_STATUS_UNKNOWN;
-    }
-
-    status = json_object_get_string(json, "status");
-    len = strnlen_s(status, AMVP_CERT_REQ_STATUS_MAX_LEN + 1);
-    if (len > AMVP_CERT_REQ_STATUS_MAX_LEN) {
-        return AMVP_CERT_REQ_STATUS_UNKNOWN;
-    }
-
-    strncmp_s(AMVP_CERT_REQ_STATUS_STR_INITIAL, sizeof(AMVP_CERT_REQ_STATUS_STR_INITIAL) - 1, status, len, &diff);
-    if (!diff) return AMVP_CERT_REQ_STATUS_INITIAL;
-    strncmp_s(AMVP_CERT_REQ_STATUS_STR_READY, sizeof(AMVP_CERT_REQ_STATUS_STR_READY) - 1, status, len, &diff);
-    if (!diff) return AMVP_CERT_REQ_STATUS_READY;
-    strncmp_s(AMVP_CERT_REQ_STATUS_STR_SUBMITTED, sizeof(AMVP_CERT_REQ_STATUS_STR_SUBMITTED) - 1, status, len, &diff);
-    if (!diff) return AMVP_CERT_REQ_STATUS_SUBMITTED;
-    strncmp_s(AMVP_CERT_REQ_STATUS_STR_IN_REVIEW, sizeof(AMVP_CERT_REQ_STATUS_STR_IN_REVIEW) - 1, status, len, &diff);
-    if (!diff) return AMVP_CERT_REQ_STATUS_IN_REVIEW;
-    strncmp_s(AMVP_CERT_REQ_STATUS_STR_APPROVED, sizeof(AMVP_CERT_REQ_STATUS_STR_APPROVED) - 1, status, len, &diff);
-    if (!diff) return AMVP_CERT_REQ_STATUS_APPROVED;
-    strncmp_s(AMVP_CERT_REQ_STATUS_STR_REJECTED, sizeof(AMVP_CERT_REQ_STATUS_STR_REJECTED) - 1, status, len, &diff);
-    if (!diff) return AMVP_CERT_REQ_STATUS_REJECTED;
-    strncmp_s(AMVP_CERT_REQ_STATUS_STR_ERROR, sizeof(AMVP_CERT_REQ_STATUS_STR_ERROR) - 1, status, len, &diff);
-    if (!diff) return AMVP_CERT_REQ_STATUS_ERROR;
-
-    return AMVP_CERT_REQ_STATUS_UNKNOWN;
-}
-
-/* Helper function to output test evidence table */
-static AMVP_RESULT amvp_output_test_evidence_table(AMVP_CTX *ctx, JSON_Array *missing_te_array) {
-    JSON_Object *tmp_obj = NULL;
-    JSON_Array *req_arr = NULL;
-    const char *te_name = NULL;
-    size_t arr_size = 0, req_arr_size = 0;
-    int i = 0, j = 0;
-
-    if (!ctx || !missing_te_array) {
-        return AMVP_INVALID_ARG;
-    }
-
-    arr_size = json_array_get_count(missing_te_array);
-    AMVP_LOG_NEWLINE;
-    AMVP_LOG_STATUS("    List of remaining required test evidence submissions:");
-    if (arr_size == 0) {
-        AMVP_LOG_STATUS(AMVP_ANSI_COLOR_GREEN "        All expected test evidence has been submitted!" AMVP_ANSI_COLOR_RESET);
-        return AMVP_SUCCESS;
-    }
-
-    /* Output table header */
-    AMVP_LOG_STATUS("        %-30s %s", "Test Requirement", "Tags");
-    AMVP_LOG_STATUS("        %s", "--------------------------------------------------------------");
-
-    /* Process each test evidence item */
-    for (i = 0; i < (int)arr_size; i++) {
-        tmp_obj = json_array_get_object(missing_te_array, i);
-        te_name = json_object_get_string(tmp_obj, "testRequirement");
-        if (!te_name) {
-            AMVP_LOG_ERR("Server provided a test evidence object without a name");
-            break;
-        }
-
-        req_arr = json_object_get_array(tmp_obj, "tags");
-        if (!req_arr) {
-            AMVP_LOG_ERR("Server provided a test evidence object without tags");
-            break;
-        }
-
-        req_arr_size = json_array_get_count(req_arr);
-        if (!req_arr_size) {
-            AMVP_LOG_ERR("Server provided a test evidence object with an empty tags array");
-            break;
-        }
-
-        /* Build the tags string for this test requirement */
-        char tags_str[2048] = {0}; /* Buffer for concatenated tags */
-        size_t tags_str_len = 0;
-        for (j = 0; j < (int)req_arr_size; j++) {
-            const char *tag = json_array_get_string(req_arr, j);
-            if (tag) {
-                /* Create a copy of the tag with forward slashes replaced by " or " */
-                char modified_tag[256] = {0};
-                size_t tag_len = strnlen_s(tag, 255);
-                size_t mod_tag_len = 0;
-                
-                for (size_t k = 0; k < tag_len && mod_tag_len < sizeof(modified_tag) - 5; k++) {
-                    if (tag[k] == '/') {
-                        strcpy_s(modified_tag + mod_tag_len, sizeof(modified_tag) - mod_tag_len, " or ");
-                        mod_tag_len += 4;
-                    } else {
-                        modified_tag[mod_tag_len] = tag[k];
-                        mod_tag_len++;
-                    }
-                }
-                
-                /* Check if we have space (including separator and null terminator) */
-                if (tags_str_len + mod_tag_len + 3 < sizeof(tags_str)) {
-                    if (j > 0) {
-                        strcpy_s(tags_str + tags_str_len, sizeof(tags_str) - tags_str_len, ", ");
-                        tags_str_len += 2;
-                    }
-                    strcpy_s(tags_str + tags_str_len, sizeof(tags_str) - tags_str_len, modified_tag);
-                    tags_str_len += mod_tag_len;
-                }
-            }
-        }
-        AMVP_LOG_STATUS("        " AMVP_ANSI_COLOR_YELLOW "%-30s" AMVP_ANSI_COLOR_RESET " %s", te_name, tags_str);
-    }
-
-    return AMVP_SUCCESS;
-}
-
-/* Output prettified cert request status to log */
-static AMVP_RESULT amvp_output_cert_request_status(AMVP_CTX *ctx, JSON_Object *status_json) {
-    JSON_Array *arr = NULL, *feedback = NULL;
-    char *module_name = NULL;
-    int req_id = 0, module_id = 0, vendor_id = 0, i = 0;
-    size_t arr_size = 0;
-    AMVP_RESULT rv = AMVP_SUCCESS;
-    AMVP_NAME_LIST *feedback_list = NULL, *feedback_iter = NULL;
-    AMVP_SL_LIST *sp_list = NULL, *sp_iter = NULL;
-    AMVP_CERT_REQ_STATUS cert_req_status = AMVP_CERT_REQ_STATUS_UNKNOWN;
-    const char *cert_id = NULL;
-    if (!ctx || !status_json) {
-        return AMVP_INTERNAL_ERR;
-    }
-    cert_req_status = amvp_parse_cert_req_status_str(status_json);
-
-    /* We want to collect all the information from JSON first, then output all at once so we have better control over output */
-    if (json_object_has_value_of_type(status_json, "url", JSONString)) {
-        sscanf(json_object_get_string(status_json, "url"), "/amvp/v1/certRequests/%d", &req_id);
-    } else if (json_object_has_value_of_type(status_json, "certRequestId", JSONNumber)) {
-        req_id = (int) json_object_get_number(status_json, "certRequestId");
-    }
-
-    module_id = (int)json_object_get_number(status_json, "moduleId");
-    module_name = amvp_get_module_name_from_id(ctx, module_id);
-    if (!module_name) {
-        AMVP_LOG_ERR("Error getting module name from cert request info");
-        goto end;
-    }
-
-    if (json_object_has_value_of_type(status_json, "vendorId", JSONNumber)) {
-        vendor_id = (int)json_object_get_number(status_json, "vendorId");
-    }
-
-    /* Begin prettified logging of data */
-    AMVP_LOG_STATUS("");
-    AMVP_LOG_STATUS("Current status of module certification request:");
-    AMVP_LOG_STATUS(AMVP_ANSI_COLOR_GREEN "    Certification Request %d" AMVP_ANSI_COLOR_RESET, req_id);
-    AMVP_LOG_STATUS(AMVP_ANSI_COLOR_GREEN "    Module ID: %d (%s)" AMVP_ANSI_COLOR_RESET, module_id, module_name);
-    if (vendor_id) {
-        AMVP_LOG_STATUS(AMVP_ANSI_COLOR_GREEN "    Vendor ID: %d" AMVP_ANSI_COLOR_RESET, vendor_id);
-    }
-    AMVP_LOG_STATUS("    Status:");
-    switch (cert_req_status) {
-    case AMVP_CERT_REQ_STATUS_INITIAL:
-        AMVP_LOG_STATUS("        " AMVP_ANSI_COLOR_YELLOW "The cert request has not yet finished initializing." AMVP_ANSI_COLOR_RESET);
-        goto end;
-    case AMVP_CERT_REQ_STATUS_READY:
-        AMVP_LOG_STATUS("        " AMVP_ANSI_COLOR_GREEN "The cert request is ready for data submissions!" AMVP_ANSI_COLOR_RESET);
-        break;
-    case AMVP_CERT_REQ_STATUS_SUBMITTED:
-        AMVP_LOG_STATUS("        " AMVP_ANSI_COLOR_GREEN "All required data has been submitted!" AMVP_ANSI_COLOR_RESET);
-        break;
-    case AMVP_CERT_REQ_STATUS_IN_REVIEW:
-        AMVP_LOG_STATUS("        " AMVP_ANSI_COLOR_YELLOW "The cert request is currently being reviewed." AMVP_ANSI_COLOR_RESET);
-        goto end;
-    case AMVP_CERT_REQ_STATUS_APPROVED:
-        cert_id = json_object_get_string(status_json, "validationCertificate");
-        if (!cert_id) {
-            AMVP_LOG_ERR("Server marked request as approved, but failed to provide a certificate number");
-            goto end;
-        }
-        AMVP_LOG_STATUS("        " AMVP_ANSI_COLOR_GREEN "The cert request has been approved!" AMVP_ANSI_COLOR_RESET);
-        AMVP_LOG_STATUS("        " AMVP_ANSI_COLOR_GREEN "Certificate ID: %s" AMVP_ANSI_COLOR_RESET, cert_id);
-        goto end;
-    case AMVP_CERT_REQ_STATUS_REJECTED:
-        AMVP_LOG_STATUS("        " AMVP_ANSI_COLOR_RED "The cert request has been rejected." AMVP_ANSI_COLOR_RESET);
-        feedback = json_object_get_array(status_json, "ruleFeedback");
-        if (!feedback) {
-            AMVP_LOG_ERR("Server marked request as rejected, but failed to provide reasoning");
-            goto end;
-        }
-        arr_size = json_array_get_count(feedback);
-        if (arr_size <= 0 || arr_size > 16) {
-            AMVP_LOG_ERR("Server provided invalid feedback list (empty or too long)");
-            goto end;
-        }
-        for (i = 0; i < (int)arr_size; i++) {
-            amvp_append_name_list(&feedback_list, json_array_get_string(feedback, i));
-        }
-        AMVP_LOG_STATUS("        " AMVP_ANSI_COLOR_RED "Reasoning:" AMVP_ANSI_COLOR_RESET);
-        feedback_iter = feedback_list;
-        while (feedback_iter) {
-            AMVP_LOG_STATUS(AMVP_ANSI_COLOR_RED "          %s" AMVP_ANSI_COLOR_RESET, feedback_iter->name);
-            feedback_iter = feedback_iter->next;
-        }
-        break;
-    case AMVP_CERT_REQ_STATUS_ERROR:
-        AMVP_LOG_ERR("        " AMVP_ANSI_COLOR_RED "The cert request has encountered an error." AMVP_ANSI_COLOR_RESET);
-        goto end;
-    case AMVP_CERT_REQ_STATUS_UNKNOWN:
-    default:
-        AMVP_LOG_ERR("        " AMVP_ANSI_COLOR_RED "The cert request status is unknown." AMVP_ANSI_COLOR_RESET);
-        goto end;
-    }
-
-    /* Get the expected functional test evidence list, or the list of not submitted yet TEs */
-    arr = json_object_get_array(status_json, "missingTestEvidence");
-    rv = amvp_output_test_evidence_table(ctx, arr);
-    if (rv != AMVP_SUCCESS) {
-        AMVP_LOG_ERR("Error outputting test evidence table");
-        goto end;
-    }
-
-    /* Get the list of missing security policy sections */
-    arr = json_object_get_array(status_json, "missingSecurityPolicySection");
-    if (!arr) {
-        arr_size = 0;
-    } else {
-        arr_size = json_array_get_count(arr);
-        for (i = 0; i < (int)arr_size; i++) {
-            amvp_append_sl_list(&sp_list, json_array_get_number(arr, i));
-        }
-    }
-    AMVP_LOG_STATUS("");
-    AMVP_LOG_STATUS("    List of unsubmitted security policy sections:");
-    if (sp_list) {
-        sp_iter = sp_list;
-        while (sp_iter) {
-            AMVP_LOG_STATUS("        " AMVP_ANSI_COLOR_YELLOW "%-8d" AMVP_ANSI_COLOR_RESET "   %s",
-                          sp_iter->length, amvp_lookup_sp_section_name(sp_iter->length));
-            sp_iter = sp_iter->next;
-        }
-    } else {
-        AMVP_LOG_STATUS(AMVP_ANSI_COLOR_GREEN "        All expected SP sections have been submitted!" AMVP_ANSI_COLOR_RESET);
-    }
-    AMVP_LOG_STATUS("");
-
-end:
-    //if (te_list) amvp_free_nl(te_list);
-    if (sp_list) amvp_free_sl(sp_list);
-    if (feedback_list) amvp_free_nl(feedback_list);
-    if (module_name) free(module_name);
     return rv;
 }
 
@@ -986,6 +718,7 @@ AMVP_RESULT amvp_check_cert_req_status(AMVP_CTX *ctx) {
     } while (retry);
 
 end:
+    if (val) json_value_free(val);
     return rv;
 }
 
@@ -1049,11 +782,17 @@ AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx) {
     if (ctx->cert_req_info.vendor_id) {
         AMVP_LOG_STATUS("    Vendor: %d", ctx->cert_req_info.vendor_id);
     }
-    if (ctx->cert_req_info.contact_count > 0) {
-        AMVP_LOG_STATUS("    Contacts:");
+    if (ctx->cert_req_info.tester_count > 0) {
+        AMVP_LOG_STATUS("    Testers:");
+        for (i = 0; i < ctx->cert_req_info.tester_count; i++) {
+            AMVP_LOG_STATUS("        %s", ctx->cert_req_info.tester_id[i]);
+        }
     }
-    for (i = 0; i < ctx->cert_req_info.contact_count; i++) {
-        AMVP_LOG_STATUS("        %s", ctx->cert_req_info.contact_id[i]);
+    if (ctx->cert_req_info.reviewer_count > 0) {
+        AMVP_LOG_STATUS("    Reviewers:");
+        for (i = 0; i < ctx->cert_req_info.reviewer_count; i++) {
+            AMVP_LOG_STATUS("        %s", ctx->cert_req_info.reviewer_id[i]);
+        }
     }
 
     /* Create the module cert request value */
@@ -1072,6 +811,12 @@ AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx) {
     /* Send it */
     AMVP_LOG_STATUS("Sending module cert request...");
     rv = amvp_transport_post(ctx, "/amvp/v1/certRequests", reg, reg_len);
+    if (rv == AMVP_PROTOCOL_RSP_ERR) {
+        rv = amvp_handle_protocol_error(ctx, ctx->error);
+        if (rv == AMVP_RETRY_OPERATION) {
+            rv = amvp_transport_post(ctx, "/amvp/v1/certRequests", reg, reg_len);
+        }
+    }
     if (rv != AMVP_SUCCESS) {
         AMVP_LOG_ERR("Failed to send certify request");
         goto end;
@@ -1136,6 +881,43 @@ end:
     if (cert_info_val) json_value_free(cert_info_val);
     if (cert_rsp_val) json_value_free(cert_rsp_val);
     if (cert_submission_val) json_value_free(cert_submission_val);
+    return rv;
+}
+
+AMVP_RESULT amvp_submit_security_policy_template(AMVP_CTX *ctx, const char *filename) {
+    AMVP_RESULT rv = AMVP_INTERNAL_ERR;
+
+    if (!ctx) {
+        return AMVP_NO_CTX;
+    }
+
+    if (!filename) {
+        AMVP_LOG_ERR("Must provide value for security policy template filename");
+        return AMVP_MISSING_ARG;
+    }
+
+    if (strnlen_s(filename, AMVP_JSON_FILENAME_MAX + 1) > AMVP_JSON_FILENAME_MAX) {
+        AMVP_LOG_ERR("Provided filename length > max(%d)", AMVP_JSON_FILENAME_MAX);
+        return AMVP_INVALID_ARG;
+    }
+
+    AMVP_LOG_STATUS("Submitting security policy template file...");
+    rv = amvp_send_sp_template(ctx, ctx->session_url, filename);
+    if (rv == AMVP_PROTOCOL_RSP_ERR) {
+        rv = amvp_handle_protocol_error(ctx, ctx->error);
+        if (rv == AMVP_RETRY_OPERATION) {
+            rv = amvp_send_sp_template(ctx, ctx->session_url, filename);
+        }
+    }
+
+    if (rv == AMVP_SUCCESS) {
+        AMVP_LOG_STATUS("Security policy template successfully submitted!");
+    } else {
+        AMVP_LOG_ERR("Error sending security policy template for cert request session");
+        return rv;
+    }
+
+    rv = amvp_check_cert_req_status(ctx);
     return rv;
 }
 

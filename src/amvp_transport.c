@@ -62,6 +62,13 @@ typedef enum amvp_user_agent_env_type {
 AMVP_RESULT amvp_network_action(AMVP_CTX *ctx, AMVP_NET_ACTION action,
                                        const char *url, const char *data, int data_len);
 
+static void log_network_status(AMVP_CTX *ctx,
+                               AMVP_NET_ACTION action,
+                               int curl_code,
+                               const char *url);
+
+static AMVP_RESULT inspect_http_code(AMVP_CTX *ctx, int code);
+
 static struct curl_slist *amvp_add_auth_hdr(AMVP_CTX *ctx, struct curl_slist *slist) {
     char *bearer = NULL;
     char bearer_title[] = "Authorization: Bearer ";
@@ -103,7 +110,7 @@ static struct curl_slist *amvp_add_auth_hdr(AMVP_CTX *ctx, struct curl_slist *sl
 
 end:
     if (ctx->use_tmp_jwt) {
-        /* 
+        /*
          * This was a single-use token.
          * Turn it off now... the library might turn it back on later.
          */
@@ -589,6 +596,290 @@ end:
     return http_code;
 }
 
+/*
+ * Build a curl_mime structure for security policy document template requests
+ * Returns allocated mime structure that caller must free with curl_mime_free()
+ */
+static curl_mime *build_sp_template_request(CURL *curl_handle, const char *file_path) {
+    curl_mime *mime = NULL;
+    curl_mimepart *part = NULL;
+    CURLcode crv = CURLE_OK;
+
+    mime = curl_mime_init(curl_handle);
+    if (!mime) {
+        fprintf(stderr, "Error initializing curl mime structure\n");
+        return NULL;
+    }
+
+    /* Add amvVersion field */
+    part = curl_mime_addpart(mime);
+    if (!part) {
+        fprintf(stderr, "Error adding mime part for amvVersion\n");
+        curl_mime_free(mime);
+        return NULL;
+    }
+    crv = curl_mime_name(part, "amvVersion");
+    if (crv) {
+        fprintf(stderr, "Error setting mime field name for amvVersion\n");
+        curl_mime_free(mime);
+        return NULL;
+    }
+    crv = curl_mime_data(part, AMVP_VERSION, CURL_ZERO_TERMINATED);
+    if (crv) {
+        fprintf(stderr, "Error setting mime data for amvVersion\n");
+        curl_mime_free(mime);
+        return NULL;
+    }
+
+    /* Add documentTemplate file field */
+    part = curl_mime_addpart(mime);
+    if (!part) {
+        fprintf(stderr, "Error adding mime part for documentTemplate\n");
+        curl_mime_free(mime);
+        return NULL;
+    }
+    crv = curl_mime_name(part, "documentTemplate");
+    if (crv) {
+        fprintf(stderr, "Error setting mime field name for documentTemplate\n");
+        curl_mime_free(mime);
+        return NULL;
+    }
+    crv = curl_mime_filedata(part, file_path);
+    if (crv) {
+        fprintf(stderr, "Error setting mime filedata for documentTemplate\n");
+        curl_mime_free(mime);
+        return NULL;
+    }
+
+    return mime;
+}
+
+/**
+ * @brief Uses libcurl to send a simple HTTP POST with multipart form-data.
+ *
+ * TLS peer verification is enabled, but not mutual authentication.
+ *
+ * @param ctx Ptr to AMVP_CTX, which contains the server name
+ * @param url URL to use for the POST operation
+ * @param mime Pre-built curl_mime structure containing the multipart data
+ *
+ * @return HTTP status value from the server
+ * (e.g. 200 for HTTP OK)
+ */
+static long amvp_curl_http_post_multipart(AMVP_CTX *ctx, const char *url, curl_mime *mime) {
+    long http_code = 0;
+    CURL *hnd = NULL;
+    CURLcode crv = CURLE_OK;
+    struct curl_slist *slist = NULL;
+
+    ctx->curl_read_ctr = 0;
+
+    /*
+     * Create the Authorization header if needed
+     */
+    slist = amvp_add_auth_hdr(ctx, slist);
+
+    //Setup Curl
+    hnd = curl_easy_init();
+    if (!hnd) { AMVP_LOG_ERR("Error initializing Curl structure, stopping"); goto end; }
+
+    /* Set curl options */
+    crv = curl_easy_setopt(hnd, CURLOPT_URL, url);
+    if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_URL, stopping"); goto end; }
+    crv = curl_easy_setopt(hnd, CURLOPT_NOPROGRESS, 1L);
+    if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_NOPROGRESS, stopping"); goto end; }
+    crv = curl_easy_setopt(hnd, CURLOPT_USERAGENT, ctx->http_user_agent);
+    if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_USERAGENT, stopping"); goto end; }
+    if (slist) {
+        crv = curl_easy_setopt(hnd, CURLOPT_HTTPHEADER, slist);
+        if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_HTTPHEADER, stopping"); goto end; }
+    }
+    crv = curl_easy_setopt(hnd, CURLOPT_MIMEPOST, mime);
+    if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_MIMEPOST, stopping"); goto end; }
+    crv = curl_easy_setopt(hnd, CURLOPT_TCP_KEEPALIVE, 1L);
+    if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_TCP_KEEPALIVE, stopping"); goto end; }
+    crv = curl_easy_setopt(hnd, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_2);
+    if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_SSLVERSION, stopping"); goto end; }
+    //Always verify the server
+    crv = curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYPEER, 0);
+    if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_SSL_VERIFYPEER, stopping"); goto end; }
+    crv = curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYHOST, 0);
+    if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_SSL_VERIFYHOST, stopping"); goto end; }
+    crv = curl_easy_setopt(hnd, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+    if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_HTTP_VERSION, stopping"); goto end; }
+
+    if (ctx->cacerts_file) {
+        crv = curl_easy_setopt(hnd, CURLOPT_CAINFO, ctx->cacerts_file);
+        if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_CAINFO, stopping"); goto end; }
+        crv = curl_easy_setopt(hnd, CURLOPT_CERTINFO, 1L);
+        if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_CERTINFO, stopping"); goto end; }
+    }
+    //Mutual-auth
+    if (ctx->tls_cert && ctx->tls_key) {
+        crv = curl_easy_setopt(hnd, CURLOPT_SSLCERTTYPE, "PEM");
+        if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_SSLCERTTYPE, stopping"); goto end; }
+        crv = curl_easy_setopt(hnd, CURLOPT_SSLCERT, ctx->tls_cert);
+        if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_SSLCERT, stopping"); goto end; }
+        crv = curl_easy_setopt(hnd, CURLOPT_SSLKEYTYPE, "PEM");
+        if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_SSLKEYTYPE, stopping"); goto end; }
+        crv = curl_easy_setopt(hnd, CURLOPT_SSLKEY, ctx->tls_key);
+        if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_SSLKEY, stopping"); goto end; }
+    }
+    //To record the HTTP data received from the server, set the callback function.
+    crv = curl_easy_setopt(hnd, CURLOPT_WRITEDATA, ctx);
+    if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_WRITEDATA, stopping"); goto end; }
+    crv = curl_easy_setopt(hnd, CURLOPT_WRITEFUNCTION, amvp_curl_write_callback);
+    if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_WRITEFUNCTION, stopping"); goto end; }
+
+    if (ctx->curl_buf) {
+        /* Clear the HTTP buffer for next server response */
+        memzero_s(ctx->curl_buf, AMVP_CURL_BUF_MAX);
+    }
+
+    if (ctx->log_lvl == AMVP_LOG_LVL_DEBUG) {
+        printf("\nHTTP POST MULTIPART:\n\tURL: %s\n", url);
+    }
+
+    /*
+     * Send the HTTP POST request
+     */
+    crv = curl_easy_perform(hnd);
+    if (crv != CURLE_OK) {
+        AMVP_LOG_ERR("Curl failed with code %d (%s)", crv, curl_easy_strerror(crv));
+    }
+
+    if (ctx->log_lvl == AMVP_LOG_LVL_DEBUG) {
+        printf("\nHTTP POST MULTIPART RSP:\n\n%s\n", ctx->curl_buf);
+    }
+
+    /*
+     * Get the HTTP response status code from the server
+     */
+    curl_easy_getinfo(hnd, CURLINFO_RESPONSE_CODE, &http_code);
+
+end:
+    if (hnd) curl_easy_cleanup(hnd);
+    hnd = NULL;
+    if (slist) curl_slist_free_all(slist);
+    slist = NULL;
+
+    return http_code;
+}
+
+/**
+ * @brief Uses libcurl to send a simple HTTP PUT with multipart form-data.
+ *
+ * TLS peer verification is enabled, but not mutual authentication.
+ *
+ * @param ctx Ptr to AMVP_CTX, which contains the server name
+ * @param url URL to use for the PUT operation
+ * @param mime Pre-built curl_mime structure containing the multipart data
+ *
+ * @return HTTP status value from the server
+ * (e.g. 200 for HTTP OK)
+ */
+static long amvp_curl_http_put_multipart(AMVP_CTX *ctx, const char *url, curl_mime *mime) {
+    long http_code = 0;
+    CURL *hnd = NULL;
+    CURLcode crv = CURLE_OK;
+    struct curl_slist *slist = NULL;
+
+    ctx->curl_read_ctr = 0;
+
+    /*
+     * Create the Authorization header if needed
+     */
+    slist = amvp_add_auth_hdr(ctx, slist);
+
+    //Setup Curl
+    hnd = curl_easy_init();
+    if (!hnd) { AMVP_LOG_ERR("Error initializing Curl structure, stopping"); goto end; }
+
+    /* Set curl options */
+    crv = curl_easy_setopt(hnd, CURLOPT_URL, url);
+    if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_URL, stopping"); goto end; }
+    crv = curl_easy_setopt(hnd, CURLOPT_NOPROGRESS, 1L);
+    if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_NOPROGRESS, stopping"); goto end; }
+    crv = curl_easy_setopt(hnd, CURLOPT_USERAGENT, ctx->http_user_agent);
+    if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_USERAGENT, stopping"); goto end; }
+    if (slist) {
+        crv = curl_easy_setopt(hnd, CURLOPT_HTTPHEADER, slist);
+        if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_HTTPHEADER, stopping"); goto end; }
+    }
+    crv = curl_easy_setopt(hnd, CURLOPT_CUSTOMREQUEST, "PUT");
+    if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_CUSTOMREQUEST, stopping"); goto end; }
+    crv = curl_easy_setopt(hnd, CURLOPT_MIMEPOST, mime);
+    if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_MIMEPOST, stopping"); goto end; }
+    crv = curl_easy_setopt(hnd, CURLOPT_TCP_KEEPALIVE, 1L);
+    if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_TCP_KEEPALIVE, stopping"); goto end; }
+    crv = curl_easy_setopt(hnd, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_2);
+    if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_SSLVERSION, stopping"); goto end; }
+    //Always verify the server
+    crv = curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYPEER, 0);
+    if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_SSL_VERIFYPEER, stopping"); goto end; }
+    crv = curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYHOST, 0);
+    if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_SSL_VERIFYHOST, stopping"); goto end; }
+    crv = curl_easy_setopt(hnd, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+    if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_HTTP_VERSION, stopping"); goto end; }
+
+    if (ctx->cacerts_file) {
+        crv = curl_easy_setopt(hnd, CURLOPT_CAINFO, ctx->cacerts_file);
+        if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_CAINFO, stopping"); goto end; }
+        crv = curl_easy_setopt(hnd, CURLOPT_CERTINFO, 1L);
+        if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_CERTINFO, stopping"); goto end; }
+    }
+    //Mutual-auth
+    if (ctx->tls_cert && ctx->tls_key) {
+        crv = curl_easy_setopt(hnd, CURLOPT_SSLCERTTYPE, "PEM");
+        if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_SSLCERTTYPE, stopping"); goto end; }
+        crv = curl_easy_setopt(hnd, CURLOPT_SSLCERT, ctx->tls_cert);
+        if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_SSLCERT, stopping"); goto end; }
+        crv = curl_easy_setopt(hnd, CURLOPT_SSLKEYTYPE, "PEM");
+        if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_SSLKEYTYPE, stopping"); goto end; }
+        crv = curl_easy_setopt(hnd, CURLOPT_SSLKEY, ctx->tls_key);
+        if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_SSLKEY, stopping"); goto end; }
+    }
+    //To record the HTTP data received from the server, set the callback function.
+    crv = curl_easy_setopt(hnd, CURLOPT_WRITEDATA, ctx);
+    if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_WRITEDATA, stopping"); goto end; }
+    crv = curl_easy_setopt(hnd, CURLOPT_WRITEFUNCTION, amvp_curl_write_callback);
+    if (crv) { AMVP_LOG_ERR("Error setting curl option CURLOPT_WRITEFUNCTION, stopping"); goto end; }
+
+    if (ctx->curl_buf) {
+        /* Clear the HTTP buffer for next server response */
+        memzero_s(ctx->curl_buf, AMVP_CURL_BUF_MAX);
+    }
+
+    if (ctx->log_lvl == AMVP_LOG_LVL_DEBUG) {
+        printf("\nHTTP PUT MULTIPART:\n\tURL: %s\n", url);
+    }
+
+    /*
+     * Send the HTTP PUT request
+     */
+    crv = curl_easy_perform(hnd);
+    if (crv != CURLE_OK) {
+        AMVP_LOG_ERR("Curl failed with code %d (%s)", crv, curl_easy_strerror(crv));
+    }
+
+    if (ctx->log_lvl == AMVP_LOG_LVL_DEBUG) {
+        printf("\nHTTP PUT MULTIPART RSP:\n\n%s\n", ctx->curl_buf);
+    }
+
+    /*
+     * Get the HTTP response status code from the server
+     */
+    curl_easy_getinfo(hnd, CURLINFO_RESPONSE_CODE, &http_code);
+
+end:
+    if (hnd) curl_easy_cleanup(hnd);
+    hnd = NULL;
+    if (slist) curl_slist_free_all(slist);
+    slist = NULL;
+
+    return http_code;
+}
+
 
 static AMVP_RESULT sanity_check_ctx(AMVP_CTX *ctx) {
     if (!ctx) {
@@ -628,7 +919,7 @@ AMVP_RESULT amvp_transport_post(AMVP_CTX *ctx,
 
 /*
  * This is the top level function used within libamvp to retrieve
- * documentation package 
+ * documentation package
  */
 AMVP_RESULT amvp_retrieve_docs(AMVP_CTX *ctx, char *vsid_url) {
     AMVP_RESULT rv = 0;
@@ -699,6 +990,156 @@ AMVP_RESULT amvp_transport_put_validation(AMVP_CTX *ctx,
     if (validation == NULL) return AMVP_INVALID_ARG;
 
     return amvp_transport_put(ctx, ctx->session_url, validation, validation_len);
+}
+
+static AMVP_RESULT amvp_transport_post_multipart(AMVP_CTX *ctx,
+                                          const char *endpoint,
+                                          curl_mime *mime) {
+    AMVP_RESULT rv = 0;
+    char url[AMVP_ATTR_URL_MAX] = {0};
+    long http_code = 0;
+
+    rv = sanity_check_ctx(ctx);
+    if (AMVP_SUCCESS != rv) return rv;
+
+    if (!endpoint) {
+        AMVP_LOG_ERR("Missing endpoint");
+        return AMVP_MISSING_ARG;
+    }
+
+    if (!mime) {
+        AMVP_LOG_ERR("Missing MIME structure");
+        return AMVP_MISSING_ARG;
+    }
+
+    snprintf(url, AMVP_ATTR_URL_MAX - 1,
+            "https://%s:%d%s",
+            ctx->server_name, ctx->server_port, endpoint);
+
+    http_code = amvp_curl_http_post_multipart(ctx, url, mime);
+
+    /* Log to the console */
+    log_network_status(ctx, AMVP_NET_POST, http_code, url);
+
+    /* Use proper protocol error handling */
+    rv = inspect_http_code(ctx, http_code);
+    if (rv != AMVP_SUCCESS) {
+        return rv;
+    }
+
+    return AMVP_SUCCESS;
+}
+
+static AMVP_RESULT amvp_transport_put_multipart(AMVP_CTX *ctx,
+                                          const char *endpoint,
+                                          curl_mime *mime) {
+    AMVP_RESULT rv = 0;
+    char url[AMVP_ATTR_URL_MAX] = {0};
+    long http_code = 0;
+
+    rv = sanity_check_ctx(ctx);
+    if (AMVP_SUCCESS != rv) return rv;
+
+    if (!endpoint) {
+        AMVP_LOG_ERR("Missing endpoint");
+        return AMVP_MISSING_ARG;
+    }
+
+    if (!mime) {
+        AMVP_LOG_ERR("Missing MIME structure");
+        return AMVP_MISSING_ARG;
+    }
+
+    snprintf(url, AMVP_ATTR_URL_MAX - 1,
+            "https://%s:%d%s",
+            ctx->server_name, ctx->server_port, endpoint);
+
+    http_code = amvp_curl_http_put_multipart(ctx, url, mime);
+
+    /* Log to the console */
+    log_network_status(ctx, AMVP_NET_PUT, http_code, url);
+
+    /* Use proper protocol error handling */
+    rv = inspect_http_code(ctx, http_code);
+    if (rv != AMVP_SUCCESS) {
+        return rv;
+    }
+
+    return AMVP_SUCCESS;
+}
+
+AMVP_RESULT amvp_transport_post_sp_template(AMVP_CTX *ctx,
+                                            const char *endpoint,
+                                            const char *file_path) {
+    AMVP_RESULT rv = AMVP_SUCCESS;
+    CURL *temp_curl = NULL;
+    curl_mime *mime = NULL;
+
+    if (!ctx || !endpoint || !file_path) {
+        AMVP_LOG_ERR("Missing required parameters");
+        return AMVP_MISSING_ARG;
+    }
+
+    /* Create temporary curl handle for MIME building */
+    temp_curl = curl_easy_init();
+    if (!temp_curl) {
+        AMVP_LOG_ERR("Failed to initialize temporary curl handle");
+        return AMVP_TRANSPORT_FAIL;
+    }
+
+    /* Build MIME structure with specific fields for SP template */
+    mime = build_sp_template_request(temp_curl, file_path);
+    if (!mime) {
+        AMVP_LOG_ERR("Failed to build MIME structure");
+        curl_easy_cleanup(temp_curl);
+        return AMVP_TRANSPORT_FAIL;
+    }
+
+    /* Send the multipart request */
+    rv = amvp_transport_post_multipart(ctx, endpoint, mime);
+
+    /* Cleanup */
+    curl_mime_free(mime);
+    curl_easy_cleanup(temp_curl);
+
+    return rv;
+}
+
+AMVP_RESULT amvp_transport_put_sp_template(AMVP_CTX *ctx,
+                                           const char *endpoint,
+                                           const char *file_path) {
+    AMVP_RESULT rv = AMVP_SUCCESS;
+    CURL *temp_curl = NULL;
+    curl_mime *mime = NULL;
+
+    if (!ctx || !endpoint || !file_path) {
+        AMVP_LOG_ERR("Missing required parameters");
+        return AMVP_MISSING_ARG;
+    }
+
+    /* Create temporary curl handle for MIME building */
+    temp_curl = curl_easy_init();
+    if (!temp_curl) {
+        AMVP_LOG_ERR("Failed to initialize temporary curl handle");
+        return AMVP_TRANSPORT_FAIL;
+    }
+
+    /* Build MIME structure with specific fields for SP template */
+    mime = build_sp_template_request(temp_curl, file_path);
+    if (!mime) {
+        AMVP_LOG_ERR("Failed to build MIME structure");
+        curl_easy_cleanup(temp_curl);
+        return AMVP_TRANSPORT_FAIL;
+    }
+
+    /* Send the multipart request */
+    rv = amvp_transport_put_multipart(ctx, endpoint, mime);
+
+    /* Cleanup */
+    curl_mime_free(mime);
+    curl_easy_cleanup(temp_curl);
+
+    return rv;
 }
 
 AMVP_RESULT amvp_transport_get(AMVP_CTX *ctx,
@@ -877,6 +1318,7 @@ static AMVP_RESULT execute_network_action(AMVP_CTX *ctx,
     case AMVP_NET_DELETE:
         rc = amvp_curl_http_delete(ctx, url);
         break;
+
     default:
         AMVP_LOG_ERR("Unknown AMVP_NET_ACTION");
         return AMVP_INVALID_ARG;
@@ -923,6 +1365,7 @@ static AMVP_RESULT execute_network_action(AMVP_CTX *ctx,
             case AMVP_NET_DELETE:
                 amvp_curl_http_delete(ctx, url);
                 break;
+
             default:
                 AMVP_LOG_ERR("We should never be here!");
                 break;
@@ -965,7 +1408,7 @@ static void log_network_status(AMVP_CTX *ctx,
         AMVP_LOG_VERBOSE("GET...\n\tStatus: %d\n\tUrl: %s\n\tResp:\n%s\n",
                       curl_code, url, ctx->curl_buf);
         break;
- 
+
     case AMVP_NET_POST:
         AMVP_LOG_VERBOSE("POST...\n\tStatus: %d\n\tUrl: %s\n\tResp: %s\n",
                         curl_code, url, ctx->curl_buf);
@@ -1060,7 +1503,7 @@ AMVP_RESULT amvp_network_action(AMVP_CTX *ctx,
     rv = execute_network_action(ctx, generic_action, url,
                                 data, data_len, &curl_code);
 
-    /* Log to the console */    
+    /* Log to the console */
     log_network_status(ctx, action, curl_code, url);
 
     return rv;
@@ -1320,7 +1763,7 @@ void amvp_http_user_agent_handler(AMVP_CTX *ctx) {
         switch(sysInfo.wProcessorArchitecture) {
         case PROCESSOR_ARCHITECTURE_AMD64:
             strncpy_s(arch, AMVP_USER_AGENT_ARCH_STR_MAX + 1, "x86_64", AMVP_USER_AGENT_ARCH_STR_MAX);
-             //get CPU model string 
+             //get CPU model string
             __cpuid(brandString_resp, 0x80000002);
             memcpy_s(brandString, 16, &brandString_resp, 16);
             __cpuid(brandString_resp, 0x80000003);
@@ -1331,7 +1774,7 @@ void amvp_http_user_agent_handler(AMVP_CTX *ctx) {
             break;
         case PROCESSOR_ARCHITECTURE_INTEL:
             strncpy_s(arch, AMVP_USER_AGENT_ARCH_STR_MAX + 1, "x86", AMVP_USER_AGENT_ARCH_STR_MAX);
-            //get CPU model string 
+            //get CPU model string
             __cpuid(brandString_resp, 0x80000002);
             memcpy_s(brandString, 16, &brandString_resp, 16);
             __cpuid(brandString_resp, 0x80000003);
@@ -1360,7 +1803,7 @@ void amvp_http_user_agent_handler(AMVP_CTX *ctx) {
             amvp_http_user_agent_check_env_for_var(ctx, arch, AMVP_USER_AGENT_ARCH);
             amvp_http_user_agent_check_env_for_var(ctx, proc, AMVP_USER_AGENT_PROC);
             break;
-        }     
+        }
     }
 
     //gets compiler version

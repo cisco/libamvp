@@ -20,6 +20,8 @@
 #define AMVP_TEST_SESSIONS_URI "testSessions"
 #define AMVP_FT_EVIDENCE_URI "evidence"
 #define AMVP_SC_EVIDENCE_URI "sourceCode"
+#define AMVP_OD_EVIDENCE_URI "otherDocumentation"
+#define AMVP_FSM_EVIDENCE_URI "otherDocumentationFSM"
 #define AMVP_SP_URI "securityPolicy"
 #define AMVP_LOGIN_URI "login"
 
@@ -134,6 +136,12 @@ AMVP_RESULT amvp_send_evidence(AMVP_CTX *ctx,
     case AMVP_EVIDENCE_TYPE_SOURCE_CODE:
         type_endpoint = AMVP_SC_EVIDENCE_URI;
         break;
+    case AMVP_EVIDENCE_TYPE_OTHER_DOC:
+        type_endpoint = AMVP_OD_EVIDENCE_URI;
+        break;
+    case AMVP_EVIDENCE_TYPE_FSM:
+        type_endpoint = AMVP_FSM_EVIDENCE_URI;
+        break;
     case AMVP_EVIDENCE_TYPE_NA:
     case AMVP_EVIDENCE_TYPE_MAX:
     default:
@@ -230,4 +238,30 @@ AMVP_RESULT amvp_send_login(AMVP_CTX *ctx,
                             int len) {
     return amvp_send_with_path_seg(ctx, AMVP_NET_POST,
                                    AMVP_LOGIN_URI, login, len);
+}
+
+/*
+ * Send security policy template using multipart form-data
+ */
+AMVP_RESULT amvp_send_sp_template(AMVP_CTX *ctx,
+                                  const char *url,
+                                  const char *file_path) {
+    char *full_url = NULL;
+    AMVP_RESULT rv;
+
+    if (!ctx || !url || !file_path) {
+        AMVP_LOG_ERR("Missing required parameters");
+        return AMVP_MISSING_ARG;
+    }
+
+    /* Build the full URL: <base_url>/securityPolicy/template */
+    full_url = build_endpoint_url(url, AMVP_SP_URI "/template");
+    if (!full_url) {
+        AMVP_LOG_ERR("Failed to build URL for security policy template operation");
+        return AMVP_TRANSPORT_FAIL;
+    }
+
+    rv = amvp_transport_post_sp_template(ctx, full_url, file_path);
+    free(full_url);
+    return rv;
 }
