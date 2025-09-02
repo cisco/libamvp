@@ -136,7 +136,8 @@ am__DEPENDENCIES_1 =
 libamvp_la_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_libamvp_la_OBJECTS = amvp.lo amvp_build_register.lo \
 	amvp_operating_env.lo amvp_transport.lo amvp_endpoints.lo \
-	amvp_util.lo amvp_error.lo amvp_base64.lo parson.lo
+	amvp_util.lo amvp_error.lo amvp_base64.lo amvp_display.lo \
+	parson.lo
 libamvp_la_OBJECTS = $(am_libamvp_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -159,8 +160,8 @@ depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = ./$(DEPDIR)/amvp.Plo ./$(DEPDIR)/amvp_base64.Plo \
 	./$(DEPDIR)/amvp_build_register.Plo \
-	./$(DEPDIR)/amvp_endpoints.Plo ./$(DEPDIR)/amvp_error.Plo \
-	./$(DEPDIR)/amvp_operating_env.Plo \
+	./$(DEPDIR)/amvp_display.Plo ./$(DEPDIR)/amvp_endpoints.Plo \
+	./$(DEPDIR)/amvp_error.Plo ./$(DEPDIR)/amvp_operating_env.Plo \
 	./$(DEPDIR)/amvp_transport.Plo ./$(DEPDIR)/amvp_util.Plo \
 	./$(DEPDIR)/parson.Plo
 am__mv = mv -f
@@ -350,6 +351,7 @@ libamvp_la_SOURCES = amvp.c \
                     amvp_util.c \
                     amvp_error.c \
                     amvp_base64.c \
+                    amvp_display.c \
                     parson.c
 
 libamvp_la_LIBADD = $(SAFEC_LDFLAGS) $(LIBCURL_LDFLAGS)
@@ -440,6 +442,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_base64.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_build_register.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_display.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_endpoints.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_error.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_operating_env.Plo@am__quote@ # am--include-marker
@@ -635,6 +638,7 @@ distclean: distclean-am
 		-rm -f ./$(DEPDIR)/amvp.Plo
 	-rm -f ./$(DEPDIR)/amvp_base64.Plo
 	-rm -f ./$(DEPDIR)/amvp_build_register.Plo
+	-rm -f ./$(DEPDIR)/amvp_display.Plo
 	-rm -f ./$(DEPDIR)/amvp_endpoints.Plo
 	-rm -f ./$(DEPDIR)/amvp_error.Plo
 	-rm -f ./$(DEPDIR)/amvp_operating_env.Plo
@@ -689,6 +693,7 @@ maintainer-clean: maintainer-clean-am
 		-rm -f ./$(DEPDIR)/amvp.Plo
 	-rm -f ./$(DEPDIR)/amvp_base64.Plo
 	-rm -f ./$(DEPDIR)/amvp_build_register.Plo
+	-rm -f ./$(DEPDIR)/amvp_display.Plo
 	-rm -f ./$(DEPDIR)/amvp_endpoints.Plo
 	-rm -f ./$(DEPDIR)/amvp_error.Plo
 	-rm -f ./$(DEPDIR)/amvp_operating_env.Plo

@@ -220,8 +220,23 @@ int main(int argc, char **argv) {
 
     if (cfg.mod_cert_req) {
         rv = amvp_mark_as_cert_req(ctx, cfg.create_module_file, cfg.vendor_id);
-        for (diff = 0; diff < cfg.num_contacts; diff++) {
-            amvp_cert_req_add_contact(ctx, cfg.contact_ids[diff]);
+
+        /* Add tester contacts */
+        for (diff = 0; diff < cfg.num_testers; diff++) {
+            rv = amvp_cert_req_add_contact(ctx, cfg.tester_ids[diff], AMVP_CONTACT_TYPE_TESTER);
+            if (rv != AMVP_SUCCESS) {
+                printf("Failed to add tester contact: %s\n", amvp_lookup_error_string(rv));
+                goto end;
+            }
+        }
+
+        /* Add reviewer contacts */
+        for (diff = 0; diff < cfg.num_reviewers; diff++) {
+            rv = amvp_cert_req_add_contact(ctx, cfg.reviewer_ids[diff], AMVP_CONTACT_TYPE_REVIEWER);
+            if (rv != AMVP_SUCCESS) {
+                printf("Failed to add reviewer contact: %s\n", amvp_lookup_error_string(rv));
+                goto end;
+            }
         }
 
         for (diff = 0; diff < cfg.num_acv_certs; diff++) {
@@ -260,6 +275,20 @@ int main(int argc, char **argv) {
                 goto end;
             }
         }
+        if (cfg.submit_od_ev) {
+            rv = amvp_submit_evidence(ctx, cfg.ev_file, AMVP_EVIDENCE_TYPE_OTHER_DOC);
+            if (rv != AMVP_SUCCESS) {
+                printf("Error submitting other documentation evidence for module cert request\n");
+                goto end;
+            }
+        }
+        if (cfg.submit_fsm_ev) {
+            rv = amvp_submit_evidence(ctx, cfg.ev_file, AMVP_EVIDENCE_TYPE_FSM);
+            if (rv != AMVP_SUCCESS) {
+                printf("Error submitting finite state machine evidence for module cert request\n");
+                goto end;
+            }
+        }
         if (cfg.submit_sp) {
             rv = amvp_submit_security_policy(ctx, cfg.sp_file);
             if (rv != AMVP_SUCCESS) {
@@ -267,9 +296,18 @@ int main(int argc, char **argv) {
                 goto end;
             }
         }
+        if (cfg.submit_sp_template) {
+            rv = amvp_submit_security_policy_template(ctx, cfg.sp_template_file);
+            if (rv != AMVP_SUCCESS) {
+                printf("Error submitting security policy template for module cert request\n");
+                goto end;
+            }
+        }
         if (cfg.get_sp) {
             if (!cfg.save_to) {
                 printf("Error: Must use --save_to <file> to get security policy\n");
+                rv = AMVP_INVALID_ARG;
+                goto end;
             } else {
                 rv = amvp_set_get_save_file(ctx, cfg.save_file);
                 if (rv != AMVP_SUCCESS) {
@@ -290,7 +328,11 @@ int main(int argc, char **argv) {
         goto end;
     }
 
-    amvp_mod_cert_req(ctx);
+    rv = amvp_mod_cert_req(ctx);
+    if (rv != AMVP_SUCCESS) {
+        printf("Error submitting module cert request\n");
+        goto end;
+    }
 
 end:
     /*
@@ -299,5 +341,6 @@ end:
      */
     app_cleanup(ctx);
 
-    return rv;
+    /* Convert AMVP_RESULT to proper exit code */
+    return (rv == AMVP_SUCCESS) ? 0 : 1;
 }

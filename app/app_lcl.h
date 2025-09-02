@@ -49,18 +49,24 @@ typedef struct app_config {
     char create_module_file[JSON_FILENAME_LENGTH + 1];
     char ev_file[JSON_FILENAME_LENGTH + 1];
     char sp_file[JSON_FILENAME_LENGTH + 1];
-    char contact_ids[AMVP_MAX_CONTACTS_PER_CERT_REQ][AMVP_CONTACT_STR_MAX_LEN + 1];
+    char sp_template_file[JSON_FILENAME_LENGTH + 1];
+    char tester_ids[AMVP_MAX_CONTACTS_PER_CERT_REQ][AMVP_CONTACT_STR_MAX_LEN + 1];
+    char reviewer_ids[AMVP_MAX_CONTACTS_PER_CERT_REQ][AMVP_CONTACT_STR_MAX_LEN + 1];
     char acv_certs[AMVP_MAX_ACV_CERTS_PER_CERT_REQ][AMVP_CERT_STR_MAX_LEN + 1];
     char esv_certs[AMVP_MAX_ESV_CERTS_PER_CERT_REQ][AMVP_CERT_STR_MAX_LEN + 1];
 
-    int num_contacts;
+    int num_testers;
+    int num_reviewers;
     int num_acv_certs;
     int num_esv_certs;
     int mod_cert_req;
     int ingest_cert_info;
     int submit_ft_ev;
     int submit_sc_ev;
+    int submit_od_ev;
+    int submit_fsm_ev;
     int submit_sp;
+    int submit_sp_template;
     int get_sp;
     int finalize;
     int check_status;

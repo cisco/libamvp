@@ -879,3 +879,39 @@ AMVP_RESULT amvp_save_cert_req_info_file(AMVP_CTX *ctx, JSON_Object *contents) {
 end:
     return rv;
 }
+
+/*
+ * Parse certification request status string from JSON object
+ */
+AMVP_CERT_REQ_STATUS amvp_parse_cert_req_status_str(JSON_Object *json) {
+    const char *status = NULL;
+    int diff = 1;
+    size_t len = 0;
+
+    if (!json || !json_object_has_value_of_type(json, "status", JSONString)) {
+        return AMVP_CERT_REQ_STATUS_UNKNOWN;
+    }
+
+    status = json_object_get_string(json, "status");
+    len = strnlen_s(status, AMVP_CERT_REQ_STATUS_MAX_LEN + 1);
+    if (len > AMVP_CERT_REQ_STATUS_MAX_LEN) {
+        return AMVP_CERT_REQ_STATUS_UNKNOWN;
+    }
+
+    strncmp_s(AMVP_CERT_REQ_STATUS_STR_INITIAL, sizeof(AMVP_CERT_REQ_STATUS_STR_INITIAL) - 1, status, len, &diff);
+    if (!diff) return AMVP_CERT_REQ_STATUS_INITIAL;
+    strncmp_s(AMVP_CERT_REQ_STATUS_STR_READY, sizeof(AMVP_CERT_REQ_STATUS_STR_READY) - 1, status, len, &diff);
+    if (!diff) return AMVP_CERT_REQ_STATUS_READY;
+    strncmp_s(AMVP_CERT_REQ_STATUS_STR_SUBMITTED, sizeof(AMVP_CERT_REQ_STATUS_STR_SUBMITTED) - 1, status, len, &diff);
+    if (!diff) return AMVP_CERT_REQ_STATUS_SUBMITTED;
+    strncmp_s(AMVP_CERT_REQ_STATUS_STR_IN_REVIEW, sizeof(AMVP_CERT_REQ_STATUS_STR_IN_REVIEW) - 1, status, len, &diff);
+    if (!diff) return AMVP_CERT_REQ_STATUS_IN_REVIEW;
+    strncmp_s(AMVP_CERT_REQ_STATUS_STR_APPROVED, sizeof(AMVP_CERT_REQ_STATUS_STR_APPROVED) - 1, status, len, &diff);
+    if (!diff) return AMVP_CERT_REQ_STATUS_APPROVED;
+    strncmp_s(AMVP_CERT_REQ_STATUS_STR_REJECTED, sizeof(AMVP_CERT_REQ_STATUS_STR_REJECTED) - 1, status, len, &diff);
+    if (!diff) return AMVP_CERT_REQ_STATUS_REJECTED;
+    strncmp_s(AMVP_CERT_REQ_STATUS_STR_ERROR, sizeof(AMVP_CERT_REQ_STATUS_STR_ERROR) - 1, status, len, &diff);
+    if (!diff) return AMVP_CERT_REQ_STATUS_ERROR;
+
+    return AMVP_CERT_REQ_STATUS_UNKNOWN;
+}

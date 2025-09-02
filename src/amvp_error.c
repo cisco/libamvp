@@ -120,25 +120,27 @@ AMVP_PROTOCOL_ERR *amvp_parse_protocol_error(const char *buf) {
         /* Get the list of strings up to a certain maximum */
         arr2 = json_object_get_array(obj, AMVP_ERR_MSG_STR);
         if (!arr2) { goto err; }
-        count2 = json_array_get_count(arr2) < AMVP_ERR_MAX_DESC_STRINGS ? count2 : AMVP_ERR_MAX_DESC_STRINGS;
+        count2 = json_array_get_count(arr2) < AMVP_ERR_MAX_DESC_STRINGS ? json_array_get_count(arr2) : AMVP_ERR_MAX_DESC_STRINGS;
         for (j = 0; j < count2; j++) {
             if (list->desc_count >= AMVP_ERR_MAX_DESC_STRINGS) {
                 break;
             }
-            tmp = json_array_get_string(arr2, count2);
-            if (strnlen_s(tmp, AMVP_ERR_DESC_STR_MAX + 1 > AMVP_ERR_DESC_STR_MAX)) {
+            tmp = json_array_get_string(arr2, j);
+            if (!tmp || strnlen_s(tmp, AMVP_ERR_DESC_STR_MAX + 1) > AMVP_ERR_DESC_STR_MAX) {
                 goto err;
             }
             list->desc[list->desc_count] = strdup(tmp);
-            if (list->desc[list->desc_count]) {
+            if (!list->desc[list->desc_count]) {
                 goto err;
             }
             list->desc_count++;
         }
         if (!err_obj->errors) {
             err_obj->errors = list;
+            iter = list;
         } else {
             iter->next = list;
+            iter = list;
         }
     }
     success = 1;

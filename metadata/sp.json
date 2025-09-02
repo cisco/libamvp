@@ -1,329 +1,1958 @@
 {
-    "catalogVersion": "1.0",
-    "vendorName": "Cisco",
-    "version": "1.0",
-    "moduleName": "Cisco Example AMVP Cryptographic Module",
-    "docVersion": "1.0",
-    "lastUpdated": "4/10/25",
+    "amvVersion": "0.1",
     "securityPolicy": {
-        "general": {
-            "overallDescription": "This module represents a basic small software module. It is for example use only and does not intentionally represent any existing or future module.",
-            "securityLevels": {
-                "overall": 1,
-                "section1": 1,
-                "section2": 1,
-                "section3": 1,
-                "section4": 1,
-                "section5": 1,
-                "section6": 1,
-                "section7": 1,
-                "section8": 1,
-                "section9": 1,
-                "section10": 1,
-                "section11": 1,
-                "section12": 1
+        "schemaVersion": "2.8.4",
+        "testedHwList": [],
+        "testedSwFwHyList": [
+            {
+                "packageFileName": "fips.so",
+                "swFwVersion": "0.1",
+                "features": "",
+                "integrityTest": "HMAC SHA2-256"
             }
-        },
-        "cryptographicModuleSpecification": {
-            "description": {
-                "purposeAndUse": "This cryptographic module provides basic encryption algorithms to be used across a variety of products and use cases.",
-                "referenceToSubchip": "MultiChipStandalone",
-                "cryptographicBoundary": "The cryptographic boundary of the module is module.so, a dynamically loadable library. The module performs no communication other than with the calling application via APIs that invoke the module.",
-                "TOEPP": "The module’s TOEPP is the physical perimeter of the tested platforms listed in Table “Tested Operational Environments - Software, Firmware, Hybrid” below. The components of the TOEPP include: Hardware components. The module’s block diagram is shown below."
-            },
-            "blockDiagram": "INSERT BLOCK DIAGRAM IMAGE HERE",
-            "testedSoftwareFirmwareHybrid": [
-                {
-                    "packagesFilenames": "module.so",
-                    "softwareFirmwareVersion": "1.0",
-                    "nonSecurityRelevantDistinguishingFeatures": "non",
-                    "integrityTestImplemented": "HMAC-SHA2-256"
-                }
-            ],
-            "excludedComponents": "None",
-            "degradedMode": "The module does not support a degraded mode of operation.",
-            "modeChangeInstructionsAndStatus": "When a non-approved service is invoked while in approved mode of operation, the module implicitly transitions to a non-approved mode. Similarly, when a call to an approved service is made while in non-approved mode of operation, the module transitions to approved mode of operation.",
-            "algorithms": [
-                {
-                    "algorithmName": "AES-CBC",
-                    "cavpCertNumbers": "A01234",
-                    "algorithmCapabilities": "Decrypt,Encrypt. Key Length: 128, 192, 256",
-                    "oe": "Intel Xeon E-2234 (Coffee Lake)",
-                    "reference": "SP 800-38A"
-                },
-                {
-                    "algorithmName": "HMAC-SHA2-256",
-                    "cavpCertNumbers": "A01234",
-                    "algorithmCapabilities": "MAC: 32-256 Increment 8. Key Length: 256-448 Increment 8",
-                    "oe": "Intel Xeon E-2234 (Coffee Lake)",
-                    "reference": "FIPS 198-1"
-                 }
-            ],
-            "algorithmSpecificInformation": "No algorithms, other than those which are listed in the algorithms table, are supported by the module in any mode of operation.",
-            "rbgAndEntropy": {
-                "entropyInfo": "This module depends on a non-physical entropy source.",
-                "rngInfo": "The source is able to generate sufficient entropy to support the module’s cryptographic operations.",
-                "entropySources": [
+        ],
+        "testedHyHwList": [],
+        "opEnvSwFwHyTestedList": [
+            {
+                "operatingSystem": "Ubuntu 24.04",
+                "hardwarePlatform": "Generic Server Hardware Platform",
+                "processors": "Generic x86_64 Processor",
+                "paaPai": "Yes",
+                "hypervisorHostOs": "",
+                "swFwVersionList": [
+                    "0.1"
+                ]
+            }
+        ],
+        "opEnvSwFwHyVAList": [],
+        "modeOfOpList": [
+            {
+                "name": "Approved Mode",
+                "description": "Provides services approved by FIPS 140-3",
+                "type": "Approved",
+                "statusIndicator": "Returns success value when approved services are run successfully"
+            }
+        ],
+        "vendorAffirmedAlgoList": [
+            {
+                "name": "CKG Section 4",
+                "implName": "N/A",
+                "reference": "SP 800-133 rev2 Section 4, example 1",
+                "algoPropList": [
                     {
-                        "esvCertNumber": "E01234",
-                        "operationalEnvironment": "string"
+                        "name": "Key Type",
+                        "value": "Asymmetric",
+                        "propertyId": 0
                     }
                 ]
             }
-        },
-        "cryptographicModuleInterfaces": {
-            "portsAndInterfaces": {
-                "text": "The logical interface is a C-language application program interface (API). The Data Input interface consists of the input parameters of the API functions. The Data Output interface consists of the output parameters of the API functions. The Control Input interface consists of the actual API functions. The Status Output interface includes the return values of the API functions.",
-                "portInterfaces": [
+        ],
+        "nonApprovedAllowedAlgoList": [],
+        "nonApprovedAllowedAlgoNSCList": [],
+        "nonApprovedNotAllowedAlgoList": [],
+        "secFunImplList": [
+            {
+                "name": "Random Number Generation",
+                "description": "Used for random number and symmetric key generation",
+                "sfTypeList": [
                     {
-                        "port": "As a software-only module, the module does not have physical ports. Physical ports are interpreted to be the physical ports of the hardware platforms on which it runs.",
-                        "logicalInterface": "Data Input",
-                        "data": "API input parameters for data."
-                    },
+                        "sfAbbrev": "DRBG",
+                        "sfId": 11
+                    }
+                ],
+                "sfPropList": [],
+                "algorithmList": [
                     {
-                        "port": "As a software-only module, the module does not have physical ports. Physical ports are interpreted to be the physical ports of the hardware platforms on which it runs.",
-                        "logicalInterface": "Data Output",
-                        "data": "API output parameters for data."
-                    },
-                    {
-                        "port": "As a software-only module, the module does not have physical ports. Physical ports are interpreted to be the physical ports of the hardware platforms on which it runs.",
-                        "logicalInterface": "Control Output",
-                        "data": "API function calls."
-                    },
-                    {
-                        "port": "As a software-only module, the module does not have physical ports. Physical ports are interpreted to be the physical ports of the hardware platforms on which it runs.",
-                        "logicalInterface": "Status Output",
-                        "data": "API return codes, error message."
+                        "algoDisplayName": "Hash DRBG",
+                        "canonicalAlgorithmId": 66,
+                        "implName": "Example AMVP Cryptographic Module Cryptographic Implementation",
+                        "validationId": 1234,
+                        "certName": "A4",
+                        "algoPropList": []
                     }
                 ]
             },
-            "trustChannelSpec": "The module does not support trusted channel.",
-            "controlInterfaceNotInhibited": "Please note that the module does not support a control output interface and is not applicable for this module",
-            "additionalInformation": "N/A"
-        },
-        "rolesServicesAuthentication": {
-            "authenticationMethods": {
-                "authenticationMethodsList": [
+            {
+                "name": "Asymmetric Key Generation",
+                "description": "Used to generate  ECDSA, DH, ECDH keys",
+                "sfTypeList": [
                     {
-                        "name": "N/A for this module",
-                        "description": "N/A",
-                        "mechanism": "N/A",
-                        "strengthPerAttempt": "N/A",
-                        "strengthPerMinute": "N/A"
+                        "sfAbbrev": "AsymKeyPair-KeyGen",
+                        "sfId": 2
                     }
                 ],
-                "text": "The module does not support authentication. The module does not support concurrent operators."
-            },
-            "roles": [
-                {
-                    "name": "Crypto Officer",
-                    "type": "Role",
-                    "operatorType": "CO",
-                    "authenticationMethods": "N/A (Implicitly assumed)"
-                }
-            ],
-            "approvedServices": {
-                "approvedServicesList": [
+                "sfPropList": [],
+                "algorithmList": [
                     {
-                        "name": "Symmetric Encryption",
-                        "description": "Encryption",
-                        "indicator": "Return value 1 from the API call",
-                        "inputs": "Plaintext, key",
-                        "outputs": "Ciphertext",
-                        "sfi": "AES CBC listed in the Approved Algorithms Table",
-                        "roles": "CO",
-                        "sspAccess": "W, E"
+                        "algoDisplayName": "ECDSA KeyGen (FIPS186-5)",
+                        "canonicalAlgorithmId": 52,
+                        "implName": "Example AMVP Cryptographic Module Cryptographic Implementation",
+                        "validationId": 1234,
+                        "certName": "A4",
+                        "algoPropList": []
+                    }
+                ]
+            },
+            {
+                "name": "Key Derivation Function (KDF)",
+                "description": "Used to derive keys using various standardized functions",
+                "sfTypeList": [
+                    {
+                        "sfAbbrev": "KAS-135KDF",
+                        "sfId": 16
+                    }
+                ],
+                "sfPropList": [],
+                "algorithmList": [
+                    {
+                        "algoDisplayName": "KDA HKDF SP800-56Cr2",
+                        "canonicalAlgorithmId": 91,
+                        "implName": "Example AMVP Cryptographic Module Cryptographic Implementation",
+                        "validationId": 1234,
+                        "certName": "A4",
+                        "algoPropList": []
                     },
                     {
-                        "name": "Decryption",
-                        "description": "Decryption",
-                        "indicator": "Return value 1 from the API call",
-                        "inputs": "Ciphertext, key",
-                        "outputs": "Plaintext",
-                        "sfi": "AES CBC listed in the Approved Algorithms Table",
-                        "roles": "CO",
-                        "sspAccess": "W, E"
+                        "algoDisplayName": "KDF SP800-108",
+                        "canonicalAlgorithmId": 101,
+                        "implName": "Example AMVP Cryptographic Module Cryptographic Implementation",
+                        "validationId": 1234,
+                        "certName": "A4",
+                        "algoPropList": []
                     }
-                ],
-                "text": "For the above table, the convention below applies when specifying the access permissions (types) that the service has for each SSP.\n\bG = Generate: The module generates or derives the SSP.\n\bR = Read: The SSP is read from the module (e.g., the SSP is output).\n\bW = Write: The SSP is updated, imported, or written to the module.\n\bE = Execute: The module uses the SSP in performing a cryptographic operation.\n\bZ = Zeroize: The module zeroizes the SSP.\nFor the role, CO indicates “Crypto Officer”.\nThe module implements a service indicator that indicates whether the invoked service is approved. The service indicator is a return value 1 from a given API."
+                ]
             },
-            "nonApprovedServices": [
-                {
-                    "name": "Encryption",
-                    "description": "Encryption",
-                    "algorithmsAccessed": "DES, Triple-DES listed in the Non-Approved Algorithms Table",
-                    "role": "CO"
-                },
-                {
-                    "name": "Decryption",
-                    "description": "Decryption",
-                    "algorithmsAccessed": "DES, Triple-DES listed in the Non-Approved Algorithms Table",
-                    "role": "CO"
-                }
-            ],
-            "externalSoftwareFirmwareLoaded": "The module does not support loading of external software or firmware."
-        },
-        "softwareFirmwareSecurity": {
-            "integrityTechniques": "The module runs a HMAC SHA2-256 integrity verification at application startup. The module also runs the self-test for HMAC SHA2-256 prior to running the integrity check.",
-            "initiateOnDemand": "The operator can initiate on-demand integrity test by calling a given API or rebooting the host platform.",
-            "openSourceParameters": "None",
-            "additionalInformation": "None"
-        },
-        "operationalEnvironment": {},
-        "physicalSecurity": {},
-        "noninvasiveSecurity": {},
-        "sensitiveSecurityParameterManagement": {
-            "storageAreas": {
-                "storageAreaList": [
+            {
+                "name": "Symmetric Encrypt/Decrypt",
+                "description": "Used to encrypt or decrypt data. Executes using AES EDK (passed in by the calling application)",
+                "sfTypeList": [
                     {
-                        "name": "RAM",
-                        "description": "Temporary Internal Storage",
-                        "persistenceType": "Dynamic"
-                    }
-                ],
-                "text": "The module does not store any CSPs persistently. The application is responsible for managing CSPs."
-            },
-            "inputOutputMethods": {
-                "sspInputOutputList": [
-                    {
-                        "name": "AP Input",
-                        "from": "Calling Process",
-                        "to": "API Input Parameters",
-                        "formatType": "Plaintext",
-                        "distributionType": "Manual",
-                        "entryType": "Electronic",
-                        "SFIOrAlgorithm": ""
+                        "sfAbbrev": "BC-Auth",
+                        "sfId": 6
                     },
                     {
-                        "name": "API Output",
-                        "from": "API Output Parameters",
-                        "to": "Calling Process",
-                        "formatType": "Plaintext",
-                        "distributionType": "Manual",
-                        "entryType": "Electronic",
-                        "SFIOrAlgorithm": ""
+                        "sfAbbrev": "BC-UnAuth",
+                        "sfId": 7
                     }
                 ],
-                "text": "All CSPs enter the module’s boundary as API parameters."
-            },
-            "sspZeroizationMethods": {
-                "sspZeroizationList": [
+                "sfPropList": [],
+                "algorithmList": [
                     {
-                        "method": "SSP_Delete_All()",
-                        "description": "Deletes all keys and SSPs",
-                        "rationale": "All keys and SSPs will no longer be accessible through API calls",
-                        "operatorInitiationCapability": "Allowed"
+                        "algoDisplayName": "AES-GCM",
+                        "canonicalAlgorithmId": 14,
+                        "implName": "Example AMVP Cryptographic Module Cryptographic Implementation",
+                        "validationId": 1234,
+                        "certName": "A4",
+                        "algoPropList": []
+                    }
+                ]
+            },
+            {
+                "name": "Message Digest (SHS)",
+                "description": "Used to generate a SHA2-256 message digest",
+                "sfTypeList": [
+                    {
+                        "sfAbbrev": "SHA",
+                        "sfId": 27
+                    }
+                ],
+                "sfPropList": [],
+                "algorithmList": [
+                    {
+                        "algoDisplayName": "SHA2-256",
+                        "canonicalAlgorithmId": 131,
+                        "implName": "Example AMVP Cryptographic Module Cryptographic Implementation",
+                        "validationId": 1234,
+                        "certName": "A4",
+                        "algoPropList": []
+                    }
+                ]
+            },
+            {
+                "name": "Keyed Hash (HMAC)",
+                "description": "Used to generate or verify data integrity with HMAC. Executes using HMAC Key.",
+                "sfTypeList": [
+                    {
+                        "sfAbbrev": "MAC",
+                        "sfId": 25
+                    }
+                ],
+                "sfPropList": [],
+                "algorithmList": [
+                    {
+                        "algoDisplayName": "HMAC-SHA2-256",
+                        "canonicalAlgorithmId": 70,
+                        "implName": "Example AMVP Cryptographic Module Cryptographic Implementation",
+                        "validationId": 1234,
+                        "certName": "A4",
+                        "algoPropList": []
+                    }
+                ]
+            },
+            {
+                "name": "Key Wrapping (KW)",
+                "description": "Used to encrypt a key value on behalf of the calling application. Executes using AES Key Wrapping Key.",
+                "sfTypeList": [
+                    {
+                        "sfAbbrev": "BC-Auth",
+                        "sfId": 6
+                    }
+                ],
+                "sfPropList": [],
+                "algorithmList": [
+                    {
+                        "algoDisplayName": "AES-KW",
+                        "canonicalAlgorithmId": 17,
+                        "implName": "Example AMVP Cryptographic Module Cryptographic Implementation",
+                        "validationId": 1234,
+                        "certName": "A4",
+                        "algoPropList": []
                     },
                     {
-                        "method": "Power Cycle",
-                        "description": "Power Cycle zeroizes all stored SSPs",
-                        "rationale": "Operating System zeroizes all the stored SSPs",
-                        "operatorInitiationCapability": "Allowed"
+                        "algoDisplayName": "AES-KWP",
+                        "canonicalAlgorithmId": 18,
+                        "implName": "Example AMVP Cryptographic Module Cryptographic Implementation",
+                        "validationId": 1234,
+                        "certName": "A4",
+                        "algoPropList": []
                     }
-                ],
-                "text": "Power cycling or calling the given API (with a successful return value) will delete all relevant information."
+                ]
             },
-            "ssps": {
-                "sspList": [
+            {
+                "name": "Key Agreement/Agreement Component (SP 800-56A rev3, SP 800-56B rev2)",
+                "description": "Used to perform key agreement primitives on behalf of the calling application. Executes using DH Private, DH Public, EC DH Private, EC DH Public.",
+                "sfTypeList": [
                     {
-                        "name": "HMAC Key",
-                        "description": "Used for MAC generation and verification",
-                        "size": "128 to 524288 bits - greater than 128 bits",
-                        "strength": "-",
-                        "type": "Keyed Hash - SSP",
-                        "generatedBy": "Random Number Generation",
-                        "establishedBy": "-",
-                        "usedBy": "Keyed Hash (HMAC/KMAC/CMAC)",
-                        "inputOutput": "API Input API Output",
-                        "storage": "RAM: Plaintext",
-                        "temporaryStorageDuration": "Until zeroized by reboot or API call",
-                        "zeroization": "SSP_Delete_All() or Power Cycle",
-                        "category": "-",
-                        "relatedSSPs": "-"
+                        "sfAbbrev": "KAS-SSC",
+                        "sfId": 21
                     }
                 ],
-                "text": ""
+                "sfPropList": [],
+                "algorithmList": [
+                    {
+
+                        "algoDisplayName": "KAS-ECC-SSC Sp800-56Ar3",
+                        "canonicalAlgorithmId": 83,
+                        "implName": "Example AMVP Cryptographic Module Cryptographic Implementation",
+                        "validationId": 1234,
+                        "certName": "A4",
+                        "algoPropList": []
+                    }
+                ]
             },
-            "transitions": "N/A",
-            "additionalInformation": "N/A"
-        },
-        "selfTests": {
-            "preOperationalSelfTests": {
-              "preOperationalSelfTestList": [
-                {
-                  "algorithm": "HMAC-SHA2-256",
-                  "implementation": "",
-                  "testProperties": "256 Bits",
-                  "testMethod": "Firmware Integrity Test",
-                  "type": "SW/FW Integrity",
-                  "indicator": "Return value of 1 on success",
-                  "details": "Device power on, self-test run, self-test pass, device proceed to boot. Device power on, self-test run, self-test fail, device no boot. "
-                }
-              ],
-              "text": "The module performs an HMAC self test in all required states."
+            {
+                "name": "Digital Signature",
+                "description": "Used to generate or verify ECDSA digital signatures. Executes using ECDSA SGK/ECDSA SVK",
+                "sfTypeList": [
+                    {
+                        "sfAbbrev": "DigSig-SigGen",
+                        "sfId": 9
+                    },
+                    {
+                        "sfAbbrev": "DigSig-SigVer",
+                        "sfId": 10
+                    }
+                ],
+                "sfPropList": [],
+                "algorithmList": [
+                    {
+                        "algoDisplayName": "ECDSA SigGen (FIPS186-5)",
+                        "canonicalAlgorithmId": 58,
+                        "implName": "Example AMVP Cryptographic Module Cryptographic Implementation",
+                        "validationId": 1234,
+                        "certName": "A4",
+                        "algoPropList": []
+                    }
+                ]
             },
-            "conditionalSelfTests": {
-              "conditionalSelfTestList": [
-                {
-                  "algorithm": "AES-CBC",
-                  "implementation": "",
-                  "testProperties": "128 Bits",
-                  "testMethod": "KAT",
-                  "type": "CAST",
-                  "indicator": "Return value of 1 on success",
-                  "details": "Encrypt/Decrypt KAT",
-                  "condition": "Test runs on power up at boot."
-                }
-              ],
-              "text": ""
-            },
-            "preOperationalPeriodicSelfTests": {
-              "preOperationalPeriodicSelfTestList": [
-                {
-                  "algorithm": "HMAC-SHA2-256",
-                  "implementation": "",
-                  "testProperties": "256 Bits",
-                  "testMethod": "Firmware Integrity Test",
-                  "type": "SW/FW Integrity",
-                  "indicator": "Return value of 1 on success",
-                  "details": "",
-                  "period": "On reboot or API call",
-                  "periodicMethod": "Manual or reboot"
-                }
-              ],
-              "text": ""
-            },
-            "conditionalPeriodicSelfTests": {
-              "conditionalPeriodicSelfTestList": [
-                {
-                  "algorithm": "HMAC-SHA2-256",
-                  "implementation": "",
-                  "testProperties": "256 Bits",
-                  "testMethod": "Firmware Integrity Test",
-                  "type": "SW/FW Integrity",
-                  "indicator": "Return value of 1 on success",
-                  "details": "",
-                  "period": "On reboot or API call",
-                  "periodicMethod": "Manual or reboot"
-                }
-              ],
-              "text": ""
+            {
+                "name": "Asymmetric Key Verification",
+                "description": "Used to verify ECDSA public keys",
+                "sfTypeList": [
+                    {
+                        "sfAbbrev": "AsymKeyPair-KeyVer",
+                        "sfId": 3
+                    }
+                ],
+                "sfPropList": [],
+                "algorithmList": [
+                    {
+                        "algoDisplayName": "ECDSA KeyVer (FIPS186-5)",
+                        "canonicalAlgorithmId": 55,
+                        "implName": "Example AMVP Cryptographic Module Cryptographic Implementation",
+                        "validationId": 1234,
+                        "certName": "A4",
+                        "algoPropList": []
+                    }
+                ]
             }
-          },
-        "lifeCycleAssurance": {
-            "installationInitializationAndStartupProcedures": "The module is only distributed to select and qualified personnel and is distributed with in-depth documentation. The module runs all relevant integrity and self tests at startup, and prevents usage if they fail.",
-            "administratorGuidance": "An additional guidance document, if required, can be obtained by contacting the company using the information posted on the validation certificate.",
-            "nonAdministratorGuidance": "N/A to this module.",
-            "designAndRules": "Caller shall ensure all required algorithm properties are enabled.",
-            "maintenanceRequirements": "Not applicable to this module",
-            "endOfLife": "",
-            "additionalInformation": ""
+        ],
+        "esvCertList": [],
+        "esvItarCertList": [],
+        "entropySourceList": [],
+        "portInterfaceList": [
+            {
+                "physicalPort": "N/A",
+                "dataPasses": "API entry point data input stack parameters",
+                "logicalInterfaceList": [
+                    "Data Input"
+                ]
+            },
+            {
+                "physicalPort": "N/A",
+                "dataPasses": "API output parameters resulting from call execution",
+                "logicalInterfaceList": [
+                    "Data Output"
+                ]
+            },
+            {
+                "physicalPort": "N/A",
+                "dataPasses": "API entry point and corresponding stack parameters",
+                "logicalInterfaceList": [
+                    "Control Input"
+                ]
+            },
+            {
+                "physicalPort": "N/A",
+                "dataPasses": "API return value resulting from call execution",
+                "logicalInterfaceList": [
+                    "Status Output"
+                ]
+            }
+        ],
+        "authMethodList": [],
+        "roleList": [
+            {
+                "name": "Crypto-Officer",
+                "type": "Role",
+                "operatorType": "Crypto-Officer",
+                "authMethodList": [
+                    "None"
+                ]
+            },
+            {
+                "name": "User",
+                "type": "Role",
+                "operatorType": "User",
+                "authMethodList": [
+                    "None"
+                ]
+            }
+        ],
+        "approvedServiceList": [
+            {
+                "name": "Random Number Generation",
+                "description": "Used for random number and symmetric key generation",
+                "indicator": "1",
+                "inputs": "DRBG struct (RBG State); DRBG_Seed",
+                "outputs": "Status return; Random value",
+                "secFunImplList": [
+                    "Random Number Generation"
+                ],
+                "roleSspAccessList": [
+                    {
+                        "roleName": "Crypto-Officer",
+                        "sspAccessList": [
+                            {
+                                "sspName": "Entropy Input",
+                                "accessType": [
+                                    "W",
+                                    "E",
+                                    "Z"
+                                ]
+                            },
+                            {
+                                "sspName": "DRBG_Seed",
+                                "accessType": [
+                                    "G",
+                                    "E",
+                                    "Z"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "roleName": "User",
+                        "sspAccessList": [
+                            {
+                                "sspName": "Entropy Input",
+                                "accessType": [
+                                    "W",
+                                    "E",
+                                    "Z"
+                                ]
+                            },
+                            {
+                                "sspName": "DRBG_Seed",
+                                "accessType": [
+                                    "G",
+                                    "E",
+                                    "Z"
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "name": "Asymmetric Key Generation",
+                "description": "Generate asymmetric key pairs",
+                "indicator": "1",
+                "inputs": "ECDSA: curve identifier. DH: keypair information. EC DH: curve identifier.",
+                "outputs": "Status return; general private and public keys",
+                "secFunImplList": [
+                    "Asymmetric Key Generation"
+                ],
+                "roleSspAccessList": [
+                    {
+                        "roleName": "Crypto-Officer",
+                        "sspAccessList": [
+                            {
+                                "sspName": "ECDSA SGK",
+                                "accessType": [
+                                    "G",
+                                    "R"
+                                ]
+                            },
+                            {
+                                "sspName": "DH Private",
+                                "accessType": [
+                                    "G",
+                                    "R"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "roleName": "User",
+                        "sspAccessList": [
+                            {
+                                "sspName": "ECDSA SGK",
+                                "accessType": [
+                                    "G",
+                                    "R"
+                                ]
+                            },
+                            {
+                                "sspName": "DH Private",
+                                "accessType": [
+                                    "G",
+                                    "R"
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "name": "Key Derivation Function (KDF)",
+                "description": "Used to derive keys using various standardized functions",
+                "indicator": "1",
+                "inputs": "Key agreement shared secret; flags",
+                "outputs": "Status return; derived keying material",
+                "secFunImplList": [
+                    "Key Derivation Function (KDF)"
+                ],
+                "roleSspAccessList": [
+                    {
+                        "roleName": "Crypto-Officer",
+                        "sspAccessList": [
+                            {
+                                "sspName": "KDF Derived Key",
+                                "accessType": [
+                                    "G",
+                                    "R"
+                                ]
+                            },
+                            {
+                                "sspName": "Shared Secret",
+                                "accessType": [
+                                    "W",
+                                    "E"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "roleName": "User",
+                        "sspAccessList": [
+                            {
+                                "sspName": "KDF Derived Key",
+                                "accessType": [
+                                    "G",
+                                    "R"
+                                ]
+                            },
+                            {
+                                "sspName": "Shared Secret",
+                                "accessType": [
+                                    "W",
+                                    "E"
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "name": "Symmetric Encrypt/Decrypt",
+                "description": "Used to encrypt or decrypt data. Executes using AES EDK or GCM key.",
+                "indicator": "1",
+                "inputs": "Encryption or decryption key; plaintext or ciphertext data; flags",
+                "outputs": "Status return. Plaintext or ciphertext data",
+                "secFunImplList": [
+                    "Symmetric Encrypt/Decrypt"
+                ],
+                "roleSspAccessList": [
+                    {
+                        "roleName": "Crypto-Officer",
+                        "sspAccessList": [
+                            {
+                                "sspName": "AES EDK",
+                                "accessType": [
+                                    "W",
+                                    "E"
+                                ]
+                            },
+                            {
+                                "sspName": "AES GCM",
+                                "accessType": [
+                                    "W",
+                                    "E"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "roleName": "User",
+                        "sspAccessList": [
+                            {
+                                "sspName": "AES EDK",
+                                "accessType": [
+                                    "W",
+                                    "E"
+                                ]
+                            },
+                            {
+                                "sspName": "AES GCM",
+                                "accessType": [
+                                    "W",
+                                    "E"
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "name": "Message Digest (SHS)",
+                "description": "Used to generate a SHA2-256 message digest",
+                "indicator": "1",
+                "inputs": "Data to be hashed",
+                "outputs": "Status return. Hashed data",
+                "secFunImplList": [
+                    "Message Digest (SHS)"
+                ],
+                "roleSspAccessList": [
+                    {
+                        "roleName": "Crypto-Officer",
+                        "sspAccessList": []
+                    },
+                    {
+                        "roleName": "User",
+                        "sspAccessList": []
+                    }
+                ]
+            },
+            {
+                "name": "Keyed Hash",
+                "description": "Used to generate or verify data integrity with HMAC. Executes using HMAC Key.",
+                "indicator": "1",
+                "inputs": "Data to be hashed and key",
+                "outputs": "Status return; MAC output value.",
+                "secFunImplList": [
+                    "Keyed Hash (HMAC)"
+                ],
+                "roleSspAccessList": [
+                    {
+                        "roleName": "Crypto-Officer",
+                        "sspAccessList": [
+                            {
+                                "sspName": "HMAC Key",
+                                "accessType": [
+                                    "W",
+                                    "E"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "roleName": "User",
+                        "sspAccessList": [
+                            {
+                                "sspName": "HMAC Key",
+                                "accessType": [
+                                    "W",
+                                    "E"
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "name": "Key Wrapping Encrypt (KW)",
+                "description": "Used to encrypt a key value on behalf of the calling application. Executes using AES Key Wrapping Key.",
+                "indicator": "1",
+                "inputs": "Keying material and key",
+                "outputs": "Encrypted key",
+                "secFunImplList": [
+                    "Key Wrapping (KW)"
+                ],
+                "roleSspAccessList": [
+                    {
+                        "roleName": "Crypto-Officer",
+                        "sspAccessList": [
+                            {
+                                "sspName": "AES Key Wrapping",
+                                "accessType": [
+                                    "W",
+                                    "E"
+                                ]
+                            },
+                            {
+                                "sspName": "Keying Material",
+                                "accessType": [
+                                    "W"
+                                ]
+                            },
+                            {
+                                "sspName": "AES-KW Encrypted Key",
+                                "accessType": [
+                                    "G",
+                                    "R"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "roleName": "User",
+                        "sspAccessList": [
+                            {
+                                "sspName": "AES Key Wrapping",
+                                "accessType": [
+                                    "W",
+                                    "E"
+                                ]
+                            },
+                            {
+                                "sspName": "Keying Material",
+                                "accessType": [
+                                    "W"
+                                ]
+                            },
+                            {
+                                "sspName": "AES-KW Encrypted Key",
+                                "accessType": [
+                                    "G",
+                                    "R"
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "name": "Key Wrapping Decrypt (KW)",
+                "description": "Used to decrypt a key value on behalf of the calling application. Executes using AES Key Wrapping Key.",
+                "indicator": "1",
+                "inputs": "Encrypted Key and key",
+                "outputs": "Keying material",
+                "secFunImplList": [
+                    "Key Wrapping (KW)"
+                ],
+                "roleSspAccessList": [
+                    {
+                        "roleName": "Crypto-Officer",
+                        "sspAccessList": [
+                            {
+                                "sspName": "AES Key Wrapping",
+                                "accessType": [
+                                    "W",
+                                    "E"
+                                ]
+                            },
+                            {
+                                "sspName": "AES-KW Encrypted Key",
+                                "accessType": [
+                                    "W"
+                                ]
+                            },
+                            {
+                                "sspName": "Keying Material",
+                                "accessType": [
+                                    "G",
+                                    "R"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "roleName": "User",
+                        "sspAccessList": [
+                            {
+                                "sspName": "AES Key Wrapping",
+                                "accessType": [
+                                    "W",
+                                    "E"
+                                ]
+                            },
+                            {
+                                "sspName": "AES-KW Encrypted Key",
+                                "accessType": [
+                                    "W"
+                                ]
+                            },
+                            {
+                                "sspName": "Keying Material",
+                                "accessType": [
+                                    "G",
+                                    "R"
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "name": "Key Agreement/ Agreement Component (SP 800-56A rev3, SP  800-56B rev2)",
+                "description": "Used to perform key agreement primitives on behalf of the calling application. Executes using DH Private, DH Public, EC DH Private, EC DH Public",
+                "indicator": "1",
+                "inputs": "Key structs (key agreement keys); flags",
+                "outputs": "Status return; key agreement shared secret",
+                "secFunImplList": [
+                    "Key Agreement/Agreement Component (SP 800-56A rev3, SP 800-56B rev2)"
+                ],
+                "roleSspAccessList": [
+                    {
+                        "roleName": "Crypto-Officer",
+                        "sspAccessList": [
+                            {
+                                "sspName": "DH Private",
+                                "accessType": [
+                                    "W",
+                                    "E"
+                                ]
+                            },
+                            {
+                                "sspName": "EC DH Private",
+                                "accessType": [
+                                    "W",
+                                    "E"
+                                ]
+                            },
+                            {
+                                "sspName": "Shared Secret",
+                                "accessType": [
+                                    "G",
+                                    "R"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "roleName": "User",
+                        "sspAccessList": [
+                            {
+                                "sspName": "DH Private",
+                                "accessType": [
+                                    "W",
+                                    "E"
+                                ]
+                            },
+                            {
+                                "sspName": "EC DH Private",
+                                "accessType": [
+                                    "W",
+                                    "E"
+                                ]
+                            },
+                            {
+                                "sspName": "Shared Secret",
+                                "accessType": [
+                                    "G",
+                                    "R"
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "name": "Digital Signature",
+                "description": "Used to generate or verify ECDSA digital signatures. Executes using ECDSA SGK/ECDSA SVK",
+                "indicator": "1",
+                "inputs": "Sign: signing key; message. Verify: signature value; flags; sizes",
+                "outputs": "Status return; Signature value",
+                "secFunImplList": [
+                    "Digital Signature"
+                ],
+                "roleSspAccessList": [
+                    {
+                        "roleName": "Crypto-Officer",
+                        "sspAccessList": [
+                            {
+                                "sspName": "ECDSA SGK",
+                                "accessType": [
+                                    "W",
+                                    "E"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "roleName": "User",
+                        "sspAccessList": [
+                            {
+                                "sspName": "ECDSA SGK",
+                                "accessType": [
+                                    "W",
+                                    "E"
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "name": "Asymmetric Key Verification",
+                "description": "Used to verify ECDSA keys",
+                "indicator": "1",
+                "inputs": "Public Key",
+                "outputs": "Status return",
+                "secFunImplList": [
+                    "Asymmetric Key Verification"
+                ],
+                "roleSspAccessList": [
+                    {
+                        "roleName": "Crypto-Officer",
+                        "sspAccessList": [
+                            {
+                                "sspName": "ECDSA SVK",
+                                "accessType": [
+                                    "W",
+                                    "E"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "roleName": "User",
+                        "sspAccessList": [
+                            {
+                                "sspName": "ECDSA SVK",
+                                "accessType": [
+                                    "W",
+                                    "E"
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "name": "Module initialization",
+                "description": "The module is initialized when the provider is loaded",
+                "indicator": "1",
+                "inputs": "N/A",
+                "outputs": "N/A",
+                "secFunImplList": [
+                    "None"
+                ],
+                "roleSspAccessList": [
+                    {
+                        "roleName": "Crypto-Officer",
+                        "sspAccessList": []
+                    },
+                    {
+                        "roleName": "User",
+                        "sspAccessList": []
+                    }
+                ]
+            },
+            {
+                "name": "Perform Self-Test",
+                "description": "Perform self-tests on demand",
+                "indicator": "1",
+                "inputs": "N/A",
+                "outputs": "Success/failure message",
+                "secFunImplList": [
+                    "None"
+                ],
+                "roleSspAccessList": [
+                    {
+                        "roleName": "Crypto-Officer",
+                        "sspAccessList": []
+                    },
+                    {
+                        "roleName": "User",
+                        "sspAccessList": []
+                    }
+                ]
+            },
+            {
+                "name": "Show Module Name and Version",
+                "description": "Used to output module name and version",
+                "indicator": "N/A",
+                "inputs": "N/A",
+                "outputs": "name: Example AMVP Cryptographic Module; Version: 0.1",
+                "secFunImplList": [
+                    "None"
+                ],
+                "roleSspAccessList": [
+                    {
+                        "roleName": "Crypto-Officer",
+                        "sspAccessList": []
+                    },
+                    {
+                        "roleName": "User",
+                        "sspAccessList": []
+                    }
+                ]
+            },
+            {
+                "name": "Show Status",
+                "description": "Used to output module status",
+                "indicator": "N/A",
+                "inputs": "N/A",
+                "outputs": "status: active",
+                "secFunImplList": [
+                    "None"
+                ],
+                "roleSspAccessList": [
+                    {
+                        "roleName": "Crypto-Officer",
+                        "sspAccessList": []
+                    },
+                    {
+                        "roleName": "User",
+                        "sspAccessList": []
+                    }
+                ]
+            }
+        ],
+        "nonApprovedServiceList": [],
+        "phSecMechanismList": [],
+        "efpEftInfoList": [
+            {
+                "tempVoltType": "LowTemperature",
+                "tempVolt": "",
+                "efpOrEft": "",
+                "result": ""
+            },
+            {
+                "tempVoltType": "HighTemperature",
+                "tempVolt": "",
+                "efpOrEft": "",
+                "result": ""
+            },
+            {
+                "tempVoltType": "LowVoltage",
+                "tempVolt": "",
+                "efpOrEft": "",
+                "result": ""
+            },
+            {
+                "tempVoltType": "HighVoltage",
+                "tempVolt": "",
+                "efpOrEft": "",
+                "result": ""
+            }
+        ],
+        "hardnessTestTempList": [
+            {
+                "tempType": "LowTemperature",
+                "temp": ""
+            },
+            {
+                "tempType": "HighTemperature",
+                "temp": ""
+            }
+        ],
+        "storageAreaList": [
+            {
+                "name": "RAM",
+                "description": "Volatile Memory",
+                "persistenceType": "Dynamic"
+            }
+        ],
+        "sspInputOutputList": [
+            {
+                "name": "API Input",
+                "from": "Calling process",
+                "to": "RAM",
+                "formatType": "Plaintext",
+                "distributionType": "Manual",
+                "entryType": "Electronic",
+                "relatedSFI": ""
+            },
+            {
+                "name": "API Output",
+                "from": "RAM",
+                "to": "Calling process",
+                "formatType": "Plaintext",
+                "distributionType": "Manual",
+                "entryType": "Electronic",
+                "relatedSFI": ""
+            },
+            {
+                "name": "API Input KW",
+                "from": "Calling process",
+                "to": "RAM",
+                "formatType": "Encrypted",
+                "distributionType": "Manual",
+                "entryType": "Electronic",
+                "relatedSFI": "Key Wrapping (KW)"
+            },
+            {
+                "name": "API Output KW",
+                "from": "RAM",
+                "to": "Calling process",
+                "formatType": "Encrypted",
+                "distributionType": "Manual",
+                "entryType": "Electronic",
+                "relatedSFI": "Key Wrapping (KW)"
+            }
+        ],
+        "sspZeroizationList": [
+            {
+                "method": "API call for memory cleansing",
+                "description": "API call clears the temporarily stored CSPs",
+                "rationale": "Zeroized SSPs will no longer be accessible through API calls",
+                "operatorInitiation": "Allowed"
+            },
+            {
+                "method": "Power Cycle",
+                "description": "Power Cycle zeroizes all stored SSPs",
+                "rationale": "Operating System zeroizes all the stored SSPs",
+                "operatorInitiation": "Allowed"
+            }
+        ],
+        "sspList": [
+            {
+                "name": "ECDSA SGK",
+                "description": "Used to generate Digital Signatures",
+                "size": "521 bits",
+                "strength": "256 bits",
+                "type": "Signature Generation Key",
+                "generatedByList": [
+                    "Asymmetric Key Generation"
+                ],
+                "establishedByList": [],
+                "usedByList": [
+                    "Digital Signature"
+                ],
+                "inputOutputList": [
+                    "API Input",
+                    "API Output"
+                ],
+                "storageItemList": [
+                    {
+                        "areaName": "RAM",
+                        "format": "Plaintext",
+                        "algorithmName": ""
+                    }
+                ],
+                "storageDuration": "Until zeroized by reboot or API call",
+                "zeroizationList": [
+                    "Memory cleansing API call",
+                    "Power Cycle"
+                ],
+                "category": "CSP",
+                "relatedSspList": [
+                    {
+                        "sspName": "ECDSA SVK",
+                        "relationship": "Paired With"
+                    }
+                ]
+            },
+            {
+                "name": "DH Private",
+                "description": "Used for Key Agreement",
+                "size": "4096 bits",
+                "strength": "152 bits",
+                "type": "Key Agreement Key",
+                "generatedByList": [
+                    "Asymmetric Key Generation"
+                ],
+                "establishedByList": [],
+                "usedByList": [
+                    "Key Agreement/Agreement Component (SP 800-56A rev3, SP 800-56B rev2)"
+                ],
+                "inputOutputList": [
+                    "API Input",
+                    "API Output"
+                ],
+                "storageItemList": [
+                    {
+                        "areaName": "RAM",
+                        "format": "Plaintext",
+                        "algorithmName": ""
+                    }
+                ],
+                "storageDuration": "Until zeroized by reboot or API call",
+                "zeroizationList": [
+                    "Memory cleansing API call",
+                    "Power Cycle"
+                ],
+                "category": "CSP",
+                "relatedSspList": [
+                    {
+                        "sspName": "DH Public",
+                        "relationship": "Paired With"
+                    },
+                    {
+                        "sspName": "DH Peer Public",
+                        "relationship": "Used With"
+                    }
+                ]
+            },
+            {
+                "name": "AES EDK",
+                "description": "Used for Symmetric encrypt and decrypt operations",
+                "size": "256 bits",
+                "strength": "256 bits",
+                "type": "Symmetric Key",
+                "generatedByList": [
+                    "Random Number Generation"
+                ],
+                "establishedByList": [],
+                "usedByList": [
+                    "Symmetric Encrypt/Decrypt"
+                ],
+                "inputOutputList": [
+                    "API Input",
+                    "API Output"
+                ],
+                "storageItemList": [
+                    {
+                        "areaName": "RAM",
+                        "format": "Plaintext",
+                        "algorithmName": ""
+                    }
+                ],
+                "storageDuration": "Until zeroized by reboot or API call",
+                "zeroizationList": [
+                    "Memory cleansing API call",
+                    "Power Cycle"
+                ],
+                "category": "CSP",
+                "relatedSspList": []
+            },
+            {
+                "name": "AES Key Wrapping",
+                "description": "Used for key wrapping",
+                "size": "256 bits",
+                "strength": "256 bits",
+                "type": "Symmetric Key",
+                "generatedByList": [
+                    "Random Number Generation"
+                ],
+                "establishedByList": [],
+                "usedByList": [
+                    "Key Wrapping (KW)"
+                ],
+                "inputOutputList": [
+                    "API Input",
+                    "API Output"
+                ],
+                "storageItemList": [
+                    {
+                        "areaName": "RAM",
+                        "format": "Plaintext",
+                        "algorithmName": ""
+                    }
+                ],
+                "storageDuration": "Until zeroized by reboot or API call",
+                "zeroizationList": [
+                    "Memory cleansing API call",
+                    "Power Cycle"
+                ],
+                "category": "CSP",
+                "relatedSspList": [
+                    {
+                        "sspName": "Keying Material",
+                        "relationship": "Encrypts"
+                    },
+                    {
+                        "sspName": "Keying Material",
+                        "relationship": "Decrypts"
+                    },
+                    {
+                        "sspName": "AES-KW Encrypted Key",
+                        "relationship": "Encrypts"
+                    },
+                    {
+                        "sspName": "AES-KW Encrypted Key",
+                        "relationship": "Decrypts"
+                    }
+                ]
+            },
+            {
+                "name": "HMAC Key",
+                "description": "Used for MAC generation and verification",
+                "size": "128 to 512 bits",
+                "strength": "greater than 128 bits",
+                "type": "Keyed Hash",
+                "generatedByList": [
+                    "Random Number Generation"
+                ],
+                "establishedByList": [],
+                "usedByList": [
+                    "Keyed Hash (HMAC)"
+                ],
+                "inputOutputList": [
+                    "API Input",
+                    "API Output"
+                ],
+                "storageItemList": [
+                    {
+                        "areaName": "RAM",
+                        "format": "Plaintext",
+                        "algorithmName": ""
+                    }
+                ],
+                "storageDuration": "Until zeroized by reboot or API call",
+                "zeroizationList": [
+                    "Memory cleansing API call",
+                    "Power Cycle"
+                ],
+                "category": "CSP",
+                "relatedSspList": []
+            },
+            {
+                "name": "Entropy Input",
+                "description": "Entropy input from an external source used for DRBG seeding",
+                "size": "128-2^35 bits",
+                "strength": "128 - 256 bits",
+                "type": "Entropy Input",
+                "generatedByList": [],
+                "establishedByList": [],
+                "usedByList": [
+                    "Random Number Generation"
+                ],
+                "inputOutputList": [
+                    "API Input"
+                ],
+                "storageItemList": [
+                    {
+                        "areaName": "RAM",
+                        "format": "Plaintext",
+                        "algorithmName": ""
+                    }
+                ],
+                "storageDuration": "Until zeroized by reboot or API call",
+                "zeroizationList": [
+                    "Memory cleansing API call",
+                    "Power Cycle"
+                ],
+                "category": "CSP",
+                "relatedSspList": [
+                    {
+                        "sspName": "DRBG_Seed",
+                        "relationship": "Constituent"
+                    }
+                ]
+            },
+            {
+                "name": "DRBG_Seed",
+                "description": "Seed used for DRBG Instantiation and Reseed",
+                "size": "128-256 bit",
+                "strength": "128-256 bit",
+                "type": "DRBG Seed",
+                "generatedByList": [
+                    "Random Number Generation"
+                ],
+                "establishedByList": [],
+                "usedByList": [
+                    "Random Number Generation"
+                ],
+                "inputOutputList": [],
+                "storageItemList": [
+                    {
+                        "areaName": "RAM",
+                        "format": "Plaintext",
+                        "algorithmName": ""
+                    }
+                ],
+                "storageDuration": "Until zeroized by reboot or API call",
+                "zeroizationList": [
+                    "Memory cleansing API call",
+                    "Power Cycle"
+                ],
+                "category": "CSP",
+                "relatedSspList": [
+                    {
+                        "sspName": "DRBG_C",
+                        "relationship": "Derives"
+                    },
+                    {
+                        "sspName": "DRBG_Key",
+                        "relationship": "Derives"
+                    },
+                    {
+                        "sspName": "DRBG_V",
+                        "relationship": "Derives"
+                    },
+                    {
+                        "sspName": "Entropy Input",
+                        "relationship": "Incorporates"
+                    }
+                ]
+            },
+            {
+                "name": "Shared Secret",
+                "description": "Used for Key Agreement",
+                "size": "",
+                "strength": "112 - 256 bits",
+                "type": "Shared Secret",
+                "generatedByList": [],
+                "establishedByList": [
+                    "Key Agreement/Agreement Component (SP 800-56A rev3, SP 800-56B rev2)"
+                ],
+                "usedByList": [
+                    "Key Derivation Function (KDF)"
+                ],
+                "inputOutputList": [
+                    "API Input",
+                    "API Output"
+                ],
+                "storageItemList": [
+                    {
+                        "areaName": "RAM",
+                        "format": "Plaintext",
+                        "algorithmName": ""
+                    }
+                ],
+                "storageDuration": "Until zeroized by reboot or API call",
+                "zeroizationList": [
+                    "Memory cleansing API call",
+                    "Power Cycle"
+                ],
+                "category": "CSP",
+                "relatedSspList": [
+                    {
+                        "sspName": "DH Private",
+                        "relationship": "Established By"
+                    },
+                    {
+                        "sspName": "DH Peer Public",
+                        "relationship": "Established By"
+                    },
+                    {
+                        "sspName": "EC DH Private",
+                        "relationship": "Established By"
+                    },
+                    {
+                        "sspName": "EC DH Peer's Public",
+                        "relationship": "Established By"
+                    },
+                    {
+                        "sspName": "KDF Derived Key",
+                        "relationship": "Derives"
+                    }
+                ]
+            },
+            {
+                "name": "Keying Material",
+                "description": "Plaintext keying material to be encrypted",
+                "size": "112 bits or more",
+                "strength": "112 bits or more",
+                "type": "Symmetric Key",
+                "generatedByList": [],
+                "establishedByList": [],
+                "usedByList": [
+                    "Key Wrapping (KW)"
+                ],
+                "inputOutputList": [
+                    "API Input",
+                    "API Output"
+                ],
+                "storageItemList": [
+                    {
+                        "areaName": "RAM",
+                        "format": "Plaintext",
+                        "algorithmName": ""
+                    }
+                ],
+                "storageDuration": "Until zeroized by reboot or API call",
+                "zeroizationList": [
+                    "Memory cleansing API call",
+                    "Power Cycle"
+                ],
+                "category": "CSP",
+                "relatedSspList": [
+                    {
+                        "sspName": "AES Key Wrapping",
+                        "relationship": "Encrypted By"
+                    },
+                    {
+                        "sspName": "AES Key Wrapping",
+                        "relationship": "Decrypted By"
+                    },
+                    {
+                        "sspName": "AES-KW Encrypted Key",
+                        "relationship": "Plaintext form of"
+                    }
+                ]
+            },
+            {
+                "name": "ECDSA SVK",
+                "description": "Used to verify Digital Signatures",
+                "size": "521 bits",
+                "strength": "256 bits",
+                "type": "Signature Verification Key",
+                "generatedByList": [
+                    "Asymmetric Key Generation"
+                ],
+                "establishedByList": [],
+                "usedByList": [
+                    "Digital Signature",
+                    "Asymmetric Key Verification"
+                ],
+                "inputOutputList": [
+                    "API Input",
+                    "API Output"
+                ],
+                "storageItemList": [
+                    {
+                        "areaName": "RAM",
+                        "format": "Plaintext",
+                        "algorithmName": ""
+                    }
+                ],
+                "storageDuration": "Until zeroized by reboot or API call",
+                "zeroizationList": [
+                    "Memory cleansing API call",
+                    "Power Cycle"
+                ],
+                "category": "CSP",
+                "relatedSspList": [
+                    {
+                        "sspName": "ECDSA SGK",
+                        "relationship": "Paired With"
+                    }
+                ]
+            },
+            {
+                "name": "DH Public",
+                "description": "Used for Key Agreement",
+                "size": "4096 bits",
+                "strength": "152 bits",
+                "type": "Key Agreement Key",
+                "generatedByList": [
+                    "Asymmetric Key Generation"
+                ],
+                "establishedByList": [],
+                "usedByList": [
+                    "Key Agreement/Agreement Component (SP 800-56A rev3, SP 800-56B rev2)"
+                ],
+                "inputOutputList": [
+                    "API Input",
+                    "API Output"
+                ],
+                "storageItemList": [
+                    {
+                        "areaName": "RAM",
+                        "format": "Plaintext",
+                        "algorithmName": ""
+                    }
+                ],
+                "storageDuration": "Until zeroized by reboot or API call",
+                "zeroizationList": [
+                    "Memory cleansing API call",
+                    "Power Cycle"
+                ],
+                "category": "Public Key",
+                "relatedSspList": [
+                    {
+                        "sspName": "DH Private",
+                        "relationship": "Paired With"
+                    }
+                ]
+            },
+            {
+                "name": "DH Peer Public",
+                "description": "Used for Key Agreement",
+                "size": "4096 bits",
+                "strength": "152 bits",
+                "type": "Key Agreement Key",
+                "generatedByList": [],
+                "establishedByList": [],
+                "usedByList": [
+                    "Key Agreement/Agreement Component (SP 800-56A rev3, SP 800-56B rev2)"
+                ],
+                "inputOutputList": [
+                    "API Input"
+                ],
+                "storageItemList": [
+                    {
+                        "areaName": "RAM",
+                        "format": "Plaintext",
+                        "algorithmName": ""
+                    }
+                ],
+                "storageDuration": "Until zeroized by reboot or API call",
+                "zeroizationList": [
+                    "Memory cleansing API call",
+                    "Power Cycle"
+                ],
+                "category": "Public Key",
+                "relatedSspList": [
+                    {
+                        "sspName": "DH Private",
+                        "relationship": "Used With"
+                    },
+                    {
+                        "sspName": "Shared Secret",
+                        "relationship": "Establishes"
+                    }
+                ]
+            },
+            {
+                "name": "EC DH Private",
+                "description": "Used for ECDH Key Agreement",
+                "size": "521 bits",
+                "strength": "256 bits",
+                "type": "Key Agreement Key",
+                "generatedByList": [
+                    "Asymmetric Key Generation"
+                ],
+                "establishedByList": [],
+                "usedByList": [
+                    "Key Agreement/Agreement Component (SP 800-56A rev3, SP 800-56B rev2)"
+                ],
+                "inputOutputList": [
+                    "API Input",
+                    "API Output"
+                ],
+                "storageItemList": [
+                    {
+                        "areaName": "RAM",
+                        "format": "Plaintext",
+                        "algorithmName": ""
+                    }
+                ],
+                "storageDuration": "Until zeroized by reboot or API call",
+                "zeroizationList": [
+                    "Memory cleansing API call",
+                    "Power Cycle"
+                ],
+                "category": "CSP",
+                "relatedSspList": [
+                    {
+                        "sspName": "EC DH Peer's Public",
+                        "relationship": "Used With"
+                    },
+                    {
+                        "sspName": "Shared Secret",
+                        "relationship": "Establishes"
+                    }
+                ]
+            },
+            {
+                "name": "EC DH Peer's Public",
+                "description": "Used for ECDH Key Agreement",
+                "size": "521 bits",
+                "strength": "256 bits",
+                "type": "Key Agreement Key",
+                "generatedByList": [],
+                "establishedByList": [],
+                "usedByList": [
+                    "Key Agreement/Agreement Component (SP 800-56A rev3, SP 800-56B rev2)"
+                ],
+                "inputOutputList": [
+                    "API Input"
+                ],
+                "storageItemList": [
+                    {
+                        "areaName": "RAM",
+                        "format": "Plaintext",
+                        "algorithmName": ""
+                    }
+                ],
+                "storageDuration": "Until zeroized by reboot or API call",
+                "zeroizationList": [
+                    "Memory cleansing API call",
+                    "Power Cycle"
+                ],
+                "category": "Public Key",
+                "relatedSspList": [
+                    {
+                        "sspName": "EC DH Private",
+                        "relationship": "Used With"
+                    },
+                    {
+                        "sspName": "Shared Secret",
+                        "relationship": "Establishes"
+                    }
+                ]
+            },
+            {
+                "name": "AES GCM",
+                "description": "Used for AES-GCM authenticated encryption and decryption",
+                "size": "256 bits",
+                "strength": "256 bits",
+                "type": "Symmetric Key",
+                "generatedByList": [
+                    "Random Number Generation"
+                ],
+                "establishedByList": [],
+                "usedByList": [
+                    "Symmetric Encrypt/Decrypt"
+                ],
+                "inputOutputList": [
+                    "API Input",
+                    "API Output"
+                ],
+                "storageItemList": [
+                    {
+                        "areaName": "RAM",
+                        "format": "Plaintext",
+                        "algorithmName": ""
+                    }
+                ],
+                "storageDuration": "Until zeroized by reboot or API call",
+                "zeroizationList": [
+                    "Memory cleansing API call",
+                    "Power Cycle"
+                ],
+                "category": "CSP",
+                "relatedSspList": []
+            },
+            {
+                "name": "KDF Derived Key",
+                "description": "Key derived from Key Derivation Functions",
+                "size": "112 bits or more",
+                "strength": "112 bits or more",
+                "type": "Derived Key",
+                "generatedByList": [],
+                "establishedByList": [
+                    "Key Derivation Function (KDF)"
+                ],
+                "usedByList": [],
+                "inputOutputList": [
+                    "API Output"
+                ],
+                "storageItemList": [
+                    {
+                        "areaName": "RAM",
+                        "format": "Plaintext",
+                        "algorithmName": ""
+                    }
+                ],
+                "storageDuration": "Until zeroized by reboot or API call",
+                "zeroizationList": [
+                    "Memory cleansing API call",
+                    "Power Cycle"
+                ],
+                "category": "CSP",
+                "relatedSspList": [
+                    {
+                        "sspName": "Shared Secret",
+                        "relationship": "Derived From"
+                    }
+                ]
+            },
+            {
+                "name": "AES-KW Encrypted Key",
+                "description": "Encrypted keying material produced by AES Key Wrapping",
+                "size": "Variable",
+                "strength": "256 bits",
+                "type": "Encrypted Key",
+                "generatedByList": [],
+                "establishedByList": [
+                    "Key Wrapping (KW)"
+                ],
+                "usedByList": [
+                    "Key Wrapping (KW)"
+                ],
+                "inputOutputList": [
+                    "API Input KW",
+                    "API Output KW"
+                ],
+                "storageItemList": [
+                    {
+                        "areaName": "RAM",
+                        "format": "Encrypted",
+                        "algorithmName": "AES-KW"
+                    }
+                ],
+                "storageDuration": "Until zeroized by reboot or API call",
+                "zeroizationList": [
+                    "Memory cleansing API call",
+                    "Power Cycle"
+                ],
+                "category": "CSP",
+                "relatedSspList": [
+                    {
+                        "sspName": "AES Key Wrapping",
+                        "relationship": "Encrypted By"
+                    },
+                    {
+                        "sspName": "AES Key Wrapping",
+                        "relationship": "Decrypted By"
+                    },
+                    {
+                        "sspName": "Keying Material",
+                        "relationship": "Encrypted form of"
+                    }
+                ]
+            },
+            {
+                "name": "DRBG_C",
+                "description": "DRBG Counter internal state",
+                "size": "128 bits",
+                "strength": "128 bits",
+                "type": "DRBG Internal State",
+                "generatedByList": [
+                    "Random Number Generation"
+                ],
+                "establishedByList": [],
+                "usedByList": [
+                    "Random Number Generation"
+                ],
+                "inputOutputList": [],
+                "storageItemList": [
+                    {
+                        "areaName": "RAM",
+                        "format": "Plaintext",
+                        "algorithmName": ""
+                    }
+                ],
+                "storageDuration": "Until zeroized by reboot or API call",
+                "zeroizationList": [
+                    "Memory cleansing API call",
+                    "Power Cycle"
+                ],
+                "category": "CSP",
+                "relatedSspList": [
+                    {
+                        "sspName": "DRBG_Seed",
+                        "relationship": "Derived From"
+                    }
+                ]
+            },
+            {
+                "name": "DRBG_Key",
+                "description": "DRBG Key internal state",
+                "size": "256 bits",
+                "strength": "256 bits",
+                "type": "DRBG Internal State",
+                "generatedByList": [
+                    "Random Number Generation"
+                ],
+                "establishedByList": [],
+                "usedByList": [
+                    "Random Number Generation"
+                ],
+                "inputOutputList": [],
+                "storageItemList": [
+                    {
+                        "areaName": "RAM",
+                        "format": "Plaintext",
+                        "algorithmName": ""
+                    }
+                ],
+                "storageDuration": "Until zeroized by reboot or API call",
+                "zeroizationList": [
+                    "Memory cleansing API call",
+                    "Power Cycle"
+                ],
+                "category": "CSP",
+                "relatedSspList": [
+                    {
+                        "sspName": "DRBG_Seed",
+                        "relationship": "Derived From"
+                    }
+                ]
+            },
+            {
+                "name": "DRBG_V",
+                "description": "DRBG V internal state",
+                "size": "128 bits",
+                "strength": "128 bits",
+                "type": "DRBG Internal State",
+                "generatedByList": [
+                    "Random Number Generation"
+                ],
+                "establishedByList": [],
+                "usedByList": [
+                    "Random Number Generation"
+                ],
+                "inputOutputList": [],
+                "storageItemList": [
+                    {
+                        "areaName": "RAM",
+                        "format": "Plaintext",
+                        "algorithmName": ""
+                    }
+                ],
+                "storageDuration": "Until zeroized by reboot or API call",
+                "zeroizationList": [
+                    "Memory cleansing API call",
+                    "Power Cycle"
+                ],
+                "category": "CSP",
+                "relatedSspList": [
+                    {
+                        "sspName": "DRBG_Seed",
+                        "relationship": "Derived From"
+                    }
+                ]
+            }
+        ],
+        "preOpSelfTestList": [
+            {
+                "algorithmOrTest": "HMAC-SHA2-256",
+                "testProps": "256 bits",
+                "testMethod": "Firmware Integrity Test",
+                "type": "SW/FW Integrity",
+                "indicator": "Indicates success when power up self tests succeed",
+                "details": "The self-test API call functions that run the tests. These functions provide specific values upon success or failure.",
+                "period": "On reboot or self-test API call function call",
+                "periodicMethod": "Manual or reboot"
+            }
+        ],
+        "condSelfTestList":[
+                {
+                "algorithmOrTest": "AES-GCM",
+                "testProps": "256 bits",
+                "testMethod": "KAT",
+                "type": "CAST",
+                "indicator": "Returns 1 on successful completion",
+                "details": "Encrypt KAT",
+                "conditions": "Upon power-up and call of self-test API call function",
+                "coverage": [
+                    {
+                        "algoDisplayName": "AES-GCM",
+                        "canonicalAlgorithmId": 14,
+                        "implName": "Example AMVP Cryptographic Module Cryptographic Implementationmple",
+                        "validationId": 1234,
+                        "certName": "A4",
+                        "algoPropList": []
+                    },
+                    {
+                        "algoDisplayName": "AES-KW",
+                        "canonicalAlgorithmId": 17,
+                        "implName": "Example AMVP Cryptographic Module Cryptographic Implementationmple",
+                        "validationId": 1234,
+                        "certName": "A4",
+                        "algoPropList": []
+                    },
+                    {
+                        "algoDisplayName": "AES-KWP",
+                        "canonicalAlgorithmId": 18,
+                        "implName": "Example AMVP Cryptographic Module Cryptographic Implementationmple",
+                        "validationId": 1234,
+                        "certName": "A4",
+                        "algoPropList": []
+                    }
+                ],
+                "coverageNotes": "",
+                "period": "On reboot or self-test API call function call",
+                "periodicMethod": "Manual or reboot"
+            },
+            {
+                "algorithmOrTest": "SHA2-256",
+                "testProps": "256 bits",
+                "testMethod": "KAT",
+                "type": "CAST",
+                "indicator": "Returns 1 on successful completion",
+                "details": "Message Digest KAT",
+                "conditions": "Upon power-up and call of self-test API call function",
+                "coverage": [
+                    {
+                        "algoDisplayName": "SHA2-256",
+                        "canonicalAlgorithmId": 131,
+                        "implName": "Example AMVP Cryptographic Module Cryptographic Implementation",
+                        "validationId": 1234,
+                        "certName": "A4",
+                        "algoPropList": []
+                    }
+                ],
+                "coverageNotes": "Tests the SHA2-256 message digest function",
+                "period": "On reboot or self-test API call function call",
+                "periodicMethod": "Manual or reboot"
+            }
+        ],
+        "errorStateList": [
+            {
+                "name": "Critical Error State",
+                "description": "This state is entered when pre-operational or conditional KAT self tests fail",
+                "conditions": [
+                    "Failure of pre-operational or conditional KAT self tests"
+                ],
+                "recoveryMethod": "Restarting the module",
+                "indicator": "0"
+            },
+            {
+                "name": "Soft Error State",
+                "description": "This state is entered when conditional PCT self tests fail",
+                "conditions": [
+                    "Failure of conditional PCT self tests"
+                ],
+                "recoveryMethod": "Automatic after zeroising the keypair that failed the PCT",
+                "indicator": "False, plus a console message listing the failed test"
+            }
+        ],
+        "cavpCertSet": {
+            "cavpCertList": [
+                {
+                    "vendorName": "Generic Example Vendor",
+                    "certName": "A4",
+                    "validationId": 1234,
+                    "implName": "Example AMVP Cryptographic Module Cryptographic Implementation",
+                    "implVersion": "0.1",
+                    "implType": "Firmware",
+                    "implOrganization": "Generic Example Vendor"
+                }
+            ],
+            "cavpOeList": [
+                {
+                    "name": "Generic x86_64 Processor",
+                    "oeId": 1234
+                }
+            ],
+            "cavpOeAlgoList": [
+                {
+                    "validationOeAlgorithmId": 2,
+                    "algoDisplayName": "AES-GCM",
+                    "canonicalAlgorithmId": 14,
+                    "validationId": 1234,
+                    "certName": "A4",
+                    "oeId": 1234,
+                    "selectedCapList": []
+                }
+            ],
+            "cavpImplAlgoList": [
+                {
+                    "algoDisplayName": "AES-GCM",
+                    "canonicalAlgorithmId": 14,
+                    "implName": "Example AMVP Cryptographic Module Cryptographic Implementation",
+                    "validationId": 1234,
+                    "certName": "A4",
+                    "category": "PAA"
+                }
+            ],
+            "cavpItarAlgoList": []
         },
-        "mitigationOfOtherAttacks": {
-            "attacks": "The module has random timing variations integrated to prevent timing attacks.",
-            "mitigationEffectiveness": "High",
-            "guidanceAndConstraints": "No user setup needed.",
-            "additionalInformation": "Any user of this module should ensure the operating device is secure from other physical attacks."
-        }
+        "referenceList": [
+            "Security Policy",
+            "Vendor Evidence",
+            "Finite State Model",
+            "Source Code",
+            "Components List"
+        ]
     }
 }

@@ -35,7 +35,7 @@ AMVP_RESULT amvp_build_registration_json(AMVP_CTX *ctx, JSON_Value **reg) {
         AMVP_LOG_ERR("No ctx for build_test_session");
         return AMVP_NO_CTX;
     }
-    if (ctx->cert_req_info.contact_count <= 0) {
+    if (ctx->cert_req_info.tester_count <= 0 && ctx->cert_req_info.reviewer_count <= 0) {
         AMVP_LOG_ERR("Cannot build cert req without any contact IDs");
         return AMVP_MISSING_ARG;
     }
@@ -44,11 +44,23 @@ AMVP_RESULT amvp_build_registration_json(AMVP_CTX *ctx, JSON_Value **reg) {
     cap_obj = json_value_get_object(val);
 
     json_object_set_number(cap_obj, "vendorId", ctx->cert_req_info.vendor_id);
-    json_object_set_value(cap_obj, "contacts", json_value_init_array());
-    req_arr = json_object_get_array(cap_obj, "contacts");
 
-    for (i = 0; i < ctx->cert_req_info.contact_count; i++) {
-        json_array_append_string(req_arr, ctx->cert_req_info.contact_id[i]);
+    /* Add testers array if we have any testers */
+    if (ctx->cert_req_info.tester_count > 0) {
+        json_object_set_value(cap_obj, "testers", json_value_init_array());
+        req_arr = json_object_get_array(cap_obj, "testers");
+        for (i = 0; i < ctx->cert_req_info.tester_count; i++) {
+            json_array_append_string(req_arr, ctx->cert_req_info.tester_id[i]);
+        }
+    }
+
+    /* Add reviewers array if we have any reviewers */
+    if (ctx->cert_req_info.reviewer_count > 0) {
+        json_object_set_value(cap_obj, "reviewers", json_value_init_array());
+        req_arr = json_object_get_array(cap_obj, "reviewers");
+        for (i = 0; i < ctx->cert_req_info.reviewer_count; i++) {
+            json_array_append_string(req_arr, ctx->cert_req_info.reviewer_id[i]);
+        }
     }
 
     if (ctx->cert_req_info.acv_cert_count > 0) {
