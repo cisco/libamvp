@@ -89,7 +89,6 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 bin_PROGRAMS = amvp_app$(EXEEXT)
-@FORCE_STATIC_TRUE@am__append_1 = -all-static
 subdir = app
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/libtool.m4 \
@@ -104,12 +103,14 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
+am__dirstamp = $(am__leading_dot)dirstamp
 am__objects_1 = amvp_app-app_main.$(OBJEXT) amvp_app-app_cli.$(OBJEXT) \
-	amvp_app-app_utils.$(OBJEXT)
+	totp/amvp_app-totp.$(OBJEXT) \
+	totp/amvp_app-hmac_sha256.$(OBJEXT) \
+	totp/amvp_app-sha256.$(OBJEXT)
 am_amvp_app_OBJECTS = $(am__objects_1)
 amvp_app_OBJECTS = $(am_amvp_app_OBJECTS)
-am__DEPENDENCIES_1 =
-amvp_app_DEPENDENCIES = $(am__DEPENDENCIES_1)
+amvp_app_DEPENDENCIES =
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
@@ -134,7 +135,9 @@ depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = ./$(DEPDIR)/amvp_app-app_cli.Po \
 	./$(DEPDIR)/amvp_app-app_main.Po \
-	./$(DEPDIR)/amvp_app-app_utils.Po
+	totp/$(DEPDIR)/amvp_app-hmac_sha256.Po \
+	totp/$(DEPDIR)/amvp_app-sha256.Po \
+	totp/$(DEPDIR)/amvp_app-totp.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -182,7 +185,6 @@ am__DIST_COMMON = $(srcdir)/Makefile.in $(top_srcdir)/config/depcomp \
 	README
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
-ADDL_LIB_DEPENDENCIES = @ADDL_LIB_DEPENDENCIES@
 AMTAR = @AMTAR@
 AM_DEFAULT_VERBOSITY = @AM_DEFAULT_VERBOSITY@
 AR = @AR@
@@ -254,8 +256,6 @@ SAFEC_STUB_DIR = @SAFEC_STUB_DIR@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
-SSL_CFLAGS = @SSL_CFLAGS@
-SSL_LDFLAGS = @SSL_LDFLAGS@
 STRIP = @STRIP@
 VERSION = @VERSION@
 abs_builddir = @abs_builddir@
@@ -314,15 +314,18 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 tmp_sources = app_main.c \
               app_cli.c \
-              app_utils.c \
               app_lcl.h \
-              ketopt.h
+              ketopt.h \
+              totp/totp.c \
+              totp/hmac_sha256.c \
+              totp/sha256.c \
+              totp/hmac_sha256.h \
+              totp/sha256.h
 
 amvp_app_includedir = $(includedir)/amvp
 amvp_app_SOURCES = ${tmp_sources}
 amvp_app_CFLAGS = -g -fPIE $(LIBAMVP_CFLAGS) $(SSL_CFLAGS) $(SAFEC_CFLAGS) $(COND_ALG_CFLAGS) $(LIBCURL_CFLAGS)
-amvp_app_LDFLAGS = $(LIBAMVP_LDFLAGS) $(SSL_LDFLAGS) \
-	$(LIBCURL_LDFLAGS) $(am__append_1)
+amvp_app_LDFLAGS = $(LIBAMVP_LDFLAGS) $(SSL_LDFLAGS) $(LIBCURL_LDFLAGS)
 amvp_app_LDADD = $(ADDL_LIB_DEPENDENCIES)
 all: all-am
 
@@ -406,6 +409,18 @@ clean-binPROGRAMS:
 	list=`for p in $$list; do echo "$$p"; done | sed 's/$(EXEEXT)$$//'`; \
 	echo " rm -f" $$list; \
 	rm -f $$list
+totp/$(am__dirstamp):
+	@$(MKDIR_P) totp
+	@: > totp/$(am__dirstamp)
+totp/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) totp/$(DEPDIR)
+	@: > totp/$(DEPDIR)/$(am__dirstamp)
+totp/amvp_app-totp.$(OBJEXT): totp/$(am__dirstamp) \
+	totp/$(DEPDIR)/$(am__dirstamp)
+totp/amvp_app-hmac_sha256.$(OBJEXT): totp/$(am__dirstamp) \
+	totp/$(DEPDIR)/$(am__dirstamp)
+totp/amvp_app-sha256.$(OBJEXT): totp/$(am__dirstamp) \
+	totp/$(DEPDIR)/$(am__dirstamp)
 
 amvp_app$(EXEEXT): $(amvp_app_OBJECTS) $(amvp_app_DEPENDENCIES) $(EXTRA_amvp_app_DEPENDENCIES) 
 	@rm -f amvp_app$(EXEEXT)
@@ -413,13 +428,16 @@ amvp_app$(EXEEXT): $(amvp_app_OBJECTS) $(amvp_app_DEPENDENCIES) $(EXTRA_amvp_app
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
+	-rm -f totp/*.$(OBJEXT)
 
 distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_app-app_cli.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_app-app_main.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_app-app_utils.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@totp/$(DEPDIR)/amvp_app-hmac_sha256.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@totp/$(DEPDIR)/amvp_app-sha256.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@totp/$(DEPDIR)/amvp_app-totp.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -479,19 +497,47 @@ amvp_app-app_cli.obj: app_cli.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(amvp_app_CFLAGS) $(CFLAGS) -c -o amvp_app-app_cli.obj `if test -f 'app_cli.c'; then $(CYGPATH_W) 'app_cli.c'; else $(CYGPATH_W) '$(srcdir)/app_cli.c'; fi`
 
-amvp_app-app_utils.o: app_utils.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(amvp_app_CFLAGS) $(CFLAGS) -MT amvp_app-app_utils.o -MD -MP -MF $(DEPDIR)/amvp_app-app_utils.Tpo -c -o amvp_app-app_utils.o `test -f 'app_utils.c' || echo '$(srcdir)/'`app_utils.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/amvp_app-app_utils.Tpo $(DEPDIR)/amvp_app-app_utils.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='app_utils.c' object='amvp_app-app_utils.o' libtool=no @AMDEPBACKSLASH@
+totp/amvp_app-totp.o: totp/totp.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(amvp_app_CFLAGS) $(CFLAGS) -MT totp/amvp_app-totp.o -MD -MP -MF totp/$(DEPDIR)/amvp_app-totp.Tpo -c -o totp/amvp_app-totp.o `test -f 'totp/totp.c' || echo '$(srcdir)/'`totp/totp.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) totp/$(DEPDIR)/amvp_app-totp.Tpo totp/$(DEPDIR)/amvp_app-totp.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='totp/totp.c' object='totp/amvp_app-totp.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(amvp_app_CFLAGS) $(CFLAGS) -c -o amvp_app-app_utils.o `test -f 'app_utils.c' || echo '$(srcdir)/'`app_utils.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(amvp_app_CFLAGS) $(CFLAGS) -c -o totp/amvp_app-totp.o `test -f 'totp/totp.c' || echo '$(srcdir)/'`totp/totp.c
 
-amvp_app-app_utils.obj: app_utils.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(amvp_app_CFLAGS) $(CFLAGS) -MT amvp_app-app_utils.obj -MD -MP -MF $(DEPDIR)/amvp_app-app_utils.Tpo -c -o amvp_app-app_utils.obj `if test -f 'app_utils.c'; then $(CYGPATH_W) 'app_utils.c'; else $(CYGPATH_W) '$(srcdir)/app_utils.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/amvp_app-app_utils.Tpo $(DEPDIR)/amvp_app-app_utils.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='app_utils.c' object='amvp_app-app_utils.obj' libtool=no @AMDEPBACKSLASH@
+totp/amvp_app-totp.obj: totp/totp.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(amvp_app_CFLAGS) $(CFLAGS) -MT totp/amvp_app-totp.obj -MD -MP -MF totp/$(DEPDIR)/amvp_app-totp.Tpo -c -o totp/amvp_app-totp.obj `if test -f 'totp/totp.c'; then $(CYGPATH_W) 'totp/totp.c'; else $(CYGPATH_W) '$(srcdir)/totp/totp.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) totp/$(DEPDIR)/amvp_app-totp.Tpo totp/$(DEPDIR)/amvp_app-totp.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='totp/totp.c' object='totp/amvp_app-totp.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(amvp_app_CFLAGS) $(CFLAGS) -c -o amvp_app-app_utils.obj `if test -f 'app_utils.c'; then $(CYGPATH_W) 'app_utils.c'; else $(CYGPATH_W) '$(srcdir)/app_utils.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(amvp_app_CFLAGS) $(CFLAGS) -c -o totp/amvp_app-totp.obj `if test -f 'totp/totp.c'; then $(CYGPATH_W) 'totp/totp.c'; else $(CYGPATH_W) '$(srcdir)/totp/totp.c'; fi`
+
+totp/amvp_app-hmac_sha256.o: totp/hmac_sha256.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(amvp_app_CFLAGS) $(CFLAGS) -MT totp/amvp_app-hmac_sha256.o -MD -MP -MF totp/$(DEPDIR)/amvp_app-hmac_sha256.Tpo -c -o totp/amvp_app-hmac_sha256.o `test -f 'totp/hmac_sha256.c' || echo '$(srcdir)/'`totp/hmac_sha256.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) totp/$(DEPDIR)/amvp_app-hmac_sha256.Tpo totp/$(DEPDIR)/amvp_app-hmac_sha256.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='totp/hmac_sha256.c' object='totp/amvp_app-hmac_sha256.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(amvp_app_CFLAGS) $(CFLAGS) -c -o totp/amvp_app-hmac_sha256.o `test -f 'totp/hmac_sha256.c' || echo '$(srcdir)/'`totp/hmac_sha256.c
+
+totp/amvp_app-hmac_sha256.obj: totp/hmac_sha256.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(amvp_app_CFLAGS) $(CFLAGS) -MT totp/amvp_app-hmac_sha256.obj -MD -MP -MF totp/$(DEPDIR)/amvp_app-hmac_sha256.Tpo -c -o totp/amvp_app-hmac_sha256.obj `if test -f 'totp/hmac_sha256.c'; then $(CYGPATH_W) 'totp/hmac_sha256.c'; else $(CYGPATH_W) '$(srcdir)/totp/hmac_sha256.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) totp/$(DEPDIR)/amvp_app-hmac_sha256.Tpo totp/$(DEPDIR)/amvp_app-hmac_sha256.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='totp/hmac_sha256.c' object='totp/amvp_app-hmac_sha256.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(amvp_app_CFLAGS) $(CFLAGS) -c -o totp/amvp_app-hmac_sha256.obj `if test -f 'totp/hmac_sha256.c'; then $(CYGPATH_W) 'totp/hmac_sha256.c'; else $(CYGPATH_W) '$(srcdir)/totp/hmac_sha256.c'; fi`
+
+totp/amvp_app-sha256.o: totp/sha256.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(amvp_app_CFLAGS) $(CFLAGS) -MT totp/amvp_app-sha256.o -MD -MP -MF totp/$(DEPDIR)/amvp_app-sha256.Tpo -c -o totp/amvp_app-sha256.o `test -f 'totp/sha256.c' || echo '$(srcdir)/'`totp/sha256.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) totp/$(DEPDIR)/amvp_app-sha256.Tpo totp/$(DEPDIR)/amvp_app-sha256.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='totp/sha256.c' object='totp/amvp_app-sha256.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(amvp_app_CFLAGS) $(CFLAGS) -c -o totp/amvp_app-sha256.o `test -f 'totp/sha256.c' || echo '$(srcdir)/'`totp/sha256.c
+
+totp/amvp_app-sha256.obj: totp/sha256.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(amvp_app_CFLAGS) $(CFLAGS) -MT totp/amvp_app-sha256.obj -MD -MP -MF totp/$(DEPDIR)/amvp_app-sha256.Tpo -c -o totp/amvp_app-sha256.obj `if test -f 'totp/sha256.c'; then $(CYGPATH_W) 'totp/sha256.c'; else $(CYGPATH_W) '$(srcdir)/totp/sha256.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) totp/$(DEPDIR)/amvp_app-sha256.Tpo totp/$(DEPDIR)/amvp_app-sha256.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='totp/sha256.c' object='totp/amvp_app-sha256.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(amvp_app_CFLAGS) $(CFLAGS) -c -o totp/amvp_app-sha256.obj `if test -f 'totp/sha256.c'; then $(CYGPATH_W) 'totp/sha256.c'; else $(CYGPATH_W) '$(srcdir)/totp/sha256.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -617,6 +663,8 @@ clean-generic:
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
+	-rm -f totp/$(DEPDIR)/$(am__dirstamp)
+	-rm -f totp/$(am__dirstamp)
 
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
@@ -628,7 +676,9 @@ clean-am: clean-binPROGRAMS clean-generic clean-libtool mostlyclean-am
 distclean: distclean-am
 		-rm -f ./$(DEPDIR)/amvp_app-app_cli.Po
 	-rm -f ./$(DEPDIR)/amvp_app-app_main.Po
-	-rm -f ./$(DEPDIR)/amvp_app-app_utils.Po
+	-rm -f totp/$(DEPDIR)/amvp_app-hmac_sha256.Po
+	-rm -f totp/$(DEPDIR)/amvp_app-sha256.Po
+	-rm -f totp/$(DEPDIR)/amvp_app-totp.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -676,7 +726,9 @@ installcheck-am:
 maintainer-clean: maintainer-clean-am
 		-rm -f ./$(DEPDIR)/amvp_app-app_cli.Po
 	-rm -f ./$(DEPDIR)/amvp_app-app_main.Po
-	-rm -f ./$(DEPDIR)/amvp_app-app_utils.Po
+	-rm -f totp/$(DEPDIR)/amvp_app-hmac_sha256.Po
+	-rm -f totp/$(DEPDIR)/amvp_app-sha256.Po
+	-rm -f totp/$(DEPDIR)/amvp_app-totp.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

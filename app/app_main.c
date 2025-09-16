@@ -21,7 +21,7 @@
 #include "safe_mem_lib.h"
 #include "safe_str_lib.h"
 
-//static int enable_hash(AMVP_CTX *ctx);
+static int app_setup_two_factor_auth(AMVP_CTX *ctx);
 
 const char *server;
 int port;
@@ -343,4 +343,22 @@ end:
 
     /* Convert AMVP_RESULT to proper exit code */
     return (rv == AMVP_SUCCESS) ? 0 : 1;
+}
+
+static int app_setup_two_factor_auth(AMVP_CTX *ctx) {
+    AMVP_RESULT rv = 0;
+
+    if (getenv("AMV_TOTP_SEED")) {
+        /*
+         * Specify the callback to be used for 2-FA to perform
+         * TOTP calculation
+         */
+        rv = amvp_set_2fa_callback(ctx, &totp);
+        if (rv != AMVP_SUCCESS) {
+            printf("Failed to set Two-factor authentication callback\n");
+            return 1;
+        }
+    }
+
+    return 0;
 }
