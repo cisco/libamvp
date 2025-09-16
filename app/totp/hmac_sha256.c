@@ -4,7 +4,7 @@
    LIBAMVP NOTE: Original code modified to include PR #7 at https://github.com/h5p9sl/hmac_sha256/pull/7.
    Code also modified to use safeC memory calls.
    This code is not thoroughly vetted and should NOT be used for any security purposes. It should ONLY be used for
-   TOTP generation for the already-secured ACVP protocol communications.
+   TOTP generation for the already-secured AMVP protocol communications.
  */
 
 #include "hmac_sha256.h"
