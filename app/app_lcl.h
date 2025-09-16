@@ -75,7 +75,7 @@ typedef struct app_config {
 
 
 int ingest_cli(APP_CONFIG *cfg, int argc, char **argv);
-int app_setup_two_factor_auth(AMVP_CTX *ctx);
+AMVP_RESULT totp(char **token, int token_max);
 
 #ifdef __cplusplus
 }

@@ -87,24 +87,6 @@ if test "x$disable_lib" = "xyes" ; then
         [with_libamvpdir=no])
 fi
 
-# SSL and FOM dirs only used if building app too 
-if test "x$disable_app" = "xno" ; then
-    # ssl installation directory path
-    AC_ARG_WITH([ssl-dir],
-        [AS_HELP_STRING([--with-ssl-dir],
-        [location of OpenSSL install folder, defaults to /usr/local/ssl])],
-        [ssldir="$withval"],
-        [ssldir="/usr"])
-fi
-
-#Link dependencies statically where possible
-AC_ARG_ENABLE([force-static-linking],
-[AS_HELP_STRING([--enable-force-static-linking],
-[Flag to try and force all needed libraries to link statically])],
-[static="true"],
-[static="false"])
-AM_CONDITIONAL([FORCE_STATIC], [test "x$static" == "xtrue"])
-
 # Libcurl installation path
 if test "x$disable_lib" != "xyes" ; then
     AC_ARG_WITH([libcurl-dir],
@@ -155,27 +137,6 @@ ssl_lib64="false"
 # Be more lenient in library detection stage
 LDFLAGS=" -Wl,--allow-multiple-definition $LDFLAGS"
 
-lib_dependencies=""
-# OpenSSL can depend on libdl; Curl can depend on libz. Check if these are present
-# and add them to LIBS if so.
-AC_SEARCH_LIBS([dlopen], [dl], [lib_dependencies+="-ldl "], [], [])
-AC_SEARCH_LIBS([gzdopen], [z], [lib_dependencies+="-lz "], [], [])
-AC_SUBST([ADDL_LIB_DEPENDENCIES], "$lib_dependencies")
-
-# Search for SSL and Crypto libs, and if it doesn't fail set the make vars accordingly
-if test "x$disable_app" = "xno" ; then
-    LDFLAGS="$LDFLAGS -L$ssldir/lib"
-    AC_SEARCH_LIBS([EVP_EncryptInit], [crypto], [found_crypto="true"], [
-        LDFLAGS="$LDFLAGS -L$ssldir/lib64"
-        unset ac_cv_search_EVP_EncryptInit # This value gets referenced as a cache so needs unsetting
-        AC_SEARCH_LIBS([EVP_EncryptInit], [crypto], [found_crypto="true" && ssl_lib64="true"], 
-                       [AC_MSG_FAILURE([Cannot locate libcrypto])], ["$lib_dependencies"])],
-    [])
-
-    AC_SEARCH_LIBS([SSL_CTX_new], [ssl], [],
-                [AC_MSG_FAILURE([Cannot locate libssl])], ["$lib_dependencies"])
-fi
-
 if test "x$disable_lib" = "xyes" ; then
     if test "x$libamvpdir" != "x" ; then
         LDFLAGS="$LDFLAGS -L$libalibcvpdir/lib"
@@ -191,16 +152,6 @@ if test "x$libcurldir" != "x" ; then
     LDFLAGS="$LDFLAGS -L$libcurldir/lib"
     AC_CHECK_LIB([curl], [curl_easy_init], [],
         [AC_MSG_FAILURE(Curl not found in provided curl dir)], ["$lib_dependencies"])
-fi
-
-
-if test "x$disable_app" = "xno" ; then
-    AC_SUBST([SSL_CFLAGS], "-I$ssldir/include")
-    if test "x$ssl_lib64" = "xtrue" ; then
-        AC_SUBST([SSL_LDFLAGS], "-L$ssldir/lib64 -lcrypto")
-    else
-        AC_SUBST([SSL_LDFLAGS], "-L$ssldir/lib -lcrypto")
-    fi
 fi
 
 if test "x$libcurldir" != "x" ; then
