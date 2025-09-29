@@ -56,7 +56,7 @@ typedef struct amvp_prot_error_list {
 
 typedef struct amvp_protocol_error {
     AMVP_PROTOCOL_ERR_CATEGORY category;
-    const char *category_desc;
+    char *category_desc;
     AMVP_PROTOCOL_ERR_LIST *errors;
 } AMVP_PROTOCOL_ERR;
 

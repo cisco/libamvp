@@ -21,44 +21,51 @@
 
 #ifndef AMVP_LOG_ERR
 #define AMVP_LOG_ERR(msg, ...) do { \
-        amvp_log_msg(ctx, AMVP_LOG_LVL_ERR, __func__, __LINE__, msg, ##__VA_ARGS__); \
+        amvp_log_msg(ctx, AMVP_LOG_LVL_ERR, __func__, __LINE__, 0, msg, ##__VA_ARGS__); \
 } while (0)
 #endif
 
 #ifndef AMVP_LOG_WARN
 #define AMVP_LOG_WARN(msg, ...) do { \
-        amvp_log_msg(ctx, AMVP_LOG_LVL_WARN, __func__, __LINE__, msg, ##__VA_ARGS__); \
+        amvp_log_msg(ctx, AMVP_LOG_LVL_WARN, __func__, __LINE__, 0, msg, ##__VA_ARGS__); \
 } while (0)
 #endif
 
 #ifndef AMVP_LOG_STATUS
 #define AMVP_LOG_STATUS(msg, ...)  do { \
-        amvp_log_msg(ctx, AMVP_LOG_LVL_STATUS, __func__, __LINE__, msg, ##__VA_ARGS__); \
+        amvp_log_msg(ctx, AMVP_LOG_LVL_STATUS, __func__, __LINE__, 0, msg, ##__VA_ARGS__); \
+} while (0)
+#endif
+
+#ifndef AMVP_LOG_TABLE
+#define AMVP_LOG_TABLE(msg, ...)  do { \
+        amvp_log_msg(ctx, AMVP_LOG_LVL_STATUS, __func__, __LINE__, 1, msg, ##__VA_ARGS__); \
 } while (0)
 #endif
 
 #ifndef AMVP_LOG_INFO
 #define AMVP_LOG_INFO(msg, ...) do { \
-        amvp_log_msg(ctx, AMVP_LOG_LVL_INFO, __func__, __LINE__, msg, ##__VA_ARGS__); \
+        amvp_log_msg(ctx, AMVP_LOG_LVL_INFO, __func__, __LINE__, 0, msg, ##__VA_ARGS__); \
 } while (0)
 #endif
 
 #ifndef AMVP_LOG_VERBOSE
 #define AMVP_LOG_VERBOSE(msg, ...) do { \
-        amvp_log_msg(ctx, AMVP_LOG_LVL_VERBOSE, __func__, __LINE__, msg, ##__VA_ARGS__); \
+        amvp_log_msg(ctx, AMVP_LOG_LVL_VERBOSE, __func__, __LINE__, 0, msg, ##__VA_ARGS__); \
 } while (0)
 #endif
 
-#ifndef AMVP_LOG_NEWLINE
-#define AMVP_LOG_NEWLINE do { \
-        amvp_log_newline(ctx); \
+#ifndef AMVP_LOG_DEBUG
+#define AMVP_LOG_DEBUG(msg, ...) do { \
+        amvp_log_msg(ctx, AMVP_LOG_LVL_DEBUG, __func__, __LINE__, 0, msg, ##__VA_ARGS__); \
 } while (0)
 #endif
 
 #define AMVP_LOG_TRUNCATED_STR "...[truncated]"
 //This MUST be the length of the above string (want to avoid calculating at runtime frequently)
 #define AMVP_LOG_TRUNCATED_STR_LEN 14
-#define AMVP_LOG_MAX_MSG_LEN 64000
+#define AMVP_LOG_MAX_MSG_LEN 2048 /* 2 KiB */
+#define AMVP_LOG_MAX_MSG_LEN_VERBOSE 4 * 1024 * 1024 /* 4 MiB */
 
 #define AMVP_MODULE_FILENAME_MAX_LEN 32 /* Arbitrary */
 #define AMVP_MODULE_FILENAME_DEFAULT "module"
@@ -68,7 +75,7 @@
 #define AMVP_REQ_FILENAME_DEFAULT "request"
 
 #define AMVP_CERT_REQUEST_FILENAME_MAX_LEN 64 /* Arbitrary */
-#define AMVP_CERT_REQUEST_FILENAME_DEFAULT "certification_session"
+#define AMVP_CERT_REQUEST_FILENAME_DEFAULT "cert_request"
 
 #define AMVP_REQ_STATUS_STR_INITIAL "initial"
 #define AMVP_REQ_STATUS_STR_APPROVED "approved"
@@ -142,11 +149,12 @@
 #define AMVP_SP_STATUS_STR_WAITING_GENERATION "pendingGeneration"
 #define AMVP_SP_STATUS_STR_GENERATING "processingGeneration"
 #define AMVP_SP_STATUS_STR_SUCCESS "success"
+#define AMVP_SP_STATUS_STR_SUBMITTED "submitted"
 #define AMVP_SP_STATUS_STR_ERROR "error"
 
 #define AMVP_CERTIFY_ENDPOINT "certify"
 
-#define AMVP_ANSI_COLOR_GREEN "\e[0;32m"
+#define AMVP_ANSI_COLOR_GREEN "\x1b[0;32m"
 #define AMVP_ANSI_COLOR_YELLOW "\x1b[33m"
 #define AMVP_ANSI_COLOR_RESET "\x1b[0m"
 #define AMVP_ANSI_COLOR_RED "\x1b[31m"
@@ -173,6 +181,9 @@
 #define AMVP_EVIDENCE_TYPES_BUFFER_SIZE 512
 #define AMVP_EVIDENCE_ALL_TYPES_BUFFER_SIZE 1024
 #define AMVP_EVIDENCE_STATUS_BUFFER_SIZE 64
+
+#define AMVP_MAX_CONTACTS_PER_CERT_REQ 10
+#define AMVP_CONTACT_STR_MAX_LEN 16
 
 /*
  * If library cannot detect hardware or software info for HTTP user-agent string, we can check for them
@@ -368,46 +379,6 @@ typedef enum amvp_sp_status {
     AMVP_SP_STATUS_ERROR
 } AMVP_SP_STATUS;
 
-typedef struct amvp_oe_dependencies_t {
-    AMVP_DEPENDENCY *deps[LIBAMVP_DEPENDENCIES_MAX]; /* Array to pointers of linked dependencies */
-    unsigned int count;
-    AMVP_RESOURCE_STATUS status; /**< PARTIAL indicates that at least one of the linked Dependencies does not
-                                      exist. INCOMPLETE indicates all of the 'url' are missing */
-} AMVP_OE_DEPENDENCIES;
-
-typedef struct amvp_oe_t {
-    unsigned int id; /**< For library tracking purposes */
-    char *name; /**< Name of the Operating Environment */
-    char *url; /**< ID URL returned from the server */
-    AMVP_OE_DEPENDENCIES dependencies; /**< Pointers to attached dependencies */
-} AMVP_OE;
-
-#define LIBAMVP_OES_MAX 8
-typedef struct amvp_oes_t {
-    AMVP_OE oe[LIBAMVP_OES_MAX];
-    int count;
-} AMVP_OES;
-
-typedef struct amvp_operating_env_t {
-    AMVP_VENDORS vendors; /**< Vendors */
-    AMVP_MODULES modules; /**< Modules */
-    AMVP_DEPENDENCIES dependencies; /** Dependencies */
-    AMVP_OES oes; /**< Operating Environments */
-} AMVP_OPERATING_ENV;
-
-typedef struct amvp_fips_t {
-    int do_validation; /* Flag indicating whether a FIPS validation
-                          should be performed on this testSession. 1 for yes */
-    int metadata_loaded; /* Flag indicating whether the metadata necessary for
-                           a FIPS validation was successfully loaded into memory. 1 for yes */
-    int metadata_ready; /* Flag indicating whether the metadata necessary for
-                           a FIPS validation has passed all stages (loaded and verified). 1 for yes */
-    AMVP_MODULE *module; /* Pointer to the Module to use for this validation */
-    AMVP_OE *oe; /* Pointer to the Operating Environment to use for this validation */
-} AMVP_FIPS;
-
-#define AMVP_MAX_CONTACTS_PER_CERT_REQ 10
-#define AMVP_CONTACT_STR_MAX_LEN 16
 typedef struct amvp_cert_req_t {
     char module_file[AMVP_JSON_FILENAME_MAX + 1];
     int vendor_id;
@@ -443,7 +414,6 @@ struct amvp_ctx_t {
     AMVP_LOG_LVL log_lvl;
     int debug;              /* Indicates if the ctx is set to run in "debug" mode for extra output */
     char *server_name;
-    char *path_segment;
     int server_port;
     char *cacerts_file;     /* Location of CA certificates Curl will use to verify peer */
     int verify_peer;        /* enables TLS peer verification via Curl */
@@ -453,7 +423,6 @@ struct amvp_ctx_t {
     char *http_user_agent;   /* String containing info to be sent with HTTP requests, currently OE info */
     char *session_file_path; /* String containing the path of the testSession file after it is created when applicable */
 
-    AMVP_OPERATING_ENV op_env; /**< The Operating Environment resources available */
     AMVP_STRING_LIST *vsid_url_list;
     char *session_url;
     int session_file_has_te_list;
@@ -466,7 +435,6 @@ struct amvp_ctx_t {
     char *mod_cert_req_file;    /* string used for file to save certain HTTP requests to */
 
     AMVP_CERT_REQ cert_req_info; /* Stores info related to a cert request */
-    AMVP_FIPS fips; /* Information related to a FIPS validation */
 
     /* test session data */
     char *jwt_token; /* access_token provided by server for authenticating REST calls */
@@ -495,41 +463,35 @@ typedef enum amvp_net_action {
     AMVP_NET_GET = 1, /**< Generic (get) */
     AMVP_NET_POST,    /**< Generic (post) */
     AMVP_NET_PUT,     /**< Generic (put) */
-    AMVP_NET_PUT_MULTIPART, /**< Multipart form-data (put) */
+    AMVP_NET_POST_MULTIPART, /**< Multipart form-data (post) */
     AMVP_NET_DELETE   /**< delete vector set results, data */
 } AMVP_NET_ACTION;
 
-AMVP_RESULT amvp_send_test_session_registration(AMVP_CTX *ctx, char *reg, int len);
 AMVP_RESULT amvp_send_login(AMVP_CTX *ctx, char *login, int len);
 AMVP_RESULT amvp_refresh(AMVP_CTX *ctx);
 
 AMVP_RESULT amvp_send_evidence(AMVP_CTX *ctx, AMVP_EVIDENCE_TYPE type, const char *url, char *ev, int ev_len);
 AMVP_RESULT amvp_request_security_policy_generation(AMVP_CTX *ctx, const char *url, char *data);
 AMVP_RESULT amvp_send_security_policy(AMVP_CTX *ctx, const char *url, char *sp, int sp_len);
-AMVP_RESULT amvp_get_security_policy_json(AMVP_CTX *ctx, const char *url);
+AMVP_RESULT amvp_get_security_policy_json(AMVP_CTX *ctx, const char *url, JSON_Value **result);
 
-AMVP_RESULT amvp_network_action(AMVP_CTX *ctx, AMVP_NET_ACTION action, const char *url, const char *data, int data_len);
-AMVP_RESULT amvp_transport_get(AMVP_CTX *ctx, const char *url, const AMVP_KV_LIST *parameters);
-AMVP_RESULT amvp_transport_post(AMVP_CTX *ctx, const char *uri, char *data, int data_len);
-AMVP_RESULT amvp_transport_put(AMVP_CTX *ctx, const char *endpoint, const char *data, int data_len);
-AMVP_RESULT amvp_transport_put_validation(AMVP_CTX *ctx, const char *data, int data_len);
-AMVP_RESULT amvp_transport_delete(AMVP_CTX *ctx, const char *endpoint);
-AMVP_RESULT amvp_transport_put_sp_template(AMVP_CTX *ctx, const char *endpoint, const char *file_path);
-AMVP_RESULT amvp_transport_post_sp_template(AMVP_CTX *ctx, const char *endpoint, const char *file_path);
+AMVP_RESULT amvp_network_action(AMVP_CTX *ctx, AMVP_NET_ACTION action, const char *endpoint_path, const char *data, int data_len);
+AMVP_RESULT amvp_transport_get(AMVP_CTX *ctx, const char *endpoint_path);
+AMVP_RESULT amvp_transport_post(AMVP_CTX *ctx, const char *endpoint_path, const char *data, int data_len);
+AMVP_RESULT amvp_transport_put(AMVP_CTX *ctx, const char *endpoint_path, const char *data, int data_len);
+AMVP_RESULT amvp_transport_delete(AMVP_CTX *ctx, const char *endpoint_path);
+AMVP_RESULT amvp_transport_post_multipart_form(AMVP_CTX *ctx, const char *endpoint_path, const char *file_path);
 AMVP_RESULT amvp_send_sp_template(AMVP_CTX *ctx, const char *url, const char *file_path);
 
 AMVP_RESULT amvp_build_registration_json(AMVP_CTX *ctx, JSON_Value **reg);
-AMVP_RESULT amvp_build_validation(AMVP_CTX *ctx, char **out, int *out_len);
 AMVP_RESULT amvp_create_response_obj(JSON_Object **obj, JSON_Value **val);
 AMVP_RESULT amvp_add_version_to_obj(JSON_Object *obj);
 JSON_Object *amvp_get_obj_from_rsp(AMVP_CTX *ctx, JSON_Value *arry_val);
 void amvp_release_json(JSON_Value *r_vs_val, JSON_Value *r_gval);
 
-void amvp_oe_free_operating_env(AMVP_CTX *ctx);
 AMVP_RESULT amvp_verify_fips_validation_metadata(AMVP_CTX *ctx);
 
-void amvp_log_msg(AMVP_CTX *ctx, AMVP_LOG_LVL level, const char *func, int line, const char *format, ...);
-void amvp_log_newline(AMVP_CTX *ctx);
+void amvp_log_msg(AMVP_CTX *ctx, AMVP_LOG_LVL level, const char *func, int line, int use_large_buffer, const char *format, ...);
 
 AMVP_RESULT amvp_kv_list_append(AMVP_KV_LIST **kv_list, const char *key, const char *value);
 void amvp_kv_list_free(AMVP_KV_LIST *kv_list);
@@ -544,6 +506,8 @@ int amvp_lookup_param_list(AMVP_PARAM_LIST *list, int value);
 int amvp_is_domain_already_set(AMVP_JSON_DOMAIN_OBJ *domain);
 void amvp_free_sl(AMVP_SL_LIST *list);
 void amvp_free_nl(AMVP_NAME_LIST *list);
+
+unsigned char* amvp_decode_base64(const char *val, unsigned int *output_len);
 
 int string_fits(const char *string, unsigned int max_allowed);
 void amvp_http_user_agent_handler(AMVP_CTX *ctx);
@@ -563,5 +527,28 @@ AMVP_RESULT amvp_output_cert_request_status(AMVP_CTX *ctx, JSON_Object *status_j
 /* Utility functions */
 AMVP_CERT_REQ_STATUS amvp_parse_cert_req_status_str(JSON_Object *json);
 
+/* Transport utility functions */
+AMVP_RESULT sanity_check_ctx(AMVP_CTX *ctx);
+AMVP_RESULT inspect_http_code(AMVP_CTX *ctx, int code);
+void log_network_status(AMVP_CTX *ctx, AMVP_NET_ACTION action, int http_code, const char *url);
+char* url_encode_parameter(const char *param);
+void amvp_http_user_agent_handler(AMVP_CTX *ctx);
+AMVP_RESULT execute_network_action(AMVP_CTX *ctx, AMVP_NET_ACTION action, const char *url, const char *data,
+                                   int data_len, int *curl_code);
+
+/* Centralized endpoint functions - single entry points for protocol operations */
+AMVP_RESULT amvp_get_session_status(AMVP_CTX *ctx, JSON_Value **result);
+AMVP_RESULT amvp_submit_cert_request(AMVP_CTX *ctx, const char *request_data, int data_len);
+AMVP_RESULT amvp_send_cert_finalization(AMVP_CTX *ctx);
+AMVP_RESULT amvp_get_module_info(AMVP_CTX *ctx, int module_id, JSON_Value **result);
+AMVP_RESULT amvp_send_get_request(AMVP_CTX *ctx, const char *endpoint_path);
+
+/* Utility functions */
+const char *amvp_lookup_evidence_type_string(AMVP_EVIDENCE_TYPE type);
+
+/* Internal validation functions */
+AMVP_RESULT amvp_validate_contact_id(const char *id);
+AMVP_RESULT amvp_validate_acv_cert_id(const char *id);
+AMVP_RESULT amvp_validate_esv_cert_id(const char *id);
 
 #endif

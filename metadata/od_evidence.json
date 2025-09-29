@@ -1,5 +1,4 @@
 {
-    "amvVersion": "0.1",
     "otherDocumentation": {
         "document": {
             "base-catalogVersion": "3.0",
@@ -30,6 +29,8 @@
                     "TE04.21.01",
                     "TE04.22.01",
                     "TE04.25.01",
+                    "TE04.33.01",
+                    "TE04.35.01",
                     "TE04.43.01",
                     "TE04.44.01",
                     "TE05.02.01",
@@ -95,6 +96,17 @@
                     "TE11.04.03",
                     "TE11.04.04",
                     "TE11.05.01",
+                    "TE11.08.01",
+                    "TE11.08.02",
+                    "TE11.08.03",
+                    "TE11.08.04",
+                    "TE11.08.05",
+                    "TE11.08.07",
+                    "TE11.08.08",
+                    "TE11.08.10",
+                    "TE11.08.11",
+                    "TE11.08.12",
+                    "TE11.13.01",
                     "TE11.15.01",
                     "TE11.15.02",
                     "TE11.19.01",
@@ -105,11 +117,16 @@
                     "TE12.01.01",
                     "TEA.01.01"
                 ],
-                "sectionName": "sample",
-                "documentName": "sampleDocument",
+                "documents": [
+                    {
+                        "sectionName": "sample",
+                        "documentName": "sampleDocument"
+                    }
+                ],
                 "results": {
-                    "digest": "########",
-                    "fileLocation": "location of test evidence",
+                    "summary": "Documentation provides evidence that the referenced test requirements are met through implementation details and validation procedures",
+                    "digest": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+                    "fileLocation": "other_documentation/sample_evidence",
                     "integrityMechanism": "SHA2-512"
                 }
             }

@@ -133,7 +133,7 @@ AMVP_RESULT totp(char **token, int token_max) {
     char *seed = NULL;
     int seed_len = 0;
 
-    seed = getenv("ACV_TOTP_SEED");
+    seed = getenv("AMV_TOTP_SEED");
     if (!seed) {
         /* Not required to use 2-factor auth */
         return AMVP_SUCCESS;

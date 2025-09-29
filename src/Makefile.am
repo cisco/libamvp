@@ -3,8 +3,10 @@ AM_CFLAGS = -I$(top_srcdir)/include/amvp $(SAFEC_CFLAGS) $(LIBCURL_CFLAGS)
 
 libamvp_la_SOURCES =  amvp.c \
                     amvp_build_register.c \
-                    amvp_operating_env.c \
-                    amvp_transport.c \
+                    transport/amvp_transport.c \
+                    transport/amvp_transport_libcurl.c \
+                    transport/amvp_transport_util.c \
+                    transport/amvp_user_agent.c \
                     amvp_endpoints.c \
                     amvp_util.c \
                     amvp_error.c \

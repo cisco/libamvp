@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Cisco Systems, Inc.
+ * Copyright (c) 2025, Cisco Systems, Inc.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -15,7 +15,7 @@
  * It will default to 127.0.0.1 port 443 if no arguments are given.
  */
 #include <stdio.h>
-
+#include <stdlib.h>
 #include "app_lcl.h"
 
 #include "safe_mem_lib.h"
@@ -28,7 +28,6 @@ int port;
 const char *ca_chain_file;
 char *cert_file;
 char *key_file;
-const char *path_segment;
 
 #define CHECK_ENABLE_CAP_RV(rv) \
     if (rv != AMVP_SUCCESS) { \
@@ -45,30 +44,26 @@ static void setup_session_parameters(void) {
 
     server = getenv("AMV_SERVER");
     if (!server) {
-         server = DEFAULT_SERVER;
-     }
+        server = DEFAULT_SERVER;
+    }
 
     tmp = getenv("AMV_PORT");
     if (tmp) port = atoi(tmp);
     if (!port) port = DEFAULT_PORT;
-
-    path_segment = getenv("AMV_URI_PREFIX");
-    if (!path_segment) path_segment = DEFAULT_URI_PREFIX;
 
     ca_chain_file = getenv("AMV_CA_FILE");
     cert_file = getenv("AMV_CERT_FILE");
     key_file = getenv("AMV_KEY_FILE");
 
     printf("Using the following parameters:\n\n");
-  //  printf("    AMV_SERVER:     %s\n", server);
     printf("    AMV_SERVER:     %s\n", server);
     printf("    AMV_PORT:       %d\n", port);
-    printf("    AMV_URI_PREFIX: %s\n", path_segment);
     if (ca_chain_file) printf("    AMV_CA_FILE:    %s\n", ca_chain_file);
     if (cert_file) printf("    AMV_CERT_FILE:  %s\n", cert_file);
     if (key_file) printf("    AMV_KEY_FILE:   %s\n", key_file);
     printf("\n");
 }
+
 
 /* libamvp calls this function for status updates, debugs, warnings, and errors. */
 static AMVP_RESULT progress(char *msg, AMVP_LOG_LVL level) {
@@ -114,8 +109,14 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    /* Load certification configuration from file if specified */
+    rv = load_cert_config(&cfg);
+    if (rv != AMVP_SUCCESS) {
+        printf("Failed to load certification configuration: %s\n", amvp_lookup_error_string(rv));
+        return 1;
+    }
 
-     setup_session_parameters();
+    setup_session_parameters();
 
     /*
      * We begin the libamvp usage flow here.
@@ -134,12 +135,7 @@ int main(int argc, char **argv) {
         goto end;
     }
 
-    /* Set the path segment prefix if needed */
-    rv = amvp_set_path_segment(ctx, path_segment);
-    if (rv != AMVP_SUCCESS) {
-        printf("Failed to set URI prefix\n");
-        goto end;
-    }
+
 
     if (ca_chain_file) {
         /*
@@ -175,16 +171,18 @@ int main(int argc, char **argv) {
     }
 
     if (cfg.get) {
-        rv = amvp_mark_as_get_only(ctx, cfg.get_string);
-        if (rv != AMVP_SUCCESS) {
-            printf("Failed to mark as get only.\n");
-            goto end;
-        } else if (cfg.save_to) {
+        if (cfg.save_to) {
             rv = amvp_set_get_save_file(ctx, cfg.save_file);
             if (rv != AMVP_SUCCESS) {
-                printf("Failed to set save file for get request, continuing anyway...\n");
+                printf("Failed to set save file for GET request\n");
+                goto end;
             }
         }
+        rv = amvp_get(ctx, cfg.get_string);
+        if (rv != AMVP_SUCCESS) {
+            printf("Failed to perform GET request.\n");
+        }
+        goto end;
     }
 
     if (cfg.delete) {
@@ -197,29 +195,12 @@ int main(int argc, char **argv) {
          printf("Run amvp_app --help for more information on this and other environment variables.\n\n");
     }
 
-    if (cfg.fips_validation) {
-        unsigned int module_id = 1, oe_id = 1;
-
-        /* Provide the metadata needed for a FIPS validation. */
-        rv = amvp_oe_ingest_metadata(ctx, cfg.validation_metadata_file);
-        if (rv != AMVP_SUCCESS) {
-            printf("Failed to read validation_metadata_file\n");
-            goto end;
-        }
-
-        /*
-         * Tell the library which Module and Operating Environment to use
-         * when doing the FIPS validation.
-         */
-        rv = amvp_oe_set_fips_validation_metadata(ctx, module_id, oe_id);
-        if (rv != AMVP_SUCCESS) {
-            printf("Failed to set metadata for FIPS validation\n");
-            goto end;
-        }
-    }
-
     if (cfg.mod_cert_req) {
         rv = amvp_mark_as_cert_req(ctx, cfg.create_module_file, cfg.vendor_id);
+        if (rv != AMVP_SUCCESS) {
+            printf("Failed to mark as cert request: %s\n", amvp_lookup_error_string(rv));
+            goto end;
+        }
 
         /* Add tester contacts */
         for (diff = 0; diff < cfg.num_testers; diff++) {
@@ -239,12 +220,22 @@ int main(int argc, char **argv) {
             }
         }
 
+        /* Add ACV certificates */
         for (diff = 0; diff < cfg.num_acv_certs; diff++) {
-            amvp_cert_req_add_sub_cert(ctx, cfg.acv_certs[diff], AMVP_CERT_TYPE_ACV);
+            rv = amvp_cert_req_add_sub_cert(ctx, cfg.acv_certs[diff], AMVP_CERT_TYPE_ACV);
+            if (rv != AMVP_SUCCESS) {
+                printf("Failed to add ACV certificate: %s\n", amvp_lookup_error_string(rv));
+                goto end;
+            }
         }
 
+        /* Add ESV certificates */
         for (diff = 0; diff < cfg.num_esv_certs; diff++) {
-            amvp_cert_req_add_sub_cert(ctx, cfg.esv_certs[diff], AMVP_CERT_TYPE_ESV);
+            rv = amvp_cert_req_add_sub_cert(ctx, cfg.esv_certs[diff], AMVP_CERT_TYPE_ESV);
+            if (rv != AMVP_SUCCESS) {
+                printf("Failed to add ESV certificate: %s\n", amvp_lookup_error_string(rv));
+                goto end;
+            }
         }
     }
 
@@ -261,31 +252,10 @@ int main(int argc, char **argv) {
                 goto end;
             }
         }
-        if (cfg.submit_ft_ev) {
-            rv = amvp_submit_evidence(ctx, cfg.ev_file, AMVP_EVIDENCE_TYPE_FUNCTIONAL_TEST);
+        if (cfg.submit_ev) {
+            rv = amvp_submit_evidence(ctx, cfg.ev_file);
             if (rv != AMVP_SUCCESS) {
-                printf("Error submitting functional evidence for module cert request\n");
-                goto end;
-            }
-        }
-        if (cfg.submit_sc_ev) {
-            rv = amvp_submit_evidence(ctx, cfg.ev_file, AMVP_EVIDENCE_TYPE_SOURCE_CODE);
-            if (rv != AMVP_SUCCESS) {
-                printf("Error submitting source code evidence for module cert request\n");
-                goto end;
-            }
-        }
-        if (cfg.submit_od_ev) {
-            rv = amvp_submit_evidence(ctx, cfg.ev_file, AMVP_EVIDENCE_TYPE_OTHER_DOC);
-            if (rv != AMVP_SUCCESS) {
-                printf("Error submitting other documentation evidence for module cert request\n");
-                goto end;
-            }
-        }
-        if (cfg.submit_fsm_ev) {
-            rv = amvp_submit_evidence(ctx, cfg.ev_file, AMVP_EVIDENCE_TYPE_FSM);
-            if (rv != AMVP_SUCCESS) {
-                printf("Error submitting finite state machine evidence for module cert request\n");
+                printf("Error submitting evidence for module cert request\n");
                 goto end;
             }
         }

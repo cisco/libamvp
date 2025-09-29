@@ -63,7 +63,7 @@ static void ketopt_permute(char *argv[], int j, int n) /* move argv[j] over n el
  */
 static int ketopt(ketopt_t *s, int argc, char *argv[], int permute, const char *ostr, const ko_longopt_t *longopts)
 {
-    char ostr2[OSTR_MAX+1] = "vhas:u:r:p:";
+    char ostr2[OSTR_MAX+1] = "vhs:f:";
 	int opt = -1, i0, j;
     int odiff = 0;
 

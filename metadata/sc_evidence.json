@@ -1,81 +1,74 @@
 {
-    "amvVersion": "0.1",
-    "sourceCode": {
-        "document": {
-            "base-catalogVersion": "3.0",
-            "base-lastUpdated": "October-16-2023",
-            "sourceCode-EC": "0.6",
-            "sourceCode-lastUpdated": "October-29-2024"
-        },
-        "defaults": {
-            "access": "physical remote observed",
-            "technique": "tool-assisted manual script other",
-            "description": "description of test procedure (e.g., how the input to test is provided and how the output is observed)",
-            "results": {
-                "digest": "####",
-                "fileLocation": "directory or location of test evidence",
-                "integrityMechanism": "SHA2-256"
-            }
-        },
-        "testEvidence": [
-            {
-                "teList": [
-                    "TE02.07.01",
-                    "TE02.07.02",
-                    "TE02.10.01",
-                    "TE03.01.02",
-                    "TE03.02.01",
-                    "TE03.07.05",
-                    "TE03.14.01",
-                    "TE03.14.02",
-                    "TE03.14.03",
-                    "TE03.15.02",
-                    "TE03.15.05",
-                    "TE05.04.01",
-                    "TE05.05.01",
-                    "TE05.05.06",
-                    "TE05.08.02",
-                    "TE05.13.07",
-                    "TE10.07.05",
-                    "TE10.15.02",
-                    "TE10.20.01",
-                    "TE10.22.02",
-                    "TE10.22.03",
-                    "TE10.22.05",
-                    "TE10.24.02",
-                    "TE10.28.01",
-                    "TE10.29.01",
-                    "TE10.33.02",
-                    "TE10.34.02",
-                    "TE10.35.01",
-                    "TE10.35.02",
-                    "TE10.35.03",
-                    "TE10.37.04",
-                    "TE10.37.07",
-                    "TE10.37.08",
-                    "TE10.46.02",
-                    "TE10.48.02",
-                    "TE10.49.02",
-                    "TE10.51.01",
-                    "TE10.51.02",
-                    "TE10.51.03",
-                    "TE11.16.01"
-                ],
-                "file": [
-                    "full path to file"
-                ],
-                "function": "Source code method/function(s)",
-                "lines": "Source code line numbers",
-                "description": "Summarize how the source code review aspect of the TE was accomplished.",
-                "input": "may not always be applicable",
-                "output": "may not always be applicable",
-                "status": "",
-                "results": {
-                    "digest": "########",
-                    "fileLocation": "location of test evidence",
-                    "integrityMechanism": "SHA2-512"
-                }
-            }
-        ]
-    }
+  "sourceCode": {
+    "document": {
+      "base-catalogVersion": "3.0",
+      "base-lastUpdated": "October-16-2023",
+      "sourceCode-EC": "0.6",
+      "sourceCode-lastUpdated": "October-29-2024"
+    },
+    "testEvidence": [
+      {
+        "teList": [
+          "TE02.07.01",
+          "TE02.07.02",
+          "TE02.10.01",
+          "TE03.01.02",
+          "TE03.02.01",
+          "TE03.07.05",
+          "TE03.14.01",
+          "TE03.14.02",
+          "TE03.14.03",
+          "TE03.15.02",
+          "TE03.15.05",
+          "TE05.04.01",
+          "TE05.05.01",
+          "TE05.05.06",
+          "TE05.08.02",
+          "TE05.13.07",
+          "TE10.07.05",
+          "TE10.15.02",
+          "TE10.20.01",
+          "TE10.22.02",
+          "TE10.22.03",
+          "TE10.22.05",
+          "TE10.24.02",
+          "TE10.28.01",
+          "TE10.29.01",
+          "TE10.33.02",
+          "TE10.34.02",
+          "TE10.35.01",
+          "TE10.35.02",
+          "TE10.35.03",
+          "TE10.37.04",
+          "TE10.37.07",
+          "TE10.37.08",
+          "TE10.46.02",
+          "TE10.48.02",
+          "TE10.49.02",
+          "TE10.51.01",
+          "TE10.51.02",
+          "TE10.51.03",
+          "TE11.16.01"
+        ],
+        "access": "physical",
+        "technique": "manual",
+        "description": "Source code review to verify cryptographic implementation meets requirements",
+        "version": "1.0",
+        "file": [
+          "path/to/source/file.c"
+        ],
+        "function": "crypto_implementation_function",
+        "lines": "100-150",
+        "input": "cryptographic input parameters",
+        "output": "expected cryptographic output",
+        "status": "passed",
+        "results": {
+          "summary": "Source code review confirms that cryptographic implementation correctly follows specified requirements",
+          "digest": "0000000000000000000000000000000000000000000000000000000000000000",
+          "fileLocation": "path/to/source/evidence",
+          "integrityMechanism": "SHA2-256"
+        }
+      }
+    ]
+  }
 }
