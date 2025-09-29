@@ -1,6 +1,6 @@
 /** @file */
 /*
- * Copyright (c) 2021, Cisco Systems, Inc.
+ * Copyright (c) 2025, Cisco Systems, Inc.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -30,6 +30,8 @@
 static AMVP_RESULT amvp_login(AMVP_CTX *ctx, int refresh);
 
 static AMVP_RESULT amvp_parse_login(AMVP_CTX *ctx);
+
+static AMVP_RESULT amvp_update_session_file_jwt(AMVP_CTX *ctx);
 
 /*
  * This is the first function the user should invoke to allocate
@@ -87,7 +89,6 @@ AMVP_RESULT amvp_free_test_session(AMVP_CTX *ctx) {
     if (ctx->kat_resp) { json_value_free(ctx->kat_resp); }
     if (ctx->curl_buf) { free(ctx->curl_buf); }
     if (ctx->server_name) { free(ctx->server_name); }
-    if (ctx->path_segment) { free(ctx->path_segment); }
     if (ctx->cacerts_file) { free(ctx->cacerts_file); }
     if (ctx->tls_cert) { free(ctx->tls_cert); }
     if (ctx->tls_key) { free(ctx->tls_key); }
@@ -128,11 +129,6 @@ AMVP_RESULT amvp_free_test_session(AMVP_CTX *ctx) {
         }
     }
 
-    /*
-     * Free everything in the Operating Environment structs
-     */
-    amvp_oe_free_operating_env(ctx);
-
     /* Free the AMVP_CTX struct */
     free(ctx);
 
@@ -169,31 +165,6 @@ AMVP_RESULT amvp_set_server(AMVP_CTX *ctx, const char *server_name, int port) {
         //generate user-agent string to send with HTTP requests
         amvp_http_user_agent_handler(ctx);
     }
-
-    return AMVP_SUCCESS;
-}
-
-/*
- * This function is used by the application to specify the
- * AMVP server URI path segment prefix.
- */
-AMVP_RESULT amvp_set_path_segment(AMVP_CTX *ctx, const char *path_segment) {
-    if (!ctx) {
-        return AMVP_NO_CTX;
-    }
-    if (!path_segment) {
-        return AMVP_INVALID_ARG;
-    }
-    if (strnlen_s(path_segment, AMVP_SESSION_PARAMS_STR_LEN_MAX + 1) > AMVP_SESSION_PARAMS_STR_LEN_MAX) {
-        AMVP_LOG_ERR("Path segment string(s) too long");
-        return AMVP_INVALID_ARG;
-    }
-    if (ctx->path_segment) { free(ctx->path_segment); }
-    ctx->path_segment = calloc(AMVP_SESSION_PARAMS_STR_LEN_MAX + 1, sizeof(char));
-    if (!ctx->path_segment) {
-        return AMVP_MALLOC_FAIL;
-    }
-    strcpy_s(ctx->path_segment, AMVP_SESSION_PARAMS_STR_LEN_MAX + 1, path_segment);
 
     return AMVP_SUCCESS;
 }
@@ -270,26 +241,70 @@ AMVP_RESULT amvp_set_certkey(AMVP_CTX *ctx, char *cert_file, char *key_file) {
     return AMVP_SUCCESS;
 }
 
-AMVP_RESULT amvp_mark_as_get_only(AMVP_CTX *ctx, char *string) {
+AMVP_RESULT amvp_get(AMVP_CTX *ctx, const char *endpoint_path) {
+    AMVP_RESULT rv = AMVP_SUCCESS;
+
     if (!ctx) {
         return AMVP_NO_CTX;
-    } 
-    if (!string) {
+    }
+
+    if (!endpoint_path) {
         return AMVP_MISSING_ARG;
     }
-    if (strnlen_s(string, AMVP_REQUEST_STR_LEN_MAX + 1) > AMVP_REQUEST_STR_LEN_MAX) {
-         AMVP_LOG_ERR("Request string is suspiciously long...");
+
+    if (strnlen_s(endpoint_path, AMVP_REQUEST_STR_LEN_MAX + 1) > AMVP_REQUEST_STR_LEN_MAX) {
+        AMVP_LOG_ERR("Request endpoint path is suspiciously long...");
         return AMVP_INVALID_ARG;
     }
 
-    if (ctx->get_string) { free(ctx->get_string); }
-    ctx->get_string = calloc(AMVP_REQUEST_STR_LEN_MAX + 1, sizeof(char));
-    if (!ctx->get_string) {
-        return AMVP_MALLOC_FAIL;
+    /* Check if we have authentication - either from cert req info file or need to login */
+    if (!ctx->jwt_token) {
+        rv = amvp_login(ctx, 0);
+        if (rv != AMVP_SUCCESS) {
+            AMVP_LOG_ERR("Failed to login for GET request");
+            return rv;
+        }
     }
 
-    strcpy_s(ctx->get_string, AMVP_REQUEST_STR_LEN_MAX + 1, string);
-    ctx->action = AMVP_ACTION_GET;
+    /* Perform the GET request through endpoints abstraction */
+    AMVP_LOG_STATUS("Performing GET request to: %s", endpoint_path);
+    rv = amvp_send_get_request(ctx, endpoint_path);
+    if (rv == AMVP_PROTOCOL_RSP_ERR) {
+        rv = amvp_handle_protocol_error(ctx, ctx->error);
+        if (rv == AMVP_RETRY_OPERATION) {
+            rv = amvp_send_get_request(ctx, endpoint_path);
+        }
+    }
+    if (rv != AMVP_SUCCESS) {
+        AMVP_LOG_ERR("GET request failed");
+        return rv;
+    }
+
+    /* Check if we have response data */
+    if (!ctx->curl_buf || strlen(ctx->curl_buf) == 0) {
+        AMVP_LOG_WARN("No response data received");
+        return AMVP_SUCCESS;
+    }
+
+    /* Use existing get save file mechanism - ctx->save_filename is set via amvp_set_get_save_file() */
+    if (ctx->save_filename) {
+        FILE *fp = fopen(ctx->save_filename, "w");
+        if (!fp) {
+            AMVP_LOG_ERR("Failed to open save file: %s", ctx->save_filename);
+            return AMVP_INTERNAL_ERR;
+        }
+
+        if (fwrite(ctx->curl_buf, 1, strlen(ctx->curl_buf), fp) != strlen(ctx->curl_buf)) {
+            AMVP_LOG_ERR("Failed to write response to file: %s", ctx->save_filename);
+            fclose(fp);
+            return AMVP_INTERNAL_ERR;
+        }
+        AMVP_LOG_STATUS("Response saved to file: %s", ctx->save_filename);
+        fclose(fp);
+    } else {
+        AMVP_LOG_STATUS("Response:\n%s", ctx->curl_buf);
+    }
+
     return AMVP_SUCCESS;
 }
 
@@ -297,7 +312,7 @@ AMVP_RESULT amvp_set_get_save_file(AMVP_CTX *ctx, char *filename) {
     if (!ctx) {
         AMVP_LOG_ERR("No CTX given");
         return AMVP_NO_CTX;
-    } 
+    }
     if (!filename) {
         AMVP_LOG_ERR("No filename given");
         return AMVP_MISSING_ARG;
@@ -330,7 +345,7 @@ AMVP_RESULT amvp_mark_as_cert_req(AMVP_CTX *ctx, const char *module_file, int ve
         AMVP_LOG_ERR("Module file name is suspiciously long...");
         return AMVP_INVALID_ARG;
     }
- 
+
     strcpy_s(ctx->cert_req_info.module_file, AMVP_JSON_FILENAME_MAX + 1, module_file);
     ctx->cert_req_info.vendor_id = vendor_id;
     ctx->action = AMVP_ACTION_CERT_REQ;
@@ -348,6 +363,12 @@ AMVP_RESULT amvp_cert_req_add_contact(AMVP_CTX *ctx, const char *contact_id, AMV
 
     if (!contact_id) {
         return AMVP_MISSING_ARG;
+    }
+
+    /* Validate contact ID format */
+    if (amvp_validate_contact_id(contact_id) != AMVP_SUCCESS) {
+        AMVP_LOG_ERR("Invalid contact ID format: %s (must be CVP-XXXXXX)", contact_id);
+        return AMVP_INVALID_ARG;
     }
 
     if (contact_type >= AMVP_CONTACT_TYPE_MAX) {
@@ -370,6 +391,7 @@ AMVP_RESULT amvp_cert_req_add_contact(AMVP_CTX *ctx, const char *contact_id, AMV
             count_ptr = &ctx->cert_req_info.reviewer_count;
             contact_array = ctx->cert_req_info.reviewer_id;
             break;
+        case AMVP_CONTACT_TYPE_MAX:
         default:
             AMVP_LOG_ERR("Unsupported contact type");
             return AMVP_INVALID_ARG;
@@ -411,6 +433,19 @@ AMVP_RESULT amvp_cert_req_add_sub_cert(AMVP_CTX *ctx, const char *cert_id, AMVP_
 
     if (!cert_id) {
         return AMVP_MISSING_ARG;
+    }
+
+    /* Validate certificate ID format based on type */
+    if (type == AMVP_CERT_TYPE_ACV) {
+        if (amvp_validate_acv_cert_id(cert_id) != AMVP_SUCCESS) {
+            AMVP_LOG_ERR("Invalid ACV certificate ID format: %s (must be A<number>)", cert_id);
+            return AMVP_INVALID_ARG;
+        }
+    } else if (type == AMVP_CERT_TYPE_ESV) {
+        if (amvp_validate_esv_cert_id(cert_id) != AMVP_SUCCESS) {
+            AMVP_LOG_ERR("Invalid ESV certificate ID format: %s (must be E<number>)", cert_id);
+            return AMVP_INVALID_ARG;
+        }
     }
 
     len = strnlen_s(cert_id, AMVP_CERT_STR_MAX_LEN + 1);
@@ -467,6 +502,7 @@ AMVP_RESULT amvp_cert_req_add_sub_cert(AMVP_CTX *ctx, const char *cert_id, AMVP_
         case AMVP_CERT_TYPE_AMV:
         case AMVP_CERT_TYPE_NONE:
         case AMVP_CERT_TYPE_MAX:
+        default:
             AMVP_LOG_ERR("Sub certs can only be set for ACV or ESV certs");
             return AMVP_INVALID_ARG;
     }
@@ -576,6 +612,18 @@ AMVP_RESULT amvp_read_cert_req_info_file(AMVP_CTX *ctx, const char *filename) {
         return AMVP_INVALID_ARG;
     }
 
+    /* Store the session file path for later updating */
+    if (ctx->session_file_path) {
+        free(ctx->session_file_path);
+        ctx->session_file_path = NULL;
+    }
+    ctx->session_file_path = calloc(AMVP_JSON_FILENAME_MAX + 1, sizeof(char));
+    if (!ctx->session_file_path) {
+        AMVP_LOG_ERR("Unable to allocate memory for session file path");
+        return AMVP_MALLOC_FAIL;
+    }
+    strcpy_s(ctx->session_file_path, AMVP_JSON_FILENAME_MAX + 1, filename);
+
     /*
      * Send the capabilities to the AMVP server and get the response,
      * which should be a list of vector set ID urls
@@ -636,6 +684,76 @@ end:
     return rv;
 }
 
+static AMVP_RESULT amvp_update_session_file_jwt(AMVP_CTX *ctx) {
+    AMVP_RESULT rv = AMVP_INTERNAL_ERR;
+    JSON_Value *val = NULL;
+    JSON_Object *obj = NULL;
+    char *serialized_string = NULL;
+    FILE *file = NULL;
+
+    if (!ctx) {
+        AMVP_LOG_ERR("No CTX given");
+        return AMVP_NO_CTX;
+    }
+
+    if (!ctx->session_file_path) {
+        AMVP_LOG_WARN("No session file path available to update");
+        return AMVP_SUCCESS; /* Not an error if no file to update */
+    }
+
+    if (!ctx->jwt_token) {
+        AMVP_LOG_ERR("No JWT token available to update file with");
+        return AMVP_MISSING_ARG;
+    }
+
+    /* Parse the existing session file */
+    val = json_parse_file(ctx->session_file_path);
+    if (!val) {
+        AMVP_LOG_ERR("Failed to parse existing session file: %s", ctx->session_file_path);
+        return AMVP_JSON_ERR;
+    }
+
+    obj = json_value_get_object(val);
+    if (!obj) {
+        AMVP_LOG_ERR("Session file does not contain valid JSON object");
+        goto end;
+    }
+
+    /* Update the accessToken field with the new JWT */
+    if (json_object_set_string(obj, "accessToken", ctx->jwt_token) != JSONSuccess) {
+        AMVP_LOG_ERR("Failed to update accessToken in JSON object");
+        goto end;
+    }
+
+    /* Serialize the updated JSON */
+    serialized_string = json_serialize_to_string_pretty(val, NULL);
+    if (!serialized_string) {
+        AMVP_LOG_ERR("Failed to serialize updated JSON");
+        goto end;
+    }
+
+    /* Write the updated content back to the file */
+    file = fopen(ctx->session_file_path, "w");
+    if (!file) {
+        AMVP_LOG_ERR("Failed to open session file for writing: %s", ctx->session_file_path);
+        goto end;
+    }
+
+    if (fwrite(serialized_string, 1, strlen(serialized_string), file) != strlen(serialized_string)) {
+        AMVP_LOG_ERR("Failed to write updated content to session file");
+        goto end;
+    }
+
+    AMVP_LOG_STATUS("Successfully updated JWT in session file: %s", ctx->session_file_path);
+    rv = AMVP_SUCCESS;
+
+end:
+    if (file) fclose(file);
+    if (serialized_string) json_free_serialized_string(serialized_string);
+    if (val) json_value_free(val);
+    return rv;
+}
+
 AMVP_RESULT amvp_check_cert_req_status(AMVP_CTX *ctx) {
     AMVP_RESULT rv = AMVP_INTERNAL_ERR;
     JSON_Value *val = NULL;
@@ -655,25 +773,32 @@ AMVP_RESULT amvp_check_cert_req_status(AMVP_CTX *ctx) {
 
     do {
         retry = 0;
- 
-        rv = amvp_transport_get(ctx, ctx->session_url, NULL);
+
+        rv = amvp_get_session_status(ctx, &val);
         if (rv == AMVP_PROTOCOL_RSP_ERR) {
             rv = amvp_handle_protocol_error(ctx, ctx->error);
             if (rv == AMVP_RETRY_OPERATION) {
-                rv = amvp_transport_get(ctx, ctx->session_url, NULL);
+                if (val) json_value_free(val);  /* Free first response before retry */
+                rv = amvp_get_session_status(ctx, &val);
             }
         }
 
-        val = json_parse_string(ctx->curl_buf);
+        if (rv != AMVP_SUCCESS) {
+            AMVP_LOG_ERR("Unable to get session status from server");
+            goto end;
+        }
+
         if (!val) {
-            AMVP_LOG_ERR("Unable to parse JSON from server response when getting cert req status");
-            return AMVP_JSON_ERR;
+            AMVP_LOG_ERR("No JSON data received when getting cert req status");
+            rv = AMVP_NO_DATA;
+            goto end;
         }
 
         obj = amvp_get_obj_from_rsp(ctx, val);
         if (!obj) {
             AMVP_LOG_ERR("Unrecognized JSON format found when getting cert req status");
-            return AMVP_JSON_ERR;
+            rv = AMVP_JSON_ERR;
+            goto end;
         }
 
         status = amvp_parse_cert_req_status_str(obj);
@@ -682,6 +807,8 @@ AMVP_RESULT amvp_check_cert_req_status(AMVP_CTX *ctx) {
             AMVP_LOG_STATUS("Certification request is still initializing...");
             rv = amvp_retry_handler(ctx, &retry_period, &time_waited_so_far, 1, AMVP_WAITING_FOR_TESTS);
             retry = 1;
+            if (val) json_value_free(val);
+            val = NULL;
             continue;
         case AMVP_CERT_REQ_STATUS_READY:
             if (!ctx->session_file_has_te_list) {
@@ -709,6 +836,7 @@ AMVP_RESULT amvp_check_cert_req_status(AMVP_CTX *ctx) {
             }
             break;
         case AMVP_CERT_REQ_STATUS_ERROR:
+        case AMVP_CERT_REQ_STATUS_UNKNOWN:
         default:
             AMVP_LOG_ERR("An error occurred while parsing the cert request status");
             rv = AMVP_JSON_ERR;
@@ -810,11 +938,11 @@ AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx) {
 
     /* Send it */
     AMVP_LOG_STATUS("Sending module cert request...");
-    rv = amvp_transport_post(ctx, "/amvp/v1/certRequests", reg, reg_len);
+    rv = amvp_submit_cert_request(ctx, reg, reg_len);
     if (rv == AMVP_PROTOCOL_RSP_ERR) {
         rv = amvp_handle_protocol_error(ctx, ctx->error);
         if (rv == AMVP_RETRY_OPERATION) {
-            rv = amvp_transport_post(ctx, "/amvp/v1/certRequests", reg, reg_len);
+            rv = amvp_submit_cert_request(ctx, reg, reg_len);
         }
     }
     if (rv != AMVP_SUCCESS) {
@@ -860,14 +988,14 @@ AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx) {
     }
     strcpy_s(ctx->jwt_token, AMVP_JWT_TOKEN_MAX + 1, token);
 
-    AMVP_LOG_STATUS("Successfully sent certify request. Saving details and proceeding...");
+    AMVP_LOG_STATUS("Successfully sent certify request...");
 
     rv = amvp_save_cert_req_info_file(ctx, tmp_obj);
     if (rv != AMVP_SUCCESS) {
         AMVP_LOG_ERR("Error saving cert request info file");
         goto end;
     }
-    
+
     rv = amvp_check_cert_req_status(ctx);
     if (rv != AMVP_SUCCESS) {
         AMVP_LOG_ERR("Error checking cert request status");
@@ -877,6 +1005,7 @@ AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx) {
 end:
     if (reg) json_free_serialized_string(reg);
     if (file) free(file);
+    if (module_file_val) json_value_free(module_file_val);
     if (output_file_val) json_value_free(output_file_val); //Also frees the header and body vals
     if (cert_info_val) json_value_free(cert_info_val);
     if (cert_rsp_val) json_value_free(cert_rsp_val);
@@ -982,6 +1111,7 @@ end:
     if (val) json_value_free(val);
     if (tmp) json_value_free(tmp);
     if (file) free(file);
+    if (sp) free(sp);
     return rv;
 }
 
@@ -1036,11 +1166,12 @@ AMVP_RESULT amvp_get_security_policy(AMVP_CTX *ctx) {
         return AMVP_MISSING_ARG;
     }
 
-    rv = amvp_get_security_policy_json(ctx, ctx->session_url);
+    rv = amvp_get_security_policy_json(ctx, ctx->session_url, &val);
     if (rv == AMVP_PROTOCOL_RSP_ERR) {
         rv = amvp_handle_protocol_error(ctx, ctx->error);
         if (rv == AMVP_RETRY_OPERATION) {
-            rv = amvp_get_security_policy_json(ctx, ctx->session_url);
+            if (val) json_value_free(val);
+            rv = amvp_get_security_policy_json(ctx, ctx->session_url, &val);
         }
     }
     if (rv != AMVP_SUCCESS) {
@@ -1048,9 +1179,8 @@ AMVP_RESULT amvp_get_security_policy(AMVP_CTX *ctx) {
         return AMVP_TRANSPORT_FAIL;
     }
 
-    val = json_parse_string(ctx->curl_buf);
     if (!val) {
-        AMVP_LOG_ERR("Error parsing response from server when checking certify session status");
+        AMVP_LOG_ERR("No JSON data received when getting security policy");
         goto err;
     }
 
@@ -1116,7 +1246,7 @@ AMVP_RESULT amvp_get_security_policy(AMVP_CTX *ctx) {
             goto err;
         }
 
-        if (fwrite((const void *)sp_buffer, sp_buffer_len, 1, fp) == EOF) {
+        if (fwrite((const void *)sp_buffer, sp_buffer_len, 1, fp) != 1) {
             AMVP_LOG_ERR("Failure writing security policy to file");
             goto err;
         }
@@ -1137,14 +1267,45 @@ AMVP_RESULT amvp_get_security_policy(AMVP_CTX *ctx) {
     rv = AMVP_SUCCESS;
 err:
     if (val) json_value_free(val);
+    if (req_val) json_value_free(req_val);
     if (sp_buffer) free(sp_buffer);
+    if (req_str) free(req_str);
     return rv;
 }
 
-AMVP_RESULT amvp_submit_evidence(AMVP_CTX *ctx, const char *filename, AMVP_EVIDENCE_TYPE type) {
+/*
+ * Static helper function to auto-detect evidence type from JSON structure
+ * by checking the top-level keys in the evidence payload
+ */
+static AMVP_EVIDENCE_TYPE amvp_detect_evidence_type(JSON_Object *obj) {
+    if (!obj) {
+        return AMVP_EVIDENCE_TYPE_NA;
+    }
+
+    /* Check for functional test evidence - has "functionalTest" top-level key */
+    if (json_object_has_value(obj, "functionalTest")) {
+        return AMVP_EVIDENCE_TYPE_FUNCTIONAL_TEST;
+    }
+
+    /* Check for source code evidence - has "sourceCode" top-level key */
+    if (json_object_has_value(obj, "sourceCode")) {
+        return AMVP_EVIDENCE_TYPE_SOURCE_CODE;
+    }
+
+    /* Check for other documentation evidence - has "otherDocumentation" top-level key */
+    if (json_object_has_value(obj, "otherDocumentation")) {
+        return AMVP_EVIDENCE_TYPE_OTHER_DOC;
+    }
+
+    /* If none of the expected keys are found, return unknown/invalid type */
+    return AMVP_EVIDENCE_TYPE_NA;
+}
+
+AMVP_RESULT amvp_submit_evidence(AMVP_CTX *ctx, const char *filename) {
     AMVP_RESULT rv = AMVP_INTERNAL_ERR;
     char *reg = NULL, *file = NULL, *ev = NULL;
     int ev_len = 0;
+    AMVP_EVIDENCE_TYPE type = AMVP_EVIDENCE_TYPE_NA;
 
     JSON_Value *val = NULL, *tmp = NULL, *submission = NULL;
     JSON_Object *obj = NULL, *submission_obj = NULL;
@@ -1163,15 +1324,18 @@ AMVP_RESULT amvp_submit_evidence(AMVP_CTX *ctx, const char *filename, AMVP_EVIDE
         return AMVP_INVALID_ARG;
     }
 
-    if (type <= AMVP_EVIDENCE_TYPE_NA || type >= AMVP_EVIDENCE_TYPE_MAX) {
-        AMVP_LOG_ERR("Invalid evidence type indicated, unable to submit");
-        return AMVP_INVALID_ARG;
-    }
-
     val = json_parse_file(filename);
     obj = json_value_get_object(val);
     if (!obj) {
         AMVP_LOG_ERR("Provided evidence file is invalid");
+        goto end;
+    }
+
+    /* Auto-detect evidence type from JSON structure */
+    type = amvp_detect_evidence_type(obj);
+    if (type <= AMVP_EVIDENCE_TYPE_NA || type >= AMVP_EVIDENCE_TYPE_MAX) {
+        AMVP_LOG_ERR("Unable to determine evidence type from file structure. Expected top-level keys: 'functionalTest', 'sourceCode', or 'otherDocumentation'");
+        rv = AMVP_INVALID_ARG;
         goto end;
     }
 
@@ -1185,7 +1349,7 @@ AMVP_RESULT amvp_submit_evidence(AMVP_CTX *ctx, const char *filename, AMVP_EVIDE
 
     ev = json_serialize_to_string_pretty(submission, &ev_len);
 
-    AMVP_LOG_STATUS("Successfully read evidence file. Submitting...");
+    AMVP_LOG_STATUS("Successfully read %s evidence file. Submitting...", amvp_lookup_evidence_type_string(type));
     rv = amvp_send_evidence(ctx, type, ctx->session_url, ev, ev_len);
     if (rv == AMVP_PROTOCOL_RSP_ERR) {
         rv = amvp_handle_protocol_error(ctx, ctx->error);
@@ -1222,6 +1386,7 @@ end:
     if (val) json_value_free(val);
     if (tmp) json_value_free(tmp);
     if (file) free(file);
+    if (ev) free(ev);
     return rv;
 }
 
@@ -1230,13 +1395,13 @@ AMVP_RESULT amvp_finalize_cert_request(AMVP_CTX *ctx) {
     JSON_Value *val = NULL;
     JSON_Object *obj = NULL;
     AMVP_CERT_REQ_STATUS status = AMVP_CERT_REQ_STATUS_UNKNOWN;
-    char *url = NULL;
 
-    rv = amvp_transport_get(ctx, ctx->session_url, NULL);
+    rv = amvp_get_session_status(ctx, &val);
     if (rv == AMVP_PROTOCOL_RSP_ERR) {
         rv = amvp_handle_protocol_error(ctx, ctx->error);
         if (rv == AMVP_RETRY_OPERATION) {
-            rv = amvp_transport_get(ctx, ctx->session_url, NULL);
+            if (val) json_value_free(val);  /* Free first response before retry */
+            rv = amvp_get_session_status(ctx, &val);
         }
     }
 
@@ -1245,8 +1410,12 @@ AMVP_RESULT amvp_finalize_cert_request(AMVP_CTX *ctx) {
         goto end;
     }
 
-    if (val) json_value_free(val);
-    val = json_parse_string(ctx->curl_buf);
+    if (!val) {
+        AMVP_LOG_ERR("No JSON data received when getting cert request status");
+        rv = AMVP_NO_DATA;
+        goto end;
+    }
+
     obj = amvp_get_obj_from_rsp(ctx, val);
     if (!obj) {
         AMVP_LOG_ERR("Error parsing info about certify request while waiting for approval");
@@ -1260,13 +1429,7 @@ AMVP_RESULT amvp_finalize_cert_request(AMVP_CTX *ctx) {
       //  goto end;
     }
 
-    url = calloc(AMVP_ATTR_URL_MAX, sizeof(char));
-    if (!url) {
-        AMVP_LOG_ERR("Unable to allocate URL for finalizing submission of cert request");
-        goto end;
-    }
-    snprintf(url, AMVP_ATTR_URL_MAX, "%s/%s", ctx->session_url, AMVP_CERTIFY_ENDPOINT);
-    rv = amvp_transport_post(ctx, url, "{\"amvVersion\": 0.1}", 20);
+    rv = amvp_send_cert_finalization(ctx);
     if (rv != AMVP_SUCCESS) {
         AMVP_LOG_ERR("Error occurred when requesting final submission of cert request");
         goto end;
@@ -1357,6 +1520,14 @@ static AMVP_RESULT amvp_login(AMVP_CTX *ctx, int refresh) {
         AMVP_LOG_STATUS("Login Response Failed, %d", rv);
     } else {
         AMVP_LOG_STATUS("Login successful");
+
+        /* If this was a refresh and we have a session file, update it with the new JWT */
+        if (refresh && ctx->session_file_path) {
+            AMVP_RESULT update_rv = amvp_update_session_file_jwt(ctx);
+            if (update_rv != AMVP_SUCCESS) {
+                AMVP_LOG_WARN("Failed to update session file with new JWT, but continuing...");
+            }
+        }
     }
 end:
     if (login) free(login);

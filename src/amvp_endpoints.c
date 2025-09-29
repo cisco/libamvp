@@ -16,105 +16,99 @@
 #include "amvp_error.h"
 #include "safe_lib.h"
 
-/* URI path segments for different endpoints */
-#define AMVP_TEST_SESSIONS_URI "testSessions"
-#define AMVP_FT_EVIDENCE_URI "evidence"
-#define AMVP_SC_EVIDENCE_URI "sourceCode"
-#define AMVP_OD_EVIDENCE_URI "otherDocumentation"
-#define AMVP_FSM_EVIDENCE_URI "otherDocumentationFSM"
-#define AMVP_SP_URI "securityPolicy"
-#define AMVP_LOGIN_URI "login"
+/* Endpoint paths after /amvp/v1/ */
+#define AMVP_FT_EVIDENCE_PATH "evidence"
+#define AMVP_SC_EVIDENCE_PATH "sourceCode"
+#define AMVP_OD_EVIDENCE_PATH "otherDocumentation"
+#define AMVP_SP_PATH "securityPolicy"
+#define AMVP_LOGIN_PATH "login"
+#define AMVP_CERT_REQUESTS_PATH "certRequests"
+#define AMVP_MODULES_PATH "modules"
+#define AMVP_SP_TEMPLATE_PATH "securityPolicy/template"
 
 /* Helper function declarations */
-static char* generate_sp_url(const char *url);
-static char* build_endpoint_url(const char *base_url, const char *endpoint);
-static AMVP_RESULT amvp_send_with_path_seg(AMVP_CTX *ctx,
-                                           AMVP_NET_ACTION action,
-                                           const char *uri,
-                                           char *data,
-                                           int data_len);
+static char* build_evidence_path(const char *base_path, const char *evidence_type);
+static char* build_api_path(AMVP_CTX *ctx, const char *relative_path);
+static AMVP_RESULT parse_response_json(AMVP_CTX *ctx, JSON_Value **result);
 
 /*
- * Local sanity check function for context validation
- */
-static AMVP_RESULT sanity_check_ctx(AMVP_CTX *ctx) {
-    if (!ctx) {
-        AMVP_LOG_ERR("Missing ctx");
-        return AMVP_NO_CTX;
-    }
-
-    if (!ctx->server_port || !ctx->server_name) {
-        AMVP_LOG_ERR("Call amvp_set_server to fill in server name and port");
-        return AMVP_MISSING_ARG;
-    }
-
-    return AMVP_SUCCESS;
-}
-
-/*
- * Generic helper function to build endpoint URLs
+ * Build evidence submission path by appending evidence type
  * Returns allocated string that caller must free, or NULL on error
  */
-static char* build_endpoint_url(const char *base_url, const char *endpoint) {
-    char *full_url = NULL;
-    size_t endpoint_len;
-    int url_len;
+static char* build_evidence_path(const char *base_path, const char *evidence_type) {
+    char *path = NULL;
 
-    if (!base_url || !endpoint) {
+    if (!base_path || !evidence_type) {
         return NULL;
     }
 
-    endpoint_len = strnlen_s(endpoint, AMVP_ATTR_URL_MAX);
-    url_len = strnlen_s(base_url, AMVP_ATTR_URL_MAX + 1);
-    if (url_len > AMVP_ATTR_URL_MAX - endpoint_len - 1) { /* -1 for '/' separator */
+    path = calloc(AMVP_ATTR_URL_MAX + 1, sizeof(char));
+    if (!path) {
         return NULL;
     }
 
-    full_url = calloc(AMVP_ATTR_URL_MAX + 1, sizeof(char));
-    if (!full_url) {
-        return NULL;
-    }
-    snprintf(full_url, AMVP_ATTR_URL_MAX, "%s/%s", base_url, endpoint);
-    return full_url;
+    snprintf(path, AMVP_ATTR_URL_MAX, "%s/%s", base_path, evidence_type);
+    return path;
 }
 
 /*
- * Helper function to send data with path segment
+ * Build API path by prepending path segment to relative endpoint
+ * For use with relative paths like "login", "certRequests", "modules/123"
+ * Returns allocated string that caller must free, or NULL on error
  */
-static AMVP_RESULT amvp_send_with_path_seg(AMVP_CTX *ctx,
-                                           AMVP_NET_ACTION action,
-                                           const char *uri,
-                                           char *data,
-                                           int data_len) {
-    AMVP_RESULT rv = 0;
-    char url[AMVP_ATTR_URL_MAX] = {0};
+static char* build_api_path(AMVP_CTX *ctx, const char *relative_path) {
+    char *full_path = NULL;
 
-    rv = sanity_check_ctx(ctx);
-    if (AMVP_SUCCESS != rv) return rv;
-
-    if (!ctx->path_segment) {
-        AMVP_LOG_ERR("No path segment, need to call amvp_set_path_segment first");
-        return AMVP_MISSING_ARG;
+    if (!ctx || !relative_path) {
+        return NULL;
     }
 
-    snprintf(url, AMVP_ATTR_URL_MAX - 1, "https://%s:%d%s%s", ctx->server_name,
-             ctx->server_port, ctx->path_segment, uri);
+    full_path = calloc(AMVP_ATTR_URL_MAX + 1, sizeof(char));
+    if (!full_path) {
+        return NULL;
+    }
 
-    return amvp_network_action(ctx, action, url, data, data_len);
+    snprintf(full_path, AMVP_ATTR_URL_MAX, "%s/%s", AMVP_DEFAULT_PATH_SEGMENT, relative_path);
+    return full_path;
 }
 
 /*
- * This is the transport function used within libamvp to register
- * the DUT attributes with the AMVP server.
- *
- * The reg parameter is the JSON encoded registration message that
- * will be sent to the server.
+ * Parse JSON from response buffer, return deep copy, and clear buffer
+ * Returns allocated JSON_Value that caller must free, or NULL on error
  */
-AMVP_RESULT amvp_send_test_session_registration(AMVP_CTX *ctx,
-                                                char *reg,
-                                                int len) {
-    return amvp_send_with_path_seg(ctx, AMVP_NET_POST,
-                                   AMVP_TEST_SESSIONS_URI, reg, len);
+static AMVP_RESULT parse_response_json(AMVP_CTX *ctx, JSON_Value **result) {
+    JSON_Value *parsed_json = NULL;
+
+    if (!ctx || !result) {
+        return AMVP_INVALID_ARG;
+    }
+
+    *result = NULL;
+
+    /* Parse JSON from response buffer */
+    if (ctx->curl_buf && ctx->curl_read_ctr > 0) {
+        parsed_json = json_parse_string(ctx->curl_buf);
+        if (!parsed_json) {
+            AMVP_LOG_ERR("Failed to parse JSON response");
+            return AMVP_JSON_ERR;
+        }
+
+        *result = json_value_deep_copy(parsed_json);
+        json_value_free(parsed_json);
+        if (!*result) {
+            AMVP_LOG_ERR("Failed to copy JSON response");
+            return AMVP_MALLOC_FAIL;
+        }
+
+        /* Clear the response buffer */
+        memzero_s(ctx->curl_buf, ctx->curl_read_ctr);
+        ctx->curl_read_ctr = 0;
+
+        return AMVP_SUCCESS;
+    } else {
+        AMVP_LOG_ERR("No response data received");
+        return AMVP_NO_DATA;
+    }
 }
 
 /*
@@ -125,22 +119,19 @@ AMVP_RESULT amvp_send_evidence(AMVP_CTX *ctx,
                                const char *url,
                                char *ev,
                                int ev_len) {
-    char *full_url = NULL;
-    const char *type_endpoint = NULL;
+    char *evidence_path = NULL;
+    const char *type_path = NULL;
     AMVP_RESULT rv;
 
     switch (type) {
     case AMVP_EVIDENCE_TYPE_FUNCTIONAL_TEST:
-        type_endpoint = AMVP_FT_EVIDENCE_URI;
+        type_path = AMVP_FT_EVIDENCE_PATH;
         break;
     case AMVP_EVIDENCE_TYPE_SOURCE_CODE:
-        type_endpoint = AMVP_SC_EVIDENCE_URI;
+        type_path = AMVP_SC_EVIDENCE_PATH;
         break;
     case AMVP_EVIDENCE_TYPE_OTHER_DOC:
-        type_endpoint = AMVP_OD_EVIDENCE_URI;
-        break;
-    case AMVP_EVIDENCE_TYPE_FSM:
-        type_endpoint = AMVP_FSM_EVIDENCE_URI;
+        type_path = AMVP_OD_EVIDENCE_PATH;
         break;
     case AMVP_EVIDENCE_TYPE_NA:
     case AMVP_EVIDENCE_TYPE_MAX:
@@ -149,23 +140,17 @@ AMVP_RESULT amvp_send_evidence(AMVP_CTX *ctx,
         return AMVP_INVALID_ARG;
     }
 
-    full_url = build_endpoint_url(url, type_endpoint);
-    if (!full_url) {
-        AMVP_LOG_ERR("Failed to build URL for submitting evidence");
+    evidence_path = build_evidence_path(url, type_path);
+    if (!evidence_path) {
+        AMVP_LOG_ERR("Failed to build evidence path");
         return AMVP_TRANSPORT_FAIL;
     }
 
-    rv = amvp_transport_post(ctx, full_url, ev, ev_len);
-    free(full_url);
+    rv = amvp_transport_post(ctx, evidence_path, ev, ev_len);
+    free(evidence_path);
     return rv;
 }
 
-/*
- * Helper function to generate security policy URL
- */
-static char* generate_sp_url(const char *url) {
-    return build_endpoint_url(url, AMVP_SP_URI);
-}
 
 /*
  * Send security policy to the server
@@ -174,17 +159,17 @@ AMVP_RESULT amvp_send_security_policy(AMVP_CTX *ctx,
                                       const char *url,
                                       char *sp,
                                       int sp_len) {
-    char *full_url = NULL;
+    char *sp_path = NULL;
     AMVP_RESULT rv;
 
-    full_url = generate_sp_url(url);
-    if (!full_url) {
-        AMVP_LOG_ERR("Failed to build URL for security policy operation");
+    sp_path = build_evidence_path(url, AMVP_SP_PATH);
+    if (!sp_path) {
+        AMVP_LOG_ERR("Failed to build security policy path");
         return AMVP_TRANSPORT_FAIL;
     }
 
-    rv = amvp_transport_post(ctx, full_url, sp, sp_len);
-    free(full_url);
+    rv = amvp_transport_post(ctx, sp_path, sp, sp_len);
+    free(sp_path);
     return rv;
 }
 
@@ -194,17 +179,17 @@ AMVP_RESULT amvp_send_security_policy(AMVP_CTX *ctx,
 AMVP_RESULT amvp_request_security_policy_generation(AMVP_CTX *ctx,
                                                     const char *url,
                                                     char *data) {
-    char *full_url = NULL;
+    char *sp_path = NULL;
     AMVP_RESULT rv;
 
-    full_url = generate_sp_url(url);
-    if (!full_url) {
-        AMVP_LOG_ERR("Failed to build URL for security policy operation");
+    sp_path = build_evidence_path(url, AMVP_SP_PATH);
+    if (!sp_path) {
+        AMVP_LOG_ERR("Failed to build security policy path");
         return AMVP_TRANSPORT_FAIL;
     }
 
-    rv = amvp_transport_put(ctx, full_url, (const char*)data, strnlen_s(data, AMVP_CURL_BUF_MAX));
-    free(full_url);
+    rv = amvp_transport_put(ctx, sp_path, (const char*)data, strnlen_s(data, AMVP_CURL_BUF_MAX));
+    free(sp_path);
     return rv;
 }
 
@@ -212,18 +197,31 @@ AMVP_RESULT amvp_request_security_policy_generation(AMVP_CTX *ctx,
  * Get security policy JSON from the server
  */
 AMVP_RESULT amvp_get_security_policy_json(AMVP_CTX *ctx,
-                                          const char *url) {
-    char *full_url = NULL;
+                                          const char *url,
+                                          JSON_Value **result) {
+    char *sp_path = NULL;
     AMVP_RESULT rv;
-    full_url = build_endpoint_url(url, AMVP_SP_URI);
-    if (!full_url) {
-        AMVP_LOG_ERR("Failed to build URL for getting security policy");
+
+    if (!result) {
+        AMVP_LOG_ERR("Result parameter is required");
+        return AMVP_INVALID_ARG;
+    }
+    *result = NULL;
+
+    sp_path = build_evidence_path(url, AMVP_SP_PATH);
+    if (!sp_path) {
+        AMVP_LOG_ERR("Failed to build security policy path");
         return AMVP_TRANSPORT_FAIL;
     }
 
-    rv = amvp_transport_get(ctx, full_url, NULL);
-    free(full_url);
-    return rv;
+    rv = amvp_transport_get(ctx, sp_path);
+    free(sp_path);
+
+    if (rv != AMVP_SUCCESS) {
+        return rv;
+    }
+
+    return parse_response_json(ctx, result);
 }
 
 /*
@@ -236,8 +234,22 @@ AMVP_RESULT amvp_get_security_policy_json(AMVP_CTX *ctx,
 AMVP_RESULT amvp_send_login(AMVP_CTX *ctx,
                             char *login,
                             int len) {
-    return amvp_send_with_path_seg(ctx, AMVP_NET_POST,
-                                   AMVP_LOGIN_URI, login, len);
+    AMVP_RESULT rv;
+    char *login_path = NULL;
+
+    rv = sanity_check_ctx(ctx);
+    if (AMVP_SUCCESS != rv) return rv;
+
+    login_path = build_api_path(ctx, AMVP_LOGIN_PATH);
+    if (!login_path) {
+        AMVP_LOG_ERR("Failed to build login path");
+        return AMVP_TRANSPORT_FAIL;
+    }
+
+    /* Make network call */
+    rv = amvp_network_action(ctx, AMVP_NET_POST, login_path, login, len);
+    free(login_path);
+    return rv;
 }
 
 /*
@@ -246,7 +258,7 @@ AMVP_RESULT amvp_send_login(AMVP_CTX *ctx,
 AMVP_RESULT amvp_send_sp_template(AMVP_CTX *ctx,
                                   const char *url,
                                   const char *file_path) {
-    char *full_url = NULL;
+    char *template_path = NULL;
     AMVP_RESULT rv;
 
     if (!ctx || !url || !file_path) {
@@ -254,14 +266,178 @@ AMVP_RESULT amvp_send_sp_template(AMVP_CTX *ctx,
         return AMVP_MISSING_ARG;
     }
 
-    /* Build the full URL: <base_url>/securityPolicy/template */
-    full_url = build_endpoint_url(url, AMVP_SP_URI "/template");
-    if (!full_url) {
-        AMVP_LOG_ERR("Failed to build URL for security policy template operation");
+    template_path = build_evidence_path(url, AMVP_SP_TEMPLATE_PATH);
+    if (!template_path) {
+        AMVP_LOG_ERR("Failed to build security policy template path");
         return AMVP_TRANSPORT_FAIL;
     }
 
-    rv = amvp_transport_post_sp_template(ctx, full_url, file_path);
-    free(full_url);
+    rv = amvp_transport_post_multipart_form(ctx, template_path, file_path);
+    free(template_path);
+    return rv;
+}
+
+/*
+ * Session status retrieval
+ */
+AMVP_RESULT amvp_get_session_status(AMVP_CTX *ctx, JSON_Value **result) {
+    AMVP_RESULT rv;
+
+    if (!ctx) return AMVP_NO_CTX;
+    if (!result) {
+        AMVP_LOG_ERR("Result parameter is required");
+        return AMVP_INVALID_ARG;
+    }
+    *result = NULL;
+
+    if (!ctx->session_url) {
+        AMVP_LOG_ERR("No session URL available");
+        return AMVP_MISSING_ARG;
+    }
+
+    rv = amvp_transport_get(ctx, ctx->session_url);
+    if (rv != AMVP_SUCCESS) {
+        return rv;
+    }
+
+    return parse_response_json(ctx, result);
+}
+
+/*
+ * Certificate request submission
+ */
+AMVP_RESULT amvp_submit_cert_request(AMVP_CTX *ctx, const char *request_data, int data_len) {
+    char *cert_path = NULL;
+    AMVP_RESULT rv;
+
+    if (!ctx) return AMVP_NO_CTX;
+    if (!request_data || data_len <= 0) {
+        AMVP_LOG_ERR("Invalid request data");
+        return AMVP_MISSING_ARG;
+    }
+
+    cert_path = build_api_path(ctx, AMVP_CERT_REQUESTS_PATH);
+    if (!cert_path) {
+        AMVP_LOG_ERR("Failed to build cert request path");
+        return AMVP_TRANSPORT_FAIL;
+    }
+
+    rv = amvp_transport_post(ctx, cert_path, request_data, data_len);
+    free(cert_path);
+    return rv;
+}
+
+
+/*
+ * Certificate finalization - internal endpoint function
+ */
+AMVP_RESULT amvp_send_cert_finalization(AMVP_CTX *ctx) {
+    char *certify_path = NULL;
+    char *finalize_payload = NULL;
+    JSON_Value *finalize_val = NULL;
+    JSON_Object *finalize_obj = NULL;
+    AMVP_RESULT rv;
+    int payload_len = 0;
+
+    if (!ctx) return AMVP_NO_CTX;
+    if (!ctx->session_url) {
+        AMVP_LOG_ERR("No session URL available");
+        return AMVP_MISSING_ARG;
+    }
+
+    /* Create JSON payload with proper amvVersion */
+    finalize_val = json_value_init_object();
+    if (!finalize_val) {
+        AMVP_LOG_ERR("Error creating JSON object for cert finalization");
+        return AMVP_JSON_ERR;
+    }
+
+    finalize_obj = json_value_get_object(finalize_val);
+    rv = amvp_add_version_to_obj(finalize_obj);
+    if (rv != AMVP_SUCCESS) {
+        AMVP_LOG_ERR("Unable to add amvVersion to cert finalization");
+        json_value_free(finalize_val);
+        return rv;
+    }
+
+    finalize_payload = json_serialize_to_string(finalize_val, &payload_len);
+    if (!finalize_payload) {
+        AMVP_LOG_ERR("Error serializing cert finalization JSON");
+        json_value_free(finalize_val);
+        return AMVP_JSON_ERR;
+    }
+
+    certify_path = build_evidence_path(ctx->session_url, AMVP_CERTIFY_ENDPOINT);
+    if (!certify_path) {
+        AMVP_LOG_ERR("Unable to build path for cert finalization");
+        json_free_serialized_string(finalize_payload);
+        json_value_free(finalize_val);
+        return AMVP_TRANSPORT_FAIL;
+    }
+
+    rv = amvp_transport_post(ctx, certify_path, finalize_payload, payload_len);
+
+    /* Cleanup */
+    free(certify_path);
+    json_free_serialized_string(finalize_payload);
+    json_value_free(finalize_val);
+
+    return rv;
+}
+
+/*
+ * Module information retrieval
+ */
+AMVP_RESULT amvp_get_module_info(AMVP_CTX *ctx, int module_id, JSON_Value **result) {
+    char *module_relative_path = NULL;
+    char *module_path = NULL;
+    AMVP_RESULT rv;
+
+    if (!ctx) return AMVP_NO_CTX;
+    if (!result) {
+        AMVP_LOG_ERR("Result parameter is required");
+        return AMVP_INVALID_ARG;
+    }
+    *result = NULL;
+
+    module_relative_path = calloc(AMVP_ATTR_URL_MAX + 1, sizeof(char));
+    if (!module_relative_path) {
+        AMVP_LOG_ERR("Memory allocation error for module relative path");
+        return AMVP_MALLOC_FAIL;
+    }
+
+    snprintf(module_relative_path, AMVP_ATTR_URL_MAX, "%s/%d", AMVP_MODULES_PATH, module_id);
+
+    module_path = build_api_path(ctx, module_relative_path);
+    if (!module_path) {
+        AMVP_LOG_ERR("Failed to build module info path");
+        free(module_relative_path);
+        return AMVP_TRANSPORT_FAIL;
+    }
+
+    rv = amvp_transport_get(ctx, module_path);
+    free(module_path);
+    free(module_relative_path);
+
+    if (rv != AMVP_SUCCESS) {
+        return rv;
+    }
+
+    return parse_response_json(ctx, result);
+}
+
+/*
+ * Generic GET request to any endpoint
+ */
+AMVP_RESULT amvp_send_get_request(AMVP_CTX *ctx, const char *endpoint_path) {
+    AMVP_RESULT rv;
+
+    if (!ctx) return AMVP_NO_CTX;
+    if (!endpoint_path) {
+        AMVP_LOG_ERR("Endpoint path is required");
+        return AMVP_MISSING_ARG;
+    }
+
+    rv = amvp_transport_get(ctx, endpoint_path);
     return rv;
 }

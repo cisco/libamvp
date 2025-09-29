@@ -51,7 +51,6 @@ typedef enum amvp_evidence_type {
     AMVP_EVIDENCE_TYPE_FUNCTIONAL_TEST,
     AMVP_EVIDENCE_TYPE_SOURCE_CODE,
     AMVP_EVIDENCE_TYPE_OTHER_DOC,
-    AMVP_EVIDENCE_TYPE_FSM,
     AMVP_EVIDENCE_TYPE_MAX
 } AMVP_EVIDENCE_TYPE;
 
@@ -182,19 +181,7 @@ AMVP_RESULT amvp_free_test_session(AMVP_CTX *ctx);
  */
 AMVP_RESULT amvp_set_server(AMVP_CTX *ctx, const char *server_name, int port);
 
-/**
- * @brief amvp_set_path_segment() specifies the URI prefix used by the AMVP server. Some AMVP
- *        servers use a prefix in the URI for the path to the AMVP REST interface. Calling this
- *        function allows the path segment prefix to be specified. The value provided to this
- *        function is prepended to the path segment of the URI used for the AMVP REST calls.
- *
- * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_init_cert_request.
- * @param path_segment Value to embed in the URI path after the server name and before the AMVP
- *        well-known path.
- *
- * @return AMVP_RESULT
- */
-AMVP_RESULT amvp_set_path_segment(AMVP_CTX *ctx, const char *path_segment);
+
 
 /**
  * @brief amvp_set_cacerts() specifies PEM encoded certificates to use as the root trust anchors
@@ -241,12 +228,25 @@ AMVP_RESULT amvp_set_certkey(AMVP_CTX *ctx, char *cert_file, char *key_file);
 AMVP_RESULT amvp_mark_as_sample(AMVP_CTX *ctx);
 
 /**
- * @brief amvp_mark_as_get_only() marks the operation as a GET only. This function will take the
- *        string parameter and perform a GET to check the get of a specific request. The request ID
- *        must be part of the string.
+ * @brief amvp_get() performs an immediate GET request to the specified endpoint. This function
+ *        will authenticate using existing JWT from cert req info file if available, or perform
+ *        login if needed. Use amvp_set_get_save_file() to save response to a file.
  *
- * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_init_cert_request.
- * @param string used for the get, such as '/amvp/v1/requests/383'
+ * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_init_cert_request().
+ * @param endpoint_path The endpoint path to access via GET request (starting with /)
+ *
+ * @return AMVP_RESULT
+ */
+AMVP_RESULT amvp_get(AMVP_CTX *ctx, const char *endpoint_path);/**
+ * @brief amvp_mark_as_get_only() marks the operation as a GET only. This function will take the
+ *        raw endpoint string (starting with / for the path) and will set up a GET request. No
+ *        authentication will be required as long as it's not to a path that requires authentication.
+ *        Note that the HTTPS prefix and server details should not be provided; libamvp takes care
+ *        of those details. After a successful call to this function, then running the library will
+ *        perform a GET request to the provided endpoint.
+ *
+ * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_init_cert_request().
+ * @param string The endpoint (path) to access via GET request
  *
  * @return AMVP_RESULT
  */
@@ -314,16 +314,6 @@ AMVP_RESULT amvp_oe_oe_set_dependency(AMVP_CTX *ctx,
 AMVP_RESULT amvp_set_2fa_callback(AMVP_CTX *ctx, AMVP_RESULT (*totp_cb)(char **token, int token_max));
 
 /**
- * @brief amvp_decode_base64 converts a base64 encoded string into a byte buffer
- *
- * @param val the base64 string to decode
- * @param dest location to store output of decoded buffer
- *
- * @return the pointer to the buffer of the decoded string
- */
-unsigned char* amvp_decode_base64(const char *val, unsigned int *output_len);
-
-/**
  * @brief amvp_lookup_error_string() is a utility that returns a more descriptive string for an AMVP_RESULT
  *        error code
  *
@@ -364,14 +354,13 @@ AMVP_RESULT amvp_mark_as_cert_req(AMVP_CTX *ctx, const char *module_name, int ve
 AMVP_RESULT amvp_cert_req_add_contact(AMVP_CTX *ctx, const char *contact_id, AMVP_CONTACT_TYPE contact_type);
 AMVP_RESULT amvp_cert_req_add_sub_cert(AMVP_CTX *ctx, const char *cert_id, AMVP_CERT_TYPE type);
 AMVP_RESULT amvp_get_module_request(AMVP_CTX *ctx, char *filename);
-AMVP_RESULT amvp_submit_evidence(AMVP_CTX *ctx, const char *filename, AMVP_EVIDENCE_TYPE type);
+AMVP_RESULT amvp_submit_evidence(AMVP_CTX *ctx, const char *filename);
 AMVP_RESULT amvp_submit_security_policy(AMVP_CTX *ctx, const char *filename);
 AMVP_RESULT amvp_submit_security_policy_template(AMVP_CTX *ctx, const char *filename);
 AMVP_RESULT amvp_get_security_policy(AMVP_CTX *ctx);
 AMVP_RESULT amvp_read_cert_req_info_file(AMVP_CTX *ctx, const char *filename);
 AMVP_RESULT amvp_finalize_cert_request(AMVP_CTX *ctx);
 
-AMVP_RESULT amvp_retrieve_docs(AMVP_CTX *ctx, char *vsid_url);
 
 /** @} */
 /** @internal ALL APIS SHOULD BE ADDED ABOVE THESE BLOCKS */

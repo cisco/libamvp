@@ -1,5 +1,4 @@
 #!/bin/bash
-export AMV_URI_PREFIX=/amvp/v1/
 export AMV_API_CONTEXT=amvp/
 export AMV_CA_FILE=certs/amvp.nist.gov.crt
 export AMV_KEY_FILE=<user generated>

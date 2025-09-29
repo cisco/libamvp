@@ -134,10 +134,13 @@ am__installdirs = "$(DESTDIR)$(libdir)" \
 LTLIBRARIES = $(lib_LTLIBRARIES)
 am__DEPENDENCIES_1 =
 libamvp_la_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+am__dirstamp = $(am__leading_dot)dirstamp
 am_libamvp_la_OBJECTS = amvp.lo amvp_build_register.lo \
-	amvp_operating_env.lo amvp_transport.lo amvp_endpoints.lo \
-	amvp_util.lo amvp_error.lo amvp_base64.lo amvp_display.lo \
-	parson.lo
+	transport/amvp_transport.lo \
+	transport/amvp_transport_libcurl.lo \
+	transport/amvp_transport_util.lo transport/amvp_user_agent.lo \
+	amvp_endpoints.lo amvp_util.lo amvp_error.lo amvp_base64.lo \
+	amvp_display.lo parson.lo
 libamvp_la_OBJECTS = $(am_libamvp_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -161,9 +164,11 @@ am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = ./$(DEPDIR)/amvp.Plo ./$(DEPDIR)/amvp_base64.Plo \
 	./$(DEPDIR)/amvp_build_register.Plo \
 	./$(DEPDIR)/amvp_display.Plo ./$(DEPDIR)/amvp_endpoints.Plo \
-	./$(DEPDIR)/amvp_error.Plo ./$(DEPDIR)/amvp_operating_env.Plo \
-	./$(DEPDIR)/amvp_transport.Plo ./$(DEPDIR)/amvp_util.Plo \
-	./$(DEPDIR)/parson.Plo
+	./$(DEPDIR)/amvp_error.Plo ./$(DEPDIR)/amvp_util.Plo \
+	./$(DEPDIR)/parson.Plo transport/$(DEPDIR)/amvp_transport.Plo \
+	transport/$(DEPDIR)/amvp_transport_libcurl.Plo \
+	transport/$(DEPDIR)/amvp_transport_util.Plo \
+	transport/$(DEPDIR)/amvp_user_agent.Plo
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -342,8 +347,10 @@ lib_LTLIBRARIES = libamvp.la
 AM_CFLAGS = -I$(top_srcdir)/include/amvp $(SAFEC_CFLAGS) $(LIBCURL_CFLAGS)
 libamvp_la_SOURCES = amvp.c \
                     amvp_build_register.c \
-                    amvp_operating_env.c \
-                    amvp_transport.c \
+                    transport/amvp_transport.c \
+                    transport/amvp_transport_libcurl.c \
+                    transport/amvp_transport_util.c \
+                    transport/amvp_user_agent.c \
                     amvp_endpoints.c \
                     amvp_util.c \
                     amvp_error.c \
@@ -426,12 +433,28 @@ clean-libLTLIBRARIES:
 	  echo rm -f $${locs}; \
 	  rm -f $${locs}; \
 	}
+transport/$(am__dirstamp):
+	@$(MKDIR_P) transport
+	@: > transport/$(am__dirstamp)
+transport/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) transport/$(DEPDIR)
+	@: > transport/$(DEPDIR)/$(am__dirstamp)
+transport/amvp_transport.lo: transport/$(am__dirstamp) \
+	transport/$(DEPDIR)/$(am__dirstamp)
+transport/amvp_transport_libcurl.lo: transport/$(am__dirstamp) \
+	transport/$(DEPDIR)/$(am__dirstamp)
+transport/amvp_transport_util.lo: transport/$(am__dirstamp) \
+	transport/$(DEPDIR)/$(am__dirstamp)
+transport/amvp_user_agent.lo: transport/$(am__dirstamp) \
+	transport/$(DEPDIR)/$(am__dirstamp)
 
 libamvp.la: $(libamvp_la_OBJECTS) $(libamvp_la_DEPENDENCIES) $(EXTRA_libamvp_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(LINK) -rpath $(libdir) $(libamvp_la_OBJECTS) $(libamvp_la_LIBADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
+	-rm -f transport/*.$(OBJEXT)
+	-rm -f transport/*.lo
 
 distclean-compile:
 	-rm -f *.tab.c
@@ -442,10 +465,12 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_display.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_endpoints.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_error.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_operating_env.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_transport.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amvp_util.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/parson.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@transport/$(DEPDIR)/amvp_transport.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@transport/$(DEPDIR)/amvp_transport_libcurl.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@transport/$(DEPDIR)/amvp_transport_util.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@transport/$(DEPDIR)/amvp_user_agent.Plo@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -482,6 +507,7 @@ mostlyclean-libtool:
 
 clean-libtool:
 	-rm -rf .libs _libs
+	-rm -rf transport/.libs transport/_libs
 install-libamvp_includeHEADERS: $(libamvp_include_HEADERS)
 	@$(NORMAL_INSTALL)
 	@list='$(libamvp_include_HEADERS)'; test -n "$(libamvp_includedir)" || list=; \
@@ -622,6 +648,8 @@ clean-generic:
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
+	-rm -f transport/$(DEPDIR)/$(am__dirstamp)
+	-rm -f transport/$(am__dirstamp)
 
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
@@ -638,10 +666,12 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/amvp_display.Plo
 	-rm -f ./$(DEPDIR)/amvp_endpoints.Plo
 	-rm -f ./$(DEPDIR)/amvp_error.Plo
-	-rm -f ./$(DEPDIR)/amvp_operating_env.Plo
-	-rm -f ./$(DEPDIR)/amvp_transport.Plo
 	-rm -f ./$(DEPDIR)/amvp_util.Plo
 	-rm -f ./$(DEPDIR)/parson.Plo
+	-rm -f transport/$(DEPDIR)/amvp_transport.Plo
+	-rm -f transport/$(DEPDIR)/amvp_transport_libcurl.Plo
+	-rm -f transport/$(DEPDIR)/amvp_transport_util.Plo
+	-rm -f transport/$(DEPDIR)/amvp_user_agent.Plo
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -693,10 +723,12 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/amvp_display.Plo
 	-rm -f ./$(DEPDIR)/amvp_endpoints.Plo
 	-rm -f ./$(DEPDIR)/amvp_error.Plo
-	-rm -f ./$(DEPDIR)/amvp_operating_env.Plo
-	-rm -f ./$(DEPDIR)/amvp_transport.Plo
 	-rm -f ./$(DEPDIR)/amvp_util.Plo
 	-rm -f ./$(DEPDIR)/parson.Plo
+	-rm -f transport/$(DEPDIR)/amvp_transport.Plo
+	-rm -f transport/$(DEPDIR)/amvp_transport_libcurl.Plo
+	-rm -f transport/$(DEPDIR)/amvp_transport_util.Plo
+	-rm -f transport/$(DEPDIR)/amvp_user_agent.Plo
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

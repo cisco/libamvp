@@ -1,6 +1,6 @@
 /** @file */
 /*
- * Copyright (c) 2021, Cisco Systems, Inc.
+ * Copyright (c) 2025, Cisco Systems, Inc.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -31,6 +31,7 @@ enum { BASE64_OK = 0, BASE64_INVALID };
 #define BASE64DE_FIRST    '+'
 #define BASE64DE_LAST    'z'
 
+#ifdef AMVP_UNUSED_FOR_NOW
 /* BASE 64 encode table */
 static const char base64en[] = {
 	'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
@@ -42,6 +43,7 @@ static const char base64en[] = {
 	'w', 'x', 'y', 'z', '0', '1', '2', '3',
 	'4', '5', '6', '7', '8', '9', '+', '/',
 };
+#endif
 
 /* ASCII order for BASE 64 decode, -1 in unused character */
 static const signed char base64de[] = {
@@ -76,6 +78,7 @@ static const signed char base64de[] = {
     44, 45, 46, 47, 48, 49, 50, 51,
 };
 
+#ifdef AMVP_UNUSED_FOR_NOW
 static unsigned int 
 base64_encode(const unsigned char *in, unsigned int inlen, char *out) {
 	int s;
@@ -123,6 +126,7 @@ base64_encode(const unsigned char *in, unsigned int inlen, char *out) {
 
 	return j;
 }
+#endif
 
 static unsigned int
 base64_decode(const char *in, unsigned int inlen, unsigned char *out) {

@@ -1,6 +1,6 @@
 /** @file */
 /*
- * Copyright (c) 2023, Cisco Systems, Inc.
+ * Copyright (c) 2025, Cisco Systems, Inc.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -21,7 +21,7 @@ void amvp_free_protocol_err(AMVP_PROTOCOL_ERR *err) {
     AMVP_PROTOCOL_ERR_LIST *current = NULL, *tmp = NULL;
     int i = 0;
     current = err->errors;
-    if (err->category_desc) free((void *)err->category_desc);
+    if (err->category_desc) free(err->category_desc);
     while(current) {
         tmp = current->next;
         for (i = 0; i < current->desc_count; i++) {

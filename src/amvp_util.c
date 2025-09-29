@@ -1,6 +1,6 @@
 /** @file */
 /*
- * Copyright (c) 2021, Cisco Systems, Inc.
+ * Copyright (c) 2025, Cisco Systems, Inc.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -13,59 +13,62 @@
 #include <string.h>
 #include <stdarg.h>
 #include <ctype.h>
+#ifndef _WIN32
 #include <unistd.h>
+#endif
 #include "amvp.h"
 #include "amvp_lcl.h"
 #include "amvp_error.h"
 #include "safe_lib.h"
 
+#ifndef _WIN32
 #include <curl/curl.h>
+#endif
 
 /*
  * Basic logging for libamvp
  */
-void amvp_log_msg(AMVP_CTX *ctx, AMVP_LOG_LVL level, const char *func, int line, const char *fmt, ...) {
+void amvp_log_msg(AMVP_CTX *ctx, AMVP_LOG_LVL level, const char *func, int line, int use_large_buffer, const char *fmt, ...) {
     va_list arguments;
     int iter = 0, ret = 0;
-    //One extra char for null terminator
-    char tmp[AMVP_LOG_MAX_MSG_LEN + 1];
-    tmp[AMVP_LOG_MAX_MSG_LEN] = '\0';
+    char *tmp = NULL;
+    int buf_size;
 
-    if (!ctx) {
+    if (!ctx || !ctx->test_progress_cb || ctx->log_lvl < level) {
+        return;
+    }
+
+    /* Use larger buffer when context log level is set to verbose/debug or when explicitly requested */
+    buf_size = (ctx->log_lvl >= AMVP_LOG_LVL_VERBOSE || use_large_buffer) ?
+               AMVP_LOG_MAX_MSG_LEN_VERBOSE : AMVP_LOG_MAX_MSG_LEN;
+
+    tmp = calloc(buf_size + 1, sizeof(char));
+    if (!tmp) {
+        /* Fallback: use stack buffer to report allocation failure */
+        char fallback_msg[] = "LOG ERROR: Memory allocation failed for log message";
+        ctx->test_progress_cb(fallback_msg, AMVP_LOG_LVL_ERR);
         return;
     }
 
     if (ctx->debug) {
-        iter = snprintf(tmp, AMVP_LOG_MAX_MSG_LEN, "[%s:%d]: ", func, line);
+        iter = snprintf(tmp, buf_size, "[%s:%d]: ", func, line);
     }
 
-    if (ctx->test_progress_cb && (ctx->log_lvl >= level)) {
-        /*  Pull the arguments from the stack and invoke the logger function */
-        va_start(arguments, fmt);
-        ret = vsnprintf(tmp + iter, AMVP_LOG_MAX_MSG_LEN + 1 - iter, fmt, arguments);
-        if (ret < 0 || ret >= AMVP_LOG_MAX_MSG_LEN + 1 - iter) {
-            memcpy_s(tmp + AMVP_LOG_MAX_MSG_LEN - AMVP_LOG_TRUNCATED_STR_LEN,
-                     AMVP_LOG_TRUNCATED_STR_LEN,
-                     AMVP_LOG_TRUNCATED_STR, AMVP_LOG_TRUNCATED_STR_LEN);
-            tmp[AMVP_LOG_MAX_MSG_LEN] = '\0';
-        } else {
-            iter += ret;
-            tmp[iter] = '\0';
-        }
-        ctx->test_progress_cb(tmp, level);
-        va_end(arguments);
-        fflush(stdout);
+    /*  Pull the arguments from the stack and invoke the logger function */
+    va_start(arguments, fmt);
+    ret = vsnprintf(tmp + iter, buf_size - iter, fmt, arguments);
+    if (ret < 0 || ret >= buf_size - iter) {
+        /* Add truncation marker if message exceeded buffer size */
+        memcpy_s(tmp + buf_size - AMVP_LOG_TRUNCATED_STR_LEN,
+                 AMVP_LOG_TRUNCATED_STR_LEN,
+                 AMVP_LOG_TRUNCATED_STR, AMVP_LOG_TRUNCATED_STR_LEN);
     }
+    ctx->test_progress_cb(tmp, level);
+    va_end(arguments);
+    fflush(stdout);
+
+    free(tmp);
 }
-
-/*
- * Sometimes there is a need for line separation in the logs, but we still prefer for
- * the app handler to deal with it instead of making assumptions about output
- */
-void amvp_log_newline(AMVP_CTX *ctx) {
-     char tmp[] = "\n";
-     ctx->test_progress_cb(tmp, AMVP_LOG_LVL_STATUS);
- }
 
 /*!
  *
@@ -94,7 +97,9 @@ AMVP_RESULT amvp_cleanup(AMVP_CTX *ctx) {
             AMVP_LOG_ERR("Failed to free parameter 'ctx'");
         }
     }
+#ifndef _WIN32
     curl_global_cleanup();
+#endif
     return rv;
 }
 
@@ -149,6 +154,29 @@ const char *amvp_lookup_error_string(AMVP_RESULT rv) {
         }
     }
     return "Unknown error";
+}
+
+/*
+ * This function returns a string that describes the evidence
+ * type passed in.
+ */
+const char *amvp_lookup_evidence_type_string(AMVP_EVIDENCE_TYPE type) {
+    int i;
+    struct amvp_evidence_type_desc_t {
+        AMVP_EVIDENCE_TYPE type;
+        const char *desc;
+    } evidence_type_desc_tbl[AMVP_EVIDENCE_TYPE_MAX - 1] = {
+        { AMVP_EVIDENCE_TYPE_FUNCTIONAL_TEST, "functional test" },
+        { AMVP_EVIDENCE_TYPE_SOURCE_CODE,     "source code"     },
+        { AMVP_EVIDENCE_TYPE_OTHER_DOC,       "other documentation" }
+    };
+
+    for (i = 0; i < AMVP_EVIDENCE_TYPE_MAX - 1; i++) {
+        if (type == evidence_type_desc_tbl[i].type) {
+            return evidence_type_desc_tbl[i].desc;
+        }
+    }
+    return "unknown";
 }
 
 const char *amvp_lookup_sp_section_name(int id) {
@@ -259,7 +287,7 @@ void amvp_release_json(JSON_Value *r_vs_val,
  *
  * @return 1 Length of \string <= \p max_allowed
  * @return 0 Length of \string > \p max_allowed
- * 
+ *
  */
 int string_fits(const char *string, unsigned int max_allowed) {
     if (strnlen_s(string, max_allowed + 1) > max_allowed) {
@@ -519,7 +547,7 @@ int amvp_is_domain_already_set(AMVP_JSON_DOMAIN_OBJ *domain) {
 AMVP_RESULT amvp_json_serialize_to_file_pretty_a(const JSON_Value *value, const char *filename) {
     AMVP_RESULT return_code = AMVP_SUCCESS;
     FILE *fp = NULL;
-    char *serialized_string = NULL; 
+    char *serialized_string = NULL;
 
     if (!filename) {
         return AMVP_INVALID_ARG;
@@ -594,7 +622,7 @@ end:
 }
 
 /*
- * Gets the status of a request from the curl buffer. If status is approved, store approved Url in the buffer 
+ * Gets the status of a request from the curl buffer. If status is approved, store approved Url in the buffer
  */
 int amvp_get_request_status(AMVP_CTX *ctx, char **output) {
     JSON_Value *val = NULL;
@@ -833,7 +861,7 @@ int amvp_get_id_from_url(AMVP_CTX *ctx, const char *url) {
     return id;
 }
 
-/** 
+/**
  * This function assumes the curl buffer has cert request status information.
  * It will overwrite the file if it already exists.
  */
@@ -877,6 +905,7 @@ AMVP_RESULT amvp_save_cert_req_info_file(AMVP_CTX *ctx, JSON_Object *contents) {
 
     rv = AMVP_SUCCESS;
 end:
+    if (file) free(file);
     return rv;
 }
 
@@ -914,4 +943,94 @@ AMVP_CERT_REQ_STATUS amvp_parse_cert_req_status_str(JSON_Object *json) {
     if (!diff) return AMVP_CERT_REQ_STATUS_ERROR;
 
     return AMVP_CERT_REQ_STATUS_UNKNOWN;
+}
+
+/*
+ * Internal validation functions for certification request parameters
+ */
+
+/*
+ * Validate contact ID format (CVP-XXXXXX)
+ * Used internally by amvp_cert_req_add_contact
+ */
+AMVP_RESULT amvp_validate_contact_id(const char *id) {
+    size_t len;
+    int i;
+
+    if (!id) {
+        return AMVP_INVALID_ARG;
+    }
+
+    len = strnlen_s(id, AMVP_CONTACT_STR_MAX_LEN + 1);
+    if (len != 10) {  /* CVP-XXXXXX = 10 characters */
+        return AMVP_INVALID_ARG;
+    }
+
+    /* Check CVP- prefix */
+    if (strncmp(id, "CVP-", 4) != 0) {
+        return AMVP_INVALID_ARG;
+    }
+
+    /* Check that last 6 characters are digits */
+    for (i = 4; i < 10; i++) {
+        if (!isdigit(id[i])) {
+            return AMVP_INVALID_ARG;
+        }
+    }
+
+    return AMVP_SUCCESS;
+}
+
+/*
+ * Validate ACV certificate ID format (A<number>)
+ * Used internally by amvp_cert_req_add_sub_cert
+ */
+AMVP_RESULT amvp_validate_acv_cert_id(const char *id) {
+    size_t len;
+    int i;
+
+    if (!id) {
+        return AMVP_INVALID_ARG;
+    }
+
+    len = strnlen_s(id, AMVP_CERT_STR_MAX_LEN + 1);
+    if (len < 2 || id[0] != 'A') {
+        return AMVP_INVALID_ARG;
+    }
+
+    /* Check that characters after 'A' are digits */
+    for (i = 1; i < (int)len; i++) {
+        if (!isdigit(id[i])) {
+            return AMVP_INVALID_ARG;
+        }
+    }
+
+    return AMVP_SUCCESS;
+}
+
+/*
+ * Validate ESV certificate ID format (E<number>)
+ * Used internally by amvp_cert_req_add_sub_cert
+ */
+AMVP_RESULT amvp_validate_esv_cert_id(const char *id) {
+    size_t len;
+    int i;
+
+    if (!id) {
+        return AMVP_INVALID_ARG;
+    }
+
+    len = strnlen_s(id, AMVP_CERT_STR_MAX_LEN + 1);
+    if (len < 2 || id[0] != 'E') {
+        return AMVP_INVALID_ARG;
+    }
+
+    /* Check that characters after 'E' are digits */
+    for (i = 1; i < (int)len; i++) {
+        if (!isdigit(id[i])) {
+            return AMVP_INVALID_ARG;
+        }
+    }
+
+    return AMVP_SUCCESS;
 }
