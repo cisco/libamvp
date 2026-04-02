@@ -25,6 +25,8 @@ extern "C"
 
 #define AMVP_CONFIG_CERT_REQUEST_ENV "AMVP_CONFIG_CERT_REQUEST"
 
+#define APP_SCHEMA_VERSION_MAX_LEN 32
+
 #define ANSI_COLOR_RED "\x1b[31m"
 #define ANSI_COLOR_YELLOW "\x1b[33m"
 #define ANSI_COLOR_RESET "\x1b[0m"
@@ -62,6 +64,9 @@ typedef struct app_config {
     int finalize;
     int check_status;
     int vendor_id;
+    int get_schema;
+    AMVP_SCHEMA_TYPE schema_type;
+    char schema_version[APP_SCHEMA_VERSION_MAX_LEN + 1];
 } APP_CONFIG;
 
 

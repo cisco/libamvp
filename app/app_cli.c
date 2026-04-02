@@ -59,6 +59,15 @@ static void print_usage(int code) {
     printf("To GET status of request, such as validation or metadata:\n");
     printf("      --get <request string URL including ID>\n");
     printf("\n");
+    printf("To retrieve schema information from the server:\n");
+    printf("      --get_evidence_schema [version]\n");
+    printf("      --get_source_code_schema [version]\n");
+    printf("      --get_security_policy_schema [version]\n");
+    printf("      --get_other_documentation_schema [version]\n");
+    printf("      Omit version to list available versions. Provide version argument to fetch that schema.\n");
+    printf("      Only one schema type may be requested per invocation; if multiple are given, the first one is used.\n");
+    printf("      Use --save_to to save the result to a file instead of printing it.\n");
+    printf("\n");
     printf("To request to DELETE a resource you have created on the server:\n");
     printf("      --delete <url>\n");
     printf("\n");
@@ -133,6 +142,10 @@ static ko_longopt_t longopts[] = {
     { "get", ko_required_argument, 431 },
     { "delete", ko_required_argument, 432 },
     { "get_security_policy", ko_no_argument, 433 },
+    { "get_evidence_schema", ko_optional_argument, 441 },
+    { "get_source_code_schema", ko_optional_argument, 442 },
+    { "get_security_policy_schema", ko_optional_argument, 443 },
+    { "get_other_documentation_schema", ko_optional_argument, 444 },
     { "save_to", ko_required_argument, 451 },
     { "config", ko_required_argument, 452 },
     { "for_cert_request", ko_required_argument, 453 },
@@ -349,6 +362,66 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
 
         case 433:
             cfg->get_sp = 1;
+            break;
+
+        case 441:
+            if (cfg->get_schema) {
+                printf(ANSI_COLOR_YELLOW "Warning: multiple schema type options provided, ignoring.\n" ANSI_COLOR_RESET);
+                break;
+            }
+            cfg->get_schema = 1;
+            cfg->schema_type = AMVP_SCHEMA_EVIDENCE;
+            if (opt.arg) {
+                if (!check_option_length(opt.arg, c, APP_SCHEMA_VERSION_MAX_LEN)) {
+                    return 1;
+                }
+                strcpy_s(cfg->schema_version, APP_SCHEMA_VERSION_MAX_LEN + 1, opt.arg);
+            }
+            break;
+
+        case 442:
+            if (cfg->get_schema) {
+                printf(ANSI_COLOR_YELLOW "Warning: multiple schema type options provided, ignoring.\n" ANSI_COLOR_RESET);
+                break;
+            }
+            cfg->get_schema = 1;
+            cfg->schema_type = AMVP_SCHEMA_SOURCE_CODE;
+            if (opt.arg) {
+                if (!check_option_length(opt.arg, c, APP_SCHEMA_VERSION_MAX_LEN)) {
+                    return 1;
+                }
+                strcpy_s(cfg->schema_version, APP_SCHEMA_VERSION_MAX_LEN + 1, opt.arg);
+            }
+            break;
+
+        case 443:
+            if (cfg->get_schema) {
+                printf(ANSI_COLOR_YELLOW "Warning: multiple schema type options provided, ignoring.\n" ANSI_COLOR_RESET);
+                break;
+            }
+            cfg->get_schema = 1;
+            cfg->schema_type = AMVP_SCHEMA_SECURITY_POLICY;
+            if (opt.arg) {
+                if (!check_option_length(opt.arg, c, APP_SCHEMA_VERSION_MAX_LEN)) {
+                    return 1;
+                }
+                strcpy_s(cfg->schema_version, APP_SCHEMA_VERSION_MAX_LEN + 1, opt.arg);
+            }
+            break;
+
+        case 444:
+            if (cfg->get_schema) {
+                printf(ANSI_COLOR_YELLOW "Warning: multiple schema type options provided, ignoring.\n" ANSI_COLOR_RESET);
+                break;
+            }
+            cfg->get_schema = 1;
+            cfg->schema_type = AMVP_SCHEMA_OTHER_DOCUMENTATION;
+            if (opt.arg) {
+                if (!check_option_length(opt.arg, c, APP_SCHEMA_VERSION_MAX_LEN)) {
+                    return 1;
+                }
+                strcpy_s(cfg->schema_version, APP_SCHEMA_VERSION_MAX_LEN + 1, opt.arg);
+            }
             break;
 
         case 's':

@@ -55,6 +55,18 @@ typedef enum amvp_evidence_type {
 } AMVP_EVIDENCE_TYPE;
 
 /**
+ * @enum AMVP_SCHEMA_TYPE
+ * @brief Identifies which schema endpoint to query.
+ */
+typedef enum amvp_schema_type {
+    AMVP_SCHEMA_EVIDENCE = 0,
+    AMVP_SCHEMA_SOURCE_CODE,
+    AMVP_SCHEMA_SECURITY_POLICY,
+    AMVP_SCHEMA_OTHER_DOCUMENTATION,
+    AMVP_SCHEMA_MAX
+} AMVP_SCHEMA_TYPE;
+
+/**
  * @enum AMVP_LOG_LVL
  * @brief This enum defines the different log levels for
  *        the AMVP client library. Each level also contains
@@ -214,7 +226,7 @@ AMVP_RESULT amvp_set_cacerts(AMVP_CTX *ctx, const char *ca_file);
  *
  * @return AMVP_RESULT
  */
-AMVP_RESULT amvp_set_certkey(AMVP_CTX *ctx, char *cert_file, char *key_file);
+AMVP_RESULT amvp_set_certkey(AMVP_CTX *ctx, const char *cert_file, const char *key_file);
 
 /**
  * @brief amvp_mark_as_sample() marks the registration as a sample. This function sets a flag that
@@ -360,6 +372,20 @@ AMVP_RESULT amvp_submit_security_policy_template(AMVP_CTX *ctx, const char *file
 AMVP_RESULT amvp_get_security_policy(AMVP_CTX *ctx);
 AMVP_RESULT amvp_read_cert_req_info_file(AMVP_CTX *ctx, const char *filename);
 AMVP_RESULT amvp_finalize_cert_request(AMVP_CTX *ctx);
+
+/**
+ * @brief amvp_get_schema_info() retrieves schema information from the server.
+ *        If version is NULL or empty, it fetches the list of available schema versions and
+ *        prints them. If a version string is provided, it fetches that specific schema and
+ *        either prints it or saves it to a file if amvp_set_get_save_file() has been called.
+ *
+ * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_init_cert_request.
+ * @param schema_type The type of schema to query, as defined by AMVP_SCHEMA_TYPE.
+ * @param version Optional version string (e.g. "0.2"). Pass NULL to list available versions.
+ *
+ * @return AMVP_RESULT
+ */
+AMVP_RESULT amvp_get_schema_info(AMVP_CTX *ctx, AMVP_SCHEMA_TYPE schema_type, const char *version);
 
 
 /** @} */

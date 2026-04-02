@@ -26,8 +26,8 @@ static int app_setup_two_factor_auth(AMVP_CTX *ctx);
 const char *server;
 int port;
 const char *ca_chain_file;
-char *cert_file;
-char *key_file;
+const char *cert_file;
+const char *key_file;
 
 #define CHECK_ENABLE_CAP_RV(rv) \
     if (rv != AMVP_SUCCESS) { \
@@ -40,7 +40,7 @@ char *key_file;
  * variables.
  */
 static void setup_session_parameters(void) {
-    char *tmp;
+    const char *tmp;
 
     server = getenv("AMV_SERVER");
     if (!server) {
@@ -181,6 +181,22 @@ int main(int argc, char **argv) {
         rv = amvp_get(ctx, cfg.get_string);
         if (rv != AMVP_SUCCESS) {
             printf("Failed to perform GET request.\n");
+        }
+        goto end;
+    }
+
+    if (cfg.get_schema) {
+        if (cfg.save_to) {
+            rv = amvp_set_get_save_file(ctx, cfg.save_file);
+            if (rv != AMVP_SUCCESS) {
+                printf("Failed to set save file for schema request\n");
+                goto end;
+            }
+        }
+        rv = amvp_get_schema_info(ctx, cfg.schema_type,
+                cfg.schema_version[0] ? cfg.schema_version : NULL);
+        if (rv != AMVP_SUCCESS) {
+            printf("Failed to get schema info.\n");
         }
         goto end;
     }
