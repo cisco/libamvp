@@ -684,3 +684,92 @@ end:
     if (module_name) free(module_name);
     return result;
 }
+
+/* Output a formatted table of available schema versions */
+AMVP_RESULT amvp_output_schema_list(AMVP_CTX *ctx, const char *response_buf) {
+    JSON_Value *val = NULL;
+    JSON_Object *obj = NULL;
+    JSON_Array *schema_array = NULL;
+    char *table_msg = NULL;
+    int table_pos = 0;
+    size_t i = 0, arr_size = 0;
+    AMVP_RESULT result = AMVP_SUCCESS;
+
+    if (!ctx || !response_buf || strlen(response_buf) == 0) {
+        return AMVP_MISSING_ARG;
+    }
+
+    val = json_parse_string(response_buf);
+    if (!val) {
+        AMVP_LOG_ERR("Failed to parse schema list JSON");
+        return AMVP_JSON_ERR;
+    }
+
+    obj = amvp_get_obj_from_rsp(ctx, val);
+    if (!obj) {
+        AMVP_LOG_ERR("Failed to get object from schema list response");
+        result = AMVP_JSON_ERR;
+        goto end;
+    }
+
+    schema_array = json_object_get_array(obj, "schemaList");
+    if (!schema_array) {
+        AMVP_LOG_ERR("Missing schemaList in schema list response");
+        result = AMVP_JSON_ERR;
+        goto end;
+    }
+
+    table_msg = calloc(AMVP_DISPLAY_TABLE_MSG_MAX, sizeof(char));
+    if (!table_msg) {
+        result = AMVP_MALLOC_FAIL;
+        goto end;
+    }
+
+    table_pos += snprintf(table_msg + table_pos, AMVP_DISPLAY_TABLE_MSG_MAX - table_pos,
+                         "\nAvailable Schema Versions\n");
+    table_pos += snprintf(table_msg + table_pos, AMVP_DISPLAY_TABLE_MSG_MAX - table_pos,
+                         "  %-12s  %-12s  %s\n", "Version", "Status", "Endpoint");
+    table_pos += snprintf(table_msg + table_pos, AMVP_DISPLAY_TABLE_MSG_MAX - table_pos,
+                         "  %-12s  %-12s  %s\n", "-------", "------", "--------");
+
+    arr_size = json_array_get_count(schema_array);
+    for (i = 0; i < arr_size; i++) {
+        JSON_Object *entry = json_array_get_object(schema_array, i);
+        const char *entry_version = NULL;
+        const char *entry_status = NULL;
+        const char *entry_endpoint = NULL;
+        const char *color = AMVP_ANSI_COLOR_RESET;
+        int diff = 0;
+
+        if (!entry) continue;
+
+        entry_version  = json_object_get_string(entry, "version");
+        entry_status   = json_object_get_string(entry, "status");
+        entry_endpoint = json_object_get_string(entry, "endpoint");
+
+        if (!entry_version)  entry_version  = "?";
+        if (!entry_status)   entry_status   = "?";
+        if (!entry_endpoint) entry_endpoint = "?";
+
+        strncmp_s(entry_status, 9, "preferred", 9, &diff);
+        if (!diff) {
+            color = AMVP_ANSI_COLOR_GREEN;
+        } else {
+            strncmp_s(entry_status, 10, "deprecated", 10, &diff);
+            if (!diff) {
+                color = AMVP_ANSI_COLOR_YELLOW;
+            }
+        }
+
+        table_pos += snprintf(table_msg + table_pos, AMVP_DISPLAY_TABLE_MSG_MAX - table_pos,
+                             "  %-12s  %s%-12s" AMVP_ANSI_COLOR_RESET "  %s\n",
+                             entry_version, color, entry_status, entry_endpoint);
+    }
+
+    AMVP_LOG_TABLE("%s", table_msg);
+
+end:
+    if (table_msg) free(table_msg);
+    if (val) json_value_free(val);
+    return result;
+}

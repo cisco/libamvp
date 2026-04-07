@@ -474,6 +474,7 @@ AMVP_RESULT amvp_send_evidence(AMVP_CTX *ctx, AMVP_EVIDENCE_TYPE type, const cha
 AMVP_RESULT amvp_request_security_policy_generation(AMVP_CTX *ctx, const char *url, char *data);
 AMVP_RESULT amvp_send_security_policy(AMVP_CTX *ctx, const char *url, char *sp, int sp_len);
 AMVP_RESULT amvp_get_security_policy_json(AMVP_CTX *ctx, const char *url, JSON_Value **result);
+AMVP_RESULT amvp_get_schema(AMVP_CTX *ctx, AMVP_SCHEMA_TYPE schema_type, const char *version);
 
 AMVP_RESULT amvp_network_action(AMVP_CTX *ctx, AMVP_NET_ACTION action, const char *endpoint_path, const char *data, int data_len);
 AMVP_RESULT amvp_transport_get(AMVP_CTX *ctx, const char *endpoint_path);
@@ -523,6 +524,7 @@ AMVP_RESULT amvp_json_serialize_to_file_pretty_w(const JSON_Value *value, const 
 
 /* Display/output functions */
 AMVP_RESULT amvp_output_cert_request_status(AMVP_CTX *ctx, JSON_Object *status_json);
+AMVP_RESULT amvp_output_schema_list(AMVP_CTX *ctx, const char *response_buf);
 
 /* Utility functions */
 AMVP_CERT_REQ_STATUS amvp_parse_cert_req_status_str(JSON_Object *json);

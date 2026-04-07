@@ -25,6 +25,7 @@
 #define AMVP_CERT_REQUESTS_PATH "certRequests"
 #define AMVP_MODULES_PATH "modules"
 #define AMVP_SP_TEMPLATE_PATH "securityPolicy/template"
+#define AMVP_SCHEMAS_PATH "schemas"
 
 /* Helper function declarations */
 static char* build_evidence_path(const char *base_path, const char *evidence_type);
@@ -439,5 +440,54 @@ AMVP_RESULT amvp_send_get_request(AMVP_CTX *ctx, const char *endpoint_path) {
     }
 
     rv = amvp_transport_get(ctx, endpoint_path);
+    return rv;
+}
+
+/*
+ * GET a schema endpoint. If version is NULL or empty, fetches the list of
+ * available versions for that schema type. Otherwise fetches the specific
+ * versioned schema.
+ */
+AMVP_RESULT amvp_get_schema(AMVP_CTX *ctx, AMVP_SCHEMA_TYPE schema_type, const char *version) {
+    const char *type_seg = NULL;
+    char *schema_path = NULL;
+    AMVP_RESULT rv;
+
+    if (!ctx) return AMVP_NO_CTX;
+
+    switch (schema_type) {
+    case AMVP_SCHEMA_EVIDENCE:
+        type_seg = AMVP_FT_EVIDENCE_PATH;
+        break;
+    case AMVP_SCHEMA_SOURCE_CODE:
+        type_seg = AMVP_SC_EVIDENCE_PATH;
+        break;
+    case AMVP_SCHEMA_SECURITY_POLICY:
+        type_seg = AMVP_SP_PATH;
+        break;
+    case AMVP_SCHEMA_OTHER_DOCUMENTATION:
+        type_seg = AMVP_OD_EVIDENCE_PATH;
+        break;
+    case AMVP_SCHEMA_MAX:
+    default:
+        AMVP_LOG_ERR("Invalid schema type");
+        return AMVP_INVALID_ARG;
+    }
+
+    schema_path = calloc(AMVP_ATTR_URL_MAX + 1, sizeof(char));
+    if (!schema_path) {
+        return AMVP_MALLOC_FAIL;
+    }
+
+    if (version && strnlen_s(version, AMVP_ATTR_URL_MAX) > 0) {
+        snprintf(schema_path, AMVP_ATTR_URL_MAX, "%s/%s/%s/%s",
+                 AMVP_DEFAULT_PATH_SEGMENT, AMVP_SCHEMAS_PATH, type_seg, version);
+    } else {
+        snprintf(schema_path, AMVP_ATTR_URL_MAX, "%s/%s/%s",
+                 AMVP_DEFAULT_PATH_SEGMENT, AMVP_SCHEMAS_PATH, type_seg);
+    }
+
+    rv = amvp_transport_get(ctx, schema_path);
+    free(schema_path);
     return rv;
 }

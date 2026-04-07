@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <ctype.h>
 #ifdef _WIN32
 #include <io.h>
 #include <Windows.h>
@@ -28,6 +29,31 @@
  * Forward prototypes for local functions
  */
 static AMVP_RESULT amvp_login(AMVP_CTX *ctx, int refresh);
+
+/*
+ * Validates that a string is non-NULL, non-empty, within max_len characters,
+ * and free of whitespace and control characters (including CR/LF).
+ * Logs the specific character-level failure reason via ctx.
+ */
+static AMVP_RESULT validate_param_string(AMVP_CTX *ctx, const char *str, size_t max_len) {
+    const char *p;
+    size_t len = 0;
+    if (!str || str[0] == '\0') {
+        AMVP_LOG_ERR("String must not be empty");
+        return AMVP_INVALID_ARG;
+    }
+    for (p = str; *p != '\0'; p++, len++) {
+        if (isspace((unsigned char)*p) || iscntrl((unsigned char)*p)) {
+            AMVP_LOG_ERR("String contains whitespace or control characters");
+            return AMVP_INVALID_ARG;
+        }
+        if (max_len > 0 && len >= max_len) {
+            AMVP_LOG_ERR("String exceeds maximum length of %zu characters", max_len);
+            return AMVP_INVALID_ARG;
+        }
+    }
+    return AMVP_SUCCESS;
+}
 
 static AMVP_RESULT amvp_parse_login(AMVP_CTX *ctx);
 
@@ -146,8 +172,8 @@ AMVP_RESULT amvp_set_server(AMVP_CTX *ctx, const char *server_name, int port) {
     if (!server_name || port < 1) {
         return AMVP_INVALID_ARG;
     }
-    if (strnlen_s(server_name, AMVP_SESSION_PARAMS_STR_LEN_MAX + 1) > AMVP_SESSION_PARAMS_STR_LEN_MAX) {
-        AMVP_LOG_ERR("Server name string(s) too long");
+    if (validate_param_string(ctx, server_name, AMVP_SESSION_PARAMS_STR_LEN_MAX) != AMVP_SUCCESS) {
+        AMVP_LOG_ERR("Invalid server name");
         return AMVP_INVALID_ARG;
     }
     if (ctx->server_name) {
@@ -186,8 +212,8 @@ AMVP_RESULT amvp_set_cacerts(AMVP_CTX *ctx, const char *ca_file) {
         return AMVP_MISSING_ARG;
     }
 
-    if (strnlen_s(ca_file, AMVP_SESSION_PARAMS_STR_LEN_MAX + 1) > AMVP_SESSION_PARAMS_STR_LEN_MAX) {
-        AMVP_LOG_ERR("CA filename is suspiciously long...");
+    if (validate_param_string(ctx, ca_file, AMVP_SESSION_PARAMS_STR_LEN_MAX) != AMVP_SUCCESS) {
+        AMVP_LOG_ERR("Invalid CA file path");
         return AMVP_INVALID_ARG;
     }
 
@@ -209,7 +235,7 @@ AMVP_RESULT amvp_set_cacerts(AMVP_CTX *ctx, const char *ca_file) {
  * should only be used when the AMVP server supports TLS client
  * authentication.
  */
-AMVP_RESULT amvp_set_certkey(AMVP_CTX *ctx, char *cert_file, char *key_file) {
+AMVP_RESULT amvp_set_certkey(AMVP_CTX *ctx, const char *cert_file, const char *key_file) {
     if (!ctx) {
         return AMVP_NO_CTX;
     }
@@ -217,9 +243,12 @@ AMVP_RESULT amvp_set_certkey(AMVP_CTX *ctx, char *cert_file, char *key_file) {
     if (!cert_file || !key_file) {
         return AMVP_MISSING_ARG;
     }
-    if (strnlen_s(cert_file, AMVP_SESSION_PARAMS_STR_LEN_MAX + 1) > AMVP_SESSION_PARAMS_STR_LEN_MAX ||
-        strnlen_s(key_file, AMVP_SESSION_PARAMS_STR_LEN_MAX + 1) > AMVP_SESSION_PARAMS_STR_LEN_MAX) {
-        AMVP_LOG_ERR("CA filename is suspiciously long...");
+    if (validate_param_string(ctx, cert_file, AMVP_SESSION_PARAMS_STR_LEN_MAX) != AMVP_SUCCESS) {
+        AMVP_LOG_ERR("Invalid cert file path");
+        return AMVP_INVALID_ARG;
+    }
+    if (validate_param_string(ctx, key_file, AMVP_SESSION_PARAMS_STR_LEN_MAX) != AMVP_SUCCESS) {
+        AMVP_LOG_ERR("Invalid key file path");
         return AMVP_INVALID_ARG;
     }
     if (ctx->tls_cert) { free(ctx->tls_cert); }
@@ -1548,4 +1577,64 @@ const char *amvp_version(void) {
 
 const char *amvp_protocol_version(void) {
     return AMVP_VERSION;
+}
+
+AMVP_RESULT amvp_get_schema_info(AMVP_CTX *ctx, AMVP_SCHEMA_TYPE schema_type, const char *version) {
+    AMVP_RESULT rv = AMVP_SUCCESS;
+
+    if (!ctx) {
+        return AMVP_NO_CTX;
+    }
+
+    /* Authenticate if needed */
+    if (!ctx->jwt_token) {
+        rv = amvp_login(ctx, 0);
+        if (rv != AMVP_SUCCESS) {
+            AMVP_LOG_ERR("Failed to login for schema request");
+            return rv;
+        }
+    }
+
+    rv = amvp_get_schema(ctx, schema_type, version);
+    if (rv == AMVP_PROTOCOL_RSP_ERR) {
+        rv = amvp_handle_protocol_error(ctx, ctx->error);
+        if (rv == AMVP_RETRY_OPERATION) {
+            rv = amvp_get_schema(ctx, schema_type, version);
+        }
+    }
+    if (rv != AMVP_SUCCESS) {
+        AMVP_LOG_ERR("Schema GET request failed");
+        return rv;
+    }
+
+    if (!ctx->curl_buf || strlen(ctx->curl_buf) == 0) {
+        AMVP_LOG_WARN("No response data received");
+        return AMVP_SUCCESS;
+    }
+
+    if (ctx->save_filename) {
+        FILE *fp = fopen(ctx->save_filename, "w");
+        if (!fp) {
+            AMVP_LOG_ERR("Failed to open save file: %s", ctx->save_filename);
+            return AMVP_INTERNAL_ERR;
+        }
+        if (fwrite(ctx->curl_buf, 1, strlen(ctx->curl_buf), fp) != strlen(ctx->curl_buf)) {
+            AMVP_LOG_ERR("Failed to write schema response to file: %s", ctx->save_filename);
+            fclose(fp);
+            return AMVP_INTERNAL_ERR;
+        }
+        fclose(fp);
+        AMVP_LOG_STATUS("Schema response saved to: %s", ctx->save_filename);
+    } else {
+        if (version && strnlen_s(version, AMVP_ATTR_URL_MAX) > 0) {
+            AMVP_LOG_STATUS("Schema response:\n%s", ctx->curl_buf);
+        } else {
+            rv = amvp_output_schema_list(ctx, ctx->curl_buf);
+            if (rv != AMVP_SUCCESS) {
+                AMVP_LOG_ERR("Failed to display schema list");
+            }
+        }
+    }
+
+    return AMVP_SUCCESS;
 }
