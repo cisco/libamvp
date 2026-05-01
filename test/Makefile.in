@@ -112,7 +112,6 @@ noinst_PROGRAMS = runtest$(EXEEXT)
 @LIB_NOT_SUPPORTED_FALSE@      test_amvp_des.c \
 @LIB_NOT_SUPPORTED_FALSE@      test_amvp_capabilities.c \
 @LIB_NOT_SUPPORTED_FALSE@      test_amvp_hash.c \
-@LIB_NOT_SUPPORTED_FALSE@      test_amvp_build_register.c \
 @LIB_NOT_SUPPORTED_FALSE@      test_amvp_aes.c \
 @LIB_NOT_SUPPORTED_FALSE@      test_amvp.c \
 @LIB_NOT_SUPPORTED_FALSE@      test_amvp_transport.c \
@@ -169,9 +168,8 @@ am__runtest_SOURCES_DIST = ut_common.c create_session.c \
 	test_amvp_kdf_tls12.c test_amvp_kdf_tls13.c \
 	test_amvp_rsa_keygen.c test_amvp_rsa_sig.c \
 	test_amvp_rsa_prim.c test_amvp_cmac.c test_amvp_des.c \
-	test_amvp_capabilities.c test_amvp_hash.c \
-	test_amvp_build_register.c test_amvp_aes.c test_amvp.c \
-	test_amvp_transport.c test_amvp_operating_env.c \
+	test_amvp_capabilities.c test_amvp_hash.c test_amvp_aes.c \
+	test_amvp.c test_amvp_transport.c test_amvp_operating_env.c \
 	test_amvp_ecdsa.c test_amvp_kas_ecc.c test_amvp_kas_ifc.c \
 	test_amvp_kts_ifc.c test_amvp_kas_ffc.c \
 	test_amvp_safe_primes.c test_amvp_kda.c app_common.c \
@@ -203,7 +201,6 @@ am__runtest_SOURCES_DIST = ut_common.c create_session.c \
 @LIB_NOT_SUPPORTED_FALSE@	runtest-test_amvp_des.$(OBJEXT) \
 @LIB_NOT_SUPPORTED_FALSE@	runtest-test_amvp_capabilities.$(OBJEXT) \
 @LIB_NOT_SUPPORTED_FALSE@	runtest-test_amvp_hash.$(OBJEXT) \
-@LIB_NOT_SUPPORTED_FALSE@	runtest-test_amvp_build_register.$(OBJEXT) \
 @LIB_NOT_SUPPORTED_FALSE@	runtest-test_amvp_aes.$(OBJEXT) \
 @LIB_NOT_SUPPORTED_FALSE@	runtest-test_amvp.$(OBJEXT) \
 @LIB_NOT_SUPPORTED_FALSE@	runtest-test_amvp_transport.$(OBJEXT) \
@@ -260,7 +257,6 @@ am__depfiles_remade = ./$(DEPDIR)/runtest-app_common.Po \
 	./$(DEPDIR)/runtest-create_session.Po \
 	./$(DEPDIR)/runtest-test_amvp.Po \
 	./$(DEPDIR)/runtest-test_amvp_aes.Po \
-	./$(DEPDIR)/runtest-test_amvp_build_register.Po \
 	./$(DEPDIR)/runtest-test_amvp_capabilities.Po \
 	./$(DEPDIR)/runtest-test_amvp_cmac.Po \
 	./$(DEPDIR)/runtest-test_amvp_des.Po \
@@ -592,7 +588,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/runtest-create_session.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/runtest-test_amvp.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/runtest-test_amvp_aes.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/runtest-test_amvp_build_register.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/runtest-test_amvp_capabilities.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/runtest-test_amvp_cmac.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/runtest-test_amvp_des.Po@am__quote@ # am--include-marker
@@ -990,20 +985,6 @@ runtest-test_amvp_hash.obj: test_amvp_hash.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_amvp_hash.c' object='runtest-test_amvp_hash.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(runtest_CFLAGS) $(CFLAGS) -c -o runtest-test_amvp_hash.obj `if test -f 'test_amvp_hash.c'; then $(CYGPATH_W) 'test_amvp_hash.c'; else $(CYGPATH_W) '$(srcdir)/test_amvp_hash.c'; fi`
-
-runtest-test_amvp_build_register.o: test_amvp_build_register.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(runtest_CFLAGS) $(CFLAGS) -MT runtest-test_amvp_build_register.o -MD -MP -MF $(DEPDIR)/runtest-test_amvp_build_register.Tpo -c -o runtest-test_amvp_build_register.o `test -f 'test_amvp_build_register.c' || echo '$(srcdir)/'`test_amvp_build_register.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/runtest-test_amvp_build_register.Tpo $(DEPDIR)/runtest-test_amvp_build_register.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_amvp_build_register.c' object='runtest-test_amvp_build_register.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(runtest_CFLAGS) $(CFLAGS) -c -o runtest-test_amvp_build_register.o `test -f 'test_amvp_build_register.c' || echo '$(srcdir)/'`test_amvp_build_register.c
-
-runtest-test_amvp_build_register.obj: test_amvp_build_register.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(runtest_CFLAGS) $(CFLAGS) -MT runtest-test_amvp_build_register.obj -MD -MP -MF $(DEPDIR)/runtest-test_amvp_build_register.Tpo -c -o runtest-test_amvp_build_register.obj `if test -f 'test_amvp_build_register.c'; then $(CYGPATH_W) 'test_amvp_build_register.c'; else $(CYGPATH_W) '$(srcdir)/test_amvp_build_register.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/runtest-test_amvp_build_register.Tpo $(DEPDIR)/runtest-test_amvp_build_register.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_amvp_build_register.c' object='runtest-test_amvp_build_register.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(runtest_CFLAGS) $(CFLAGS) -c -o runtest-test_amvp_build_register.obj `if test -f 'test_amvp_build_register.c'; then $(CYGPATH_W) 'test_amvp_build_register.c'; else $(CYGPATH_W) '$(srcdir)/test_amvp_build_register.c'; fi`
 
 runtest-test_amvp_aes.o: test_amvp_aes.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(runtest_CFLAGS) $(CFLAGS) -MT runtest-test_amvp_aes.o -MD -MP -MF $(DEPDIR)/runtest-test_amvp_aes.Tpo -c -o runtest-test_amvp_aes.o `test -f 'test_amvp_aes.c' || echo '$(srcdir)/'`test_amvp_aes.c
@@ -1528,7 +1509,6 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/runtest-create_session.Po
 	-rm -f ./$(DEPDIR)/runtest-test_amvp.Po
 	-rm -f ./$(DEPDIR)/runtest-test_amvp_aes.Po
-	-rm -f ./$(DEPDIR)/runtest-test_amvp_build_register.Po
 	-rm -f ./$(DEPDIR)/runtest-test_amvp_capabilities.Po
 	-rm -f ./$(DEPDIR)/runtest-test_amvp_cmac.Po
 	-rm -f ./$(DEPDIR)/runtest-test_amvp_des.Po
@@ -1623,7 +1603,6 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/runtest-create_session.Po
 	-rm -f ./$(DEPDIR)/runtest-test_amvp.Po
 	-rm -f ./$(DEPDIR)/runtest-test_amvp_aes.Po
-	-rm -f ./$(DEPDIR)/runtest-test_amvp_build_register.Po
 	-rm -f ./$(DEPDIR)/runtest-test_amvp_capabilities.Po
 	-rm -f ./$(DEPDIR)/runtest-test_amvp_cmac.Po
 	-rm -f ./$(DEPDIR)/runtest-test_amvp_des.Po

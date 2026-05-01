@@ -2,7 +2,6 @@ lib_LTLIBRARIES = libamvp.la
 AM_CFLAGS = -I$(top_srcdir)/include/amvp $(SAFEC_CFLAGS) $(LIBCURL_CFLAGS)
 
 libamvp_la_SOURCES =  amvp.c \
-                    amvp_build_register.c \
                     transport/amvp_transport.c \
                     transport/amvp_transport_libcurl.c \
                     transport/amvp_transport_util.c \

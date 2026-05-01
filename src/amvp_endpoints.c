@@ -26,11 +26,7 @@
 #define AMVP_MODULES_PATH "modules"
 #define AMVP_SP_TEMPLATE_PATH "securityPolicy/template"
 #define AMVP_SCHEMAS_PATH "schemas"
-
-/* Helper function declarations */
-static char* build_evidence_path(const char *base_path, const char *evidence_type);
-static char* build_api_path(AMVP_CTX *ctx, const char *relative_path);
-static AMVP_RESULT parse_response_json(AMVP_CTX *ctx, JSON_Value **result);
+#define AMVP_CERT_REQ_SCHEMA_PATH "certificateRequestRegister"
 
 /*
  * Build evidence submission path by appending evidence type
@@ -467,6 +463,9 @@ AMVP_RESULT amvp_get_schema(AMVP_CTX *ctx, AMVP_SCHEMA_TYPE schema_type, const c
         break;
     case AMVP_SCHEMA_OTHER_DOCUMENTATION:
         type_seg = AMVP_OD_EVIDENCE_PATH;
+        break;
+    case AMVP_SCHEMA_CERT_REQ:
+        type_seg = AMVP_CERT_REQ_SCHEMA_PATH;
         break;
     case AMVP_SCHEMA_MAX:
     default:

@@ -1,6 +1,5 @@
 tmp_sources = app_main.c \
               app_cli.c \
-              app_util.c \
               app_lcl.h \
               ketopt.h \
               totp/totp.c \

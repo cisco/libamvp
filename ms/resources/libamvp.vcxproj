@@ -386,7 +386,6 @@
     </ClCompile>
     <ClCompile Include="..\..\src\amvp.c" />
     <ClCompile Include="..\..\src\amvp_aes.c" />
-    <ClCompile Include="..\..\src\amvp_build_register.c" />
     <ClCompile Include="..\..\src\amvp_capabilities.c" />
     <ClCompile Include="..\..\src\amvp_cmac.c" />
     <ClCompile Include="..\..\src\amvp_des.c" />

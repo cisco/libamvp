@@ -26,7 +26,6 @@ runtest_SOURCES += create_session.c \
       test_amvp_des.c \
       test_amvp_capabilities.c \
       test_amvp_hash.c \
-      test_amvp_build_register.c \
       test_amvp_aes.c \
       test_amvp.c \
       test_amvp_transport.c \

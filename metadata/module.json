@@ -1,205 +1,258 @@
 {
-    "schemaVersion": "initial",
-    "moduleInfo": {
-        "name": "Example AMVP Cryptographic Module",
-        "count": 1,
-        "description": "This module represents a basic software module. It is for example use only and does not intentionally represent any existing or future module.",
-        "embodiment": "singlechip",
-        "type": "software",
-        "opEnvType": "non-modifiable",
-        "submissionLevel": "Level 1",
-        "itar": false,
-        "overallSecurityLevel": 1
-    },
-    "secLevels": [
-        {
-            "section": 1,
-            "level": 1
-        },
-        {
-            "section": 2,
-            "level": 1
-        },
-        {
-            "section": 3,
-            "level": 1
-        },
-        {
-            "section": 4,
-            "level": 1
-        },
-        {
-            "section": 5,
-            "level": 1
-        },
-        {
-            "section": 6,
-            "level": 1
-        },
-        {
-            "section": 7,
-            "level": 1
-        },
-        {
-            "section": 8,
-            "level": 1
-        },
-        {
-            "section": 9,
-            "level": 1
-        },
-        {
-            "section": 10,
-            "level": 1
-        },
-        {
-            "section": 11,
-            "level": 1
-        },
-        {
-            "section": 12,
-            "level": 1
-        }
+    "amvVersion": "0.1",
+    "vendorId": 13312,
+    "moduleId": 15372,
+    "testers": [
+       "CVP-0-000001",
+       "CVP-0-000002"
     ],
-    "filterProperties": [
-        {
-            "name": "implementsOtar",
-            "included": true
+    "algorithmCertificates": ["A1"],
+    "entropyCertificates": ["E1"],
+    "module": {
+        "schemaVersion": "initial",
+        "moduleInfo": {
+            "count": 1,
+            "embodiment": "singlechip",
+            "opEnvType": "non-modifiable",
+            "submissionLevel": "Level 1",
+            "itar": false,
+            "overallSecurityLevel": 1
         },
-        {
-            "name": "hasNonApprovedMode",
-            "included": true
-        },
-        {
-            "name": "requiresInitialization",
-            "included": true
-        },
-        {
-            "name": "hasExcludedComponents",
-            "included": true
-        },
-        {
-            "name": "hasDegradedMode",
-            "included": false
-        }, {
-            "name": "hasPAAorPAI",
-            "included": false
-        },
-        {
-            "name": "hasEmbeddedOrBoundModule",
-            "included": false
-        },
-        {
-            "name": "hasCriticalFunctions",
-            "included": false
-        },
-        {
-            "name": "hasNonApprovedAlgorithmsInApprovedMode",
-            "included": false
-        },
-        {
-            "name": "hasExternalInputDevice",
-            "included": false
-        },
-        {
-            "name": "hasExternalOutputDevice",
-            "included": false
-        },
-        {
-            "name": "usesTrustedChannel",
-            "included": true
-        },
-        {
-            "name": "supportsConcurrentOperators",
-            "included": true
-        },
-        {
-            "name": "usesIdentityBasedAuthentication",
-            "included": true
-        },
-        {
-            "name": "hasMaintenanceRole",
-            "included": true
-        },
-        {
-            "name": "allowsOperatorToChangeRoles",
-            "included": false
-        },
-        {
-            "name": "hasDefaultAuthenticationData",
-            "included": true
-        },
-        {
-            "name": "usesEDC",
-            "included": true
-        },
-        {
-            "name": "allowsExternalLoadingOfSoftwareOrFirmware",
-            "included": false
-        },
-        {
-            "name": "containsNonReconfigurableMemory",
-            "included": true
-        },
-        {
-            "name": "usesOpenSource",
-            "included": false
-        },
-        {
-            "name": "providesMaintenanceAccessInterface",
-            "included": false
-        },
-        {
-            "name": "hasVentilationOrSlits",
-            "included": false
-        },
-        {
-            "name": "hasRemovableCover",
-            "included": false
-        },
-        {
-            "name": "hasTamperSeals",
-            "included": false
-        },
-        {
-            "name": "hasOperatorAppliedTamperSeals",
-            "included": false
-        },
-        {
-            "name": "hasEFPorEFT",
-            "included": false
-        },
-        {
-            "name": "outputsSensitiveDataAsPlaintext",
-            "included": false
-        },
-        {
-            "name": "supportsManualSSPEntry",
-            "included": true
-        },
-        {
-            "name": "usesSplitKnowledge",
-            "included": true
-        },
-        {
-            "name": "hasCVE",
-            "included": true
-        },
-        {
-            "name": "hasAdditionalMitigations",
-            "included": false
-        },
-        {
-            "name": "usesOtherCurve",
-            "included": true
-        },
-        {
-            "name": "supportsBypassCapability",
-            "included": false
-        },
-        {
-            "name": "hasOTPMemory",
-            "included": false
-        }
-    ]
+        "secLevels": [
+            {
+                "section": 1,
+                "level": 1
+            },
+            {
+                "section": 2,
+                "level": 1
+            },
+            {
+                "section": 3,
+                "level": 1
+            },
+            {
+                "section": 4,
+                "level": 1
+            },
+            {
+                "section": 5,
+                "level": 1
+            },
+            {
+                "section": 6,
+                "level": 1
+            },
+            {
+                "section": 7,
+                "level": 1
+            },
+            {
+                "section": 8,
+                "level": 1
+            },
+            {
+                "section": 9,
+                "level": 1
+            },
+            {
+                "section": 10,
+                "level": 1
+            },
+            {
+                "section": 11,
+                "level": 1
+            },
+            {
+                "section": 12,
+                "level": 1
+            }
+        ],
+        "filterProperties": [
+            {
+                "name": "implementsOtar",
+                "included": true
+            },
+            {
+                "name": "hasNonApprovedMode",
+                "included": true
+            },
+            {
+                "name": "requiresInitialization",
+                "included": true
+            },
+            {
+                "name": "hasExcludedComponents",
+                "included": true
+            },
+            {
+                "name": "hasDegradedMode",
+                "included": false
+            },
+            {
+                "name": "hasPAAorPAI",
+                "included": false
+            },
+            {
+                "name": "hasEmbeddedOrBoundModule",
+                "included": false
+            },
+            {
+                "name": "hasCriticalFunctions",
+                "included": false
+            },
+            {
+                "name": "hasNonApprovedAlgorithmsInApprovedMode",
+                "included": false
+            },
+            {
+                "name": "hasExternalInputDevice",
+                "included": false
+            },
+            {
+                "name": "hasExternalOutputDevice",
+                "included": false
+            },
+            {
+                "name": "usesTrustedChannel",
+                "included": true
+            },
+            {
+                "name": "supportsConcurrentOperators",
+                "included": true
+            },
+            {
+                "name": "usesIdentityBasedAuthentication",
+                "included": true
+            },
+            {
+                "name": "hasMaintenanceRole",
+                "included": true
+            },
+            {
+                "name": "allowsOperatorToChangeRoles",
+                "included": false
+            },
+            {
+                "name": "hasDefaultAuthenticationData",
+                "included": true
+            },
+            {
+                "name": "usesEDC",
+                "included": true
+            },
+            {
+                "name": "allowsExternalLoadingOfSoftwareOrFirmware",
+                "included": false
+            },
+            {
+                "name": "containsNonReconfigurableMemory",
+                "included": true
+            },
+            {
+                "name": "usesOpenSource",
+                "included": false
+            },
+            {
+                "name": "providesMaintenanceAccessInterface",
+                "included": false
+            },
+            {
+                "name": "hasVentilationOrSlits",
+                "included": false
+            },
+            {
+                "name": "hasRemovableCover",
+                "included": false
+            },
+            {
+                "name": "hasTamperSeals",
+                "included": false
+            },
+            {
+                "name": "hasOperatorAppliedTamperSeals",
+                "included": false
+            },
+            {
+                "name": "hasEFP",
+                "included": false
+            },
+            {
+                "name": "hasEFT",
+                "included": false
+            },
+            {
+                "name": "hasEFPorEFT",
+                "included": false
+            },
+            {
+                "name": "outputsSensitiveDataAsPlaintext",
+                "included": false
+            },
+            {
+                "name": "supportsManualSSPEntry",
+                "included": true
+            },
+            {
+                "name": "usesSplitKnowledge",
+                "included": true
+            },
+            {
+                "name": "hasCVE",
+                "included": true
+            },
+            {
+                "name": "hasAdditionalMitigations",
+                "included": false
+            },
+            {
+                "name": "usesOtherCurve",
+                "included": true
+            },
+            {
+                "name": "supportsBypassCapability",
+                "included": false
+            },
+            {
+                "name": "hasOTPMemory",
+                "included": false
+            },
+            {
+                "name": "hasUserRole",
+                "included": true
+            },
+            {
+                "name": "allowsSelfInitiatedCryptographicOutput",
+                "included": false
+            },
+            {
+                "name": "usesAuthentication",
+                "included": true
+            },
+            {
+                "name": "usesHashMacIntegrity",
+                "included": true
+            },
+            {
+                "name": "usesDigitalSignatureIntegrity",
+                "included": false
+            },
+            {
+                "name": "supportsSensitiveDataIO",
+                "included": false
+            },
+            {
+                "name": "supportsCompleteImageReplacement",
+                "included": false
+            },
+            {
+                "name": "hasControlOutput",
+                "included": false
+            },
+            {
+                "name": "usesRoleBasedAuthentication",
+                "included": true
+            }
+        ]
+    }
 }

@@ -84,16 +84,7 @@ EXPORTS
   amvp_set_path_segment
   amvp_set_cacerts
   amvp_set_certkey
-  amvp_mark_as_sample
-  amvp_mark_as_get_only
   amvp_set_get_save_file
-  amvp_oe_ingest_metadata
-  amvp_oe_set_fips_validation_metadata
-  amvp_oe_module_new
-  amvp_oe_module_set_type_version_desc
-  amvp_oe_dependency_new
-  amvp_oe_oe_new
-  amvp_oe_oe_set_dependency
   amvp_upload_vectors_from_file
   amvp_set_2fa_callback
   amvp_bin_to_hexstr

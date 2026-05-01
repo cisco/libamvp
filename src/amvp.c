@@ -105,8 +105,6 @@ AMVP_RESULT amvp_set_2fa_callback(AMVP_CTX *ctx, AMVP_RESULT (*totp_cb)(char **t
  * when the test session is finished.
  */
 AMVP_RESULT amvp_free_test_session(AMVP_CTX *ctx) {
-    int i = 0;
-
     if (!ctx) {
         AMVP_LOG_STATUS("No ctx to free");
         return AMVP_SUCCESS;
@@ -133,26 +131,6 @@ AMVP_RESULT amvp_free_test_session(AMVP_CTX *ctx) {
     }
     if (ctx->registration) {
             json_value_free(ctx->registration);
-    }
-    if (ctx->cert_req_info.tester_count > 0) {
-        for (i = 0; i < ctx->cert_req_info.tester_count; i++) {
-            free(ctx->cert_req_info.tester_id[i]);
-        }
-    }
-    if (ctx->cert_req_info.reviewer_count > 0) {
-        for (i = 0; i < ctx->cert_req_info.reviewer_count; i++) {
-            free(ctx->cert_req_info.reviewer_id[i]);
-        }
-    }
-    if (ctx->cert_req_info.acv_cert_count > 0) {
-        for (i = 0; i < ctx->cert_req_info.acv_cert_count; i++) {
-            free(ctx->cert_req_info.acv_cert[i]);
-        }
-    }
-    if (ctx->cert_req_info.esv_cert_count > 0) {
-        for (i = 0; i < ctx->cert_req_info.esv_cert_count; i++) {
-            free(ctx->cert_req_info.esv_cert[i]);
-        }
     }
 
     /* Free the AMVP_CTX struct */
@@ -361,13 +339,13 @@ AMVP_RESULT amvp_set_get_save_file(AMVP_CTX *ctx, char *filename) {
     return AMVP_SUCCESS;
 }
 
-AMVP_RESULT amvp_mark_as_cert_req(AMVP_CTX *ctx, const char *module_file, int vendor_id) {
+AMVP_RESULT amvp_mark_as_cert_req(AMVP_CTX *ctx, const char *module_file) {
     if (!ctx) {
         return AMVP_NO_CTX;
     }
 
-    if (!module_file || !vendor_id) {
-        AMVP_LOG_ERR("Missing module or vendor ID");
+    if (!module_file) {
+        AMVP_LOG_ERR("Missing module file");
         return AMVP_INVALID_ARG;
     }
     if (strnlen_s(module_file, AMVP_JSON_FILENAME_MAX + 1) > AMVP_JSON_FILENAME_MAX) {
@@ -375,167 +353,7 @@ AMVP_RESULT amvp_mark_as_cert_req(AMVP_CTX *ctx, const char *module_file, int ve
         return AMVP_INVALID_ARG;
     }
 
-    strcpy_s(ctx->cert_req_info.module_file, AMVP_JSON_FILENAME_MAX + 1, module_file);
-    ctx->cert_req_info.vendor_id = vendor_id;
-    ctx->action = AMVP_ACTION_CERT_REQ;
-    return AMVP_SUCCESS;
-}
-
-AMVP_RESULT amvp_cert_req_add_contact(AMVP_CTX *ctx, const char *contact_id, AMVP_CONTACT_TYPE contact_type) {
-    int len = 0;
-    int *count_ptr = NULL;
-    char **contact_array = NULL;
-
-    if (!ctx) {
-        return AMVP_NO_CTX;
-    }
-
-    if (!contact_id) {
-        return AMVP_MISSING_ARG;
-    }
-
-    /* Validate contact ID format */
-    if (amvp_validate_contact_id(contact_id) != AMVP_SUCCESS) {
-        AMVP_LOG_ERR("Invalid contact ID format: %s (must be CVP-XXXXXX)", contact_id);
-        return AMVP_INVALID_ARG;
-    }
-
-    if (contact_type >= AMVP_CONTACT_TYPE_MAX) {
-        AMVP_LOG_ERR("Invalid contact type provided");
-        return AMVP_INVALID_ARG;
-    }
-
-    if (ctx->action != AMVP_ACTION_CERT_REQ) {
-        AMVP_LOG_ERR("Session must be marked as a certify request to add contact info");
-        return AMVP_UNSUPPORTED_OP;
-    }
-
-    /* Set the appropriate count pointer and contact array based on contact type */
-    switch (contact_type) {
-        case AMVP_CONTACT_TYPE_TESTER:
-            count_ptr = &ctx->cert_req_info.tester_count;
-            contact_array = ctx->cert_req_info.tester_id;
-            break;
-        case AMVP_CONTACT_TYPE_REVIEWER:
-            count_ptr = &ctx->cert_req_info.reviewer_count;
-            contact_array = ctx->cert_req_info.reviewer_id;
-            break;
-        case AMVP_CONTACT_TYPE_MAX:
-        default:
-            AMVP_LOG_ERR("Unsupported contact type");
-            return AMVP_INVALID_ARG;
-    }
-
-    if (*count_ptr >= AMVP_MAX_CONTACTS_PER_CERT_REQ) {
-        AMVP_LOG_ERR("Already at maximum number of contacts per cert request for this contact type");
-        return AMVP_UNSUPPORTED_OP;
-    }
-
-    len = strnlen_s(contact_id, AMVP_CONTACT_STR_MAX_LEN + 1);
-    if (!len || len > AMVP_CONTACT_STR_MAX_LEN) {
-        AMVP_LOG_ERR("Provided contact ID string is too long or empty");
-        return AMVP_INVALID_ARG;
-    }
-
-    contact_array[*count_ptr] = calloc(len + 1, sizeof(char));
-    if (!contact_array[*count_ptr]) {
-        AMVP_LOG_ERR("Error allocating memory for contact ID in cert request");
-        return AMVP_MALLOC_FAIL;
-    }
-
-    if (strncpy_s(contact_array[*count_ptr], len + 1, contact_id, len)) {
-        AMVP_LOG_ERR("Error copying contact ID string into cert request");
-        free(contact_array[*count_ptr]);
-        return AMVP_INTERNAL_ERR;
-    }
-
-    (*count_ptr)++;
-    return AMVP_SUCCESS;
-}
-
-AMVP_RESULT amvp_cert_req_add_sub_cert(AMVP_CTX *ctx, const char *cert_id, AMVP_CERT_TYPE type) {
-    int len = 0;
-
-    if (!ctx) {
-        return AMVP_NO_CTX;
-    }
-
-    if (!cert_id) {
-        return AMVP_MISSING_ARG;
-    }
-
-    /* Validate certificate ID format based on type */
-    if (type == AMVP_CERT_TYPE_ACV) {
-        if (amvp_validate_acv_cert_id(cert_id) != AMVP_SUCCESS) {
-            AMVP_LOG_ERR("Invalid ACV certificate ID format: %s (must be A<number>)", cert_id);
-            return AMVP_INVALID_ARG;
-        }
-    } else if (type == AMVP_CERT_TYPE_ESV) {
-        if (amvp_validate_esv_cert_id(cert_id) != AMVP_SUCCESS) {
-            AMVP_LOG_ERR("Invalid ESV certificate ID format: %s (must be E<number>)", cert_id);
-            return AMVP_INVALID_ARG;
-        }
-    }
-
-    len = strnlen_s(cert_id, AMVP_CERT_STR_MAX_LEN + 1);
-    if (!len || len > AMVP_CONTACT_STR_MAX_LEN) {
-        AMVP_LOG_ERR("Provided cert ID string is too long or empty");
-        return AMVP_INVALID_ARG;
-    }
-
-    if (ctx->action != AMVP_ACTION_CERT_REQ) {
-        AMVP_LOG_ERR("Session must be marked as a certify request to add contact info");
-        return AMVP_UNSUPPORTED_OP;
-    }
-
-    switch (type) {
-        case AMVP_CERT_TYPE_ACV:
-            if (ctx->cert_req_info.acv_cert_count >= AMVP_MAX_ACV_CERTS_PER_CERT_REQ) {
-                AMVP_LOG_ERR("Already at maximum number of alg certs per cert request");
-                return AMVP_UNSUPPORTED_OP;
-            }
-
-            ctx->cert_req_info.acv_cert[ctx->cert_req_info.acv_cert_count] = calloc(len + 1, sizeof(char));
-            if (!ctx->cert_req_info.acv_cert[ctx->cert_req_info.acv_cert_count]) {
-                AMVP_LOG_ERR("Error allocating memory for contact ID in cert request");
-                return AMVP_MALLOC_FAIL;
-            }
-
-            if (strncpy_s(ctx->cert_req_info.acv_cert[ctx->cert_req_info.acv_cert_count], len + 1, cert_id, len)) {
-                AMVP_LOG_ERR("Error copying contact ID string into cert request");
-                free(ctx->cert_req_info.acv_cert[ctx->cert_req_info.acv_cert_count]);
-                return AMVP_INTERNAL_ERR;
-            }
-
-            ctx->cert_req_info.acv_cert_count++;
-            break;
-        case AMVP_CERT_TYPE_ESV:
-            if (ctx->cert_req_info.esv_cert_count >= AMVP_MAX_ESV_CERTS_PER_CERT_REQ) {
-                AMVP_LOG_ERR("Already at maximum number of esv certs per cert request");
-                return AMVP_UNSUPPORTED_OP;
-            }
-            ctx->cert_req_info.esv_cert[ctx->cert_req_info.esv_cert_count] = calloc(len + 1, sizeof(char));
-            if (!ctx->cert_req_info.esv_cert[ctx->cert_req_info.esv_cert_count]) {
-                AMVP_LOG_ERR("Error allocating memory for contact ID in cert request");
-                return AMVP_MALLOC_FAIL;
-            }
-
-            if (strncpy_s(ctx->cert_req_info.esv_cert[ctx->cert_req_info.esv_cert_count], len + 1, cert_id, len)) {
-                AMVP_LOG_ERR("Error copying contact ID string into cert request");
-                free(ctx->cert_req_info.esv_cert[ctx->cert_req_info.esv_cert_count]);
-                return AMVP_INTERNAL_ERR;
-            }
-
-            ctx->cert_req_info.esv_cert_count++;
-            break;
-        case AMVP_CERT_TYPE_AMV:
-        case AMVP_CERT_TYPE_NONE:
-        case AMVP_CERT_TYPE_MAX:
-        default:
-            AMVP_LOG_ERR("Sub certs can only be set for ACV or ESV certs");
-            return AMVP_INVALID_ARG;
-    }
-
+    strcpy_s(ctx->cert_req_module_file, AMVP_JSON_FILENAME_MAX + 1, module_file);
     return AMVP_SUCCESS;
 }
 
@@ -558,7 +376,6 @@ AMVP_RESULT amvp_mark_as_delete_only(AMVP_CTX *ctx, char *request_url) {
     }
 
     strcpy_s(ctx->delete_string, AMVP_REQUEST_STR_LEN_MAX + 1, request_url);
-    ctx->action = AMVP_ACTION_DELETE;
     return AMVP_SUCCESS;
 }
 
@@ -653,10 +470,7 @@ AMVP_RESULT amvp_read_cert_req_info_file(AMVP_CTX *ctx, const char *filename) {
     }
     strcpy_s(ctx->session_file_path, AMVP_JSON_FILENAME_MAX + 1, filename);
 
-    /*
-     * Send the capabilities to the AMVP server and get the response,
-     * which should be a list of vector set ID urls
-     */
+    /* Parse the cert request info file */
     val = json_parse_file(filename);
     obj = json_value_get_object(val);
     if (!obj) {
@@ -788,7 +602,7 @@ AMVP_RESULT amvp_check_cert_req_status(AMVP_CTX *ctx) {
     JSON_Value *val = NULL;
     JSON_Object *obj = NULL;
     AMVP_CERT_REQ_STATUS status = AMVP_CERT_REQ_STATUS_UNKNOWN;
-    int retry = 0, retry_period = 30;
+    int retry = 0, retry_period = AMVP_RETRY_TIME;
     unsigned int time_waited_so_far = 0;
 
     if (!ctx) {
@@ -887,23 +701,22 @@ end:
  */
 AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx) {
     AMVP_RESULT rv = AMVP_SUCCESS;
-    char *reg = NULL, *file = NULL;
-    int reg_len = 0, i = 0;
-    JSON_Value *cert_submission_val = NULL, *cert_rsp_val = NULL, *cert_info_val = NULL,
-               *output_file_val = NULL, *module_file_val = NULL;
-    JSON_Object *tmp_obj = NULL, *module_file_obj = NULL, *module_info_obj = NULL;
-    const char *url = NULL, *token = NULL, *module_name = NULL;
+    char *reg = NULL;
+    int reg_len = 0;
+    JSON_Value *cert_rsp_val = NULL, *module_file_val = NULL;
+    JSON_Object *tmp_obj = NULL, *module_file_obj = NULL;
+    const char *url = NULL, *token = NULL;
 
     if (!ctx) {
         return AMVP_NO_CTX;
     }
 
-    if (ctx->cert_req_info.module_file[0] == '\0') {
+    if (ctx->cert_req_module_file[0] == '\0') {
         AMVP_LOG_ERR("Must provide module file name before certifying");
         return AMVP_MISSING_ARG;
     }
 
-    module_file_val = json_parse_file(ctx->cert_req_info.module_file);
+    module_file_val = json_parse_file(ctx->cert_req_module_file);
     if (!module_file_val) {
         AMVP_LOG_ERR("Provided module file is invalid or does not exist");
         return AMVP_INVALID_ARG;
@@ -921,47 +734,10 @@ AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx) {
         goto end;
     }
 
-    module_info_obj = json_object_get_object(module_file_obj, "moduleInfo");
-    if (!module_info_obj) {
-        AMVP_LOG_ERR("Module file does not contain moduleInfo object");
-        rv = AMVP_JSON_ERR;
-        goto end;
-    }
-
-    module_name = json_object_get_string(module_info_obj, "name");
-    if (!module_name) {
-        AMVP_LOG_ERR("Module file does not contain name field");
-        rv = AMVP_JSON_ERR;
-        goto end;
-    }
-
-    AMVP_LOG_STATUS("    Module: %s", module_name);
-    if (ctx->cert_req_info.vendor_id) {
-        AMVP_LOG_STATUS("    Vendor: %d", ctx->cert_req_info.vendor_id);
-    }
-    if (ctx->cert_req_info.tester_count > 0) {
-        AMVP_LOG_STATUS("    Testers:");
-        for (i = 0; i < ctx->cert_req_info.tester_count; i++) {
-            AMVP_LOG_STATUS("        %s", ctx->cert_req_info.tester_id[i]);
-        }
-    }
-    if (ctx->cert_req_info.reviewer_count > 0) {
-        AMVP_LOG_STATUS("    Reviewers:");
-        for (i = 0; i < ctx->cert_req_info.reviewer_count; i++) {
-            AMVP_LOG_STATUS("        %s", ctx->cert_req_info.reviewer_id[i]);
-        }
-    }
-
-    /* Create the module cert request value */
+    /* Simplified: send the module file as-is, just add amvVersion */
     AMVP_LOG_STATUS("Creating module cert request...");
-    if (amvp_build_registration_json(ctx, &cert_submission_val) != AMVP_SUCCESS) {
-        AMVP_LOG_ERR("Error building cert request JSON");
-        rv = AMVP_JSON_ERR;
-        goto end;
-    }
-    /* create an array with amvVersion header, append request as the second object in the array */
-    amvp_add_version_to_obj(json_value_get_object(cert_submission_val));
-    reg = json_serialize_to_string(cert_submission_val, &reg_len);
+    amvp_add_version_to_obj(module_file_obj);
+    reg = json_serialize_to_string(module_file_val, &reg_len);
 
     AMVP_LOG_VERBOSE("Cert request payload:\n%s", reg);
 
@@ -1033,12 +809,8 @@ AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx) {
 
 end:
     if (reg) json_free_serialized_string(reg);
-    if (file) free(file);
     if (module_file_val) json_value_free(module_file_val);
-    if (output_file_val) json_value_free(output_file_val); //Also frees the header and body vals
-    if (cert_info_val) json_value_free(cert_info_val);
     if (cert_rsp_val) json_value_free(cert_rsp_val);
-    if (cert_submission_val) json_value_free(cert_submission_val);
     return rv;
 }
 
@@ -1081,10 +853,10 @@ AMVP_RESULT amvp_submit_security_policy_template(AMVP_CTX *ctx, const char *file
 
 AMVP_RESULT amvp_submit_security_policy(AMVP_CTX *ctx, const char *filename) {
     AMVP_RESULT rv = AMVP_INTERNAL_ERR;
-    char *reg = NULL, *file = NULL, *sp = NULL;
+    char *sp = NULL;
     int sp_len = 0;
 
-    JSON_Value *val = NULL, *tmp = NULL, *submission = NULL;
+    JSON_Value *val = NULL, *submission = NULL;
     JSON_Object *obj = NULL, *submission_obj = NULL;
 
     if (!ctx) {
@@ -1136,10 +908,7 @@ AMVP_RESULT amvp_submit_security_policy(AMVP_CTX *ctx, const char *filename) {
 
     rv = amvp_check_cert_req_status(ctx);
 end:
-    if (reg) json_free_serialized_string(reg);
     if (val) json_value_free(val);
-    if (tmp) json_value_free(tmp);
-    if (file) free(file);
     if (sp) free(sp);
     return rv;
 }
@@ -1221,7 +990,7 @@ AMVP_RESULT amvp_get_security_policy(AMVP_CTX *ctx) {
 
     status_str = json_object_get_string(obj, "status");
     if (!status_str) {
-        AMVP_LOG_ERR("No status value found when getting security policy status\n");
+        AMVP_LOG_ERR("No status value found when getting security policy status");
         return AMVP_JSON_ERR;
     }
     status = amvp_get_sp_request_status(status_str);
@@ -1247,7 +1016,7 @@ AMVP_RESULT amvp_get_security_policy(AMVP_CTX *ctx) {
             AMVP_LOG_ERR("Error requesting security policy generation");
             goto err;
         }
-        AMVP_LOG_STATUS("Succesfully requested generation of security policy PDF. Check back shortly.");
+        AMVP_LOG_STATUS("Successfully requested generation of security policy PDF. Check back shortly.");
         break;
     case AMVP_SP_STATUS_SUCCESS:
         AMVP_LOG_STATUS("Security policy ready. Saving...");
@@ -1271,7 +1040,7 @@ AMVP_RESULT amvp_get_security_policy(AMVP_CTX *ctx) {
 
         fp = fopen(ctx->save_filename, "w");
         if (fp == NULL) {
-            AMVP_LOG_ERR("Failed to intialize file output for security policy");
+            AMVP_LOG_ERR("Failed to initialize file output for security policy");
             goto err;
         }
 
@@ -1332,11 +1101,11 @@ static AMVP_EVIDENCE_TYPE amvp_detect_evidence_type(JSON_Object *obj) {
 
 AMVP_RESULT amvp_submit_evidence(AMVP_CTX *ctx, const char *filename) {
     AMVP_RESULT rv = AMVP_INTERNAL_ERR;
-    char *reg = NULL, *file = NULL, *ev = NULL;
+    char *ev = NULL;
     int ev_len = 0;
     AMVP_EVIDENCE_TYPE type = AMVP_EVIDENCE_TYPE_NA;
 
-    JSON_Value *val = NULL, *tmp = NULL, *submission = NULL;
+    JSON_Value *val = NULL, *submission = NULL;
     JSON_Object *obj = NULL, *submission_obj = NULL;
 
     if (!ctx) {
@@ -1411,10 +1180,7 @@ AMVP_RESULT amvp_submit_evidence(AMVP_CTX *ctx, const char *filename) {
     rv = amvp_check_cert_req_status(ctx);
 
 end:
-    if (reg) json_free_serialized_string(reg);
     if (val) json_value_free(val);
-    if (tmp) json_value_free(tmp);
-    if (file) free(file);
     if (ev) free(ev);
     return rv;
 }
@@ -1524,7 +1290,7 @@ static AMVP_RESULT amvp_login(AMVP_CTX *ctx, int refresh) {
     char *login = NULL;
     int login_len = 0;
 
-    AMVP_LOG_STATUS("Logging in...");
+    AMVP_LOG_STATUS("Logging in to %s...", ctx->server_name);
     rv = amvp_build_login(ctx, &login, &login_len, refresh);
     if (rv != AMVP_SUCCESS) {
         AMVP_LOG_ERR("Unable to build login message");
