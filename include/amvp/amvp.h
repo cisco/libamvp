@@ -24,27 +24,7 @@ extern "C"
 #define AMVP_TOTP_LENGTH 8
 #define AMVP_TOTP_TOKEN_MAX 128
 
-#define AMVP_MAX_CONTACTS_PER_CERT_REQ 10
-#define AMVP_CONTACT_STR_MAX_LEN 16
 #define AMVP_MAX_MODULE_NAME_LEN 128
-
-#define AMVP_MAX_ACV_CERTS_PER_CERT_REQ 5
-#define AMVP_MAX_ESV_CERTS_PER_CERT_REQ 5
-#define AMVP_CERT_STR_MAX_LEN 16
-
-typedef enum amvp_cert_type {
-    AMVP_CERT_TYPE_NONE = 0,
-    AMVP_CERT_TYPE_ACV,
-    AMVP_CERT_TYPE_ESV,
-    AMVP_CERT_TYPE_AMV,
-    AMVP_CERT_TYPE_MAX
-} AMVP_CERT_TYPE;
-
-typedef enum amvp_contact_type {
-    AMVP_CONTACT_TYPE_TESTER = 0,
-    AMVP_CONTACT_TYPE_REVIEWER,
-    AMVP_CONTACT_TYPE_MAX
-} AMVP_CONTACT_TYPE;
 
 typedef enum amvp_evidence_type {
     AMVP_EVIDENCE_TYPE_NA = 0,
@@ -63,6 +43,7 @@ typedef enum amvp_schema_type {
     AMVP_SCHEMA_SOURCE_CODE,
     AMVP_SCHEMA_SECURITY_POLICY,
     AMVP_SCHEMA_OTHER_DOCUMENTATION,
+    AMVP_SCHEMA_CERT_REQ,
     AMVP_SCHEMA_MAX
 } AMVP_SCHEMA_TYPE;
 
@@ -229,17 +210,6 @@ AMVP_RESULT amvp_set_cacerts(AMVP_CTX *ctx, const char *ca_file);
 AMVP_RESULT amvp_set_certkey(AMVP_CTX *ctx, const char *cert_file, const char *key_file);
 
 /**
- * @brief amvp_mark_as_sample() marks the registration as a sample. This function sets a flag that
- *        will allow the client to retrieve the correct answers later on, allowing for comparison
- *        and debugging.
- *
- * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_init_cert_request.
- *
- * @return AMVP_RESULT
- */
-AMVP_RESULT amvp_mark_as_sample(AMVP_CTX *ctx);
-
-/**
  * @brief amvp_get() performs an immediate GET request to the specified endpoint. This function
  *        will authenticate using existing JWT from cert req info file if available, or perform
  *        login if needed. Use amvp_set_get_save_file() to save response to a file.
@@ -249,26 +219,11 @@ AMVP_RESULT amvp_mark_as_sample(AMVP_CTX *ctx);
  *
  * @return AMVP_RESULT
  */
-AMVP_RESULT amvp_get(AMVP_CTX *ctx, const char *endpoint_path);/**
- * @brief amvp_mark_as_get_only() marks the operation as a GET only. This function will take the
- *        raw endpoint string (starting with / for the path) and will set up a GET request. No
- *        authentication will be required as long as it's not to a path that requires authentication.
- *        Note that the HTTPS prefix and server details should not be provided; libamvp takes care
- *        of those details. After a successful call to this function, then running the library will
- *        perform a GET request to the provided endpoint.
- *
- * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_init_cert_request().
- * @param string The endpoint (path) to access via GET request
- *
- * @return AMVP_RESULT
- */
-AMVP_RESULT amvp_mark_as_get_only(AMVP_CTX *ctx, char *string);
+AMVP_RESULT amvp_get(AMVP_CTX *ctx, const char *endpoint_path);
 
 /**
- * @brief amvp_set_get_save_file() indicates a file to save get requests to. This function will
- *        only work if amvp_mark_as_get_only() has already been successfully called. It will take a
- *        string parameter for the location to save the results from the GET request indicated in
- *        amvp_mark_as_get_only() to as a file.
+ * @brief amvp_set_get_save_file() indicates a file to save certain requests to. It will take a
+ *        string parameter for the location to save the results from the request as a file.
  *
  * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_init_cert_request.
  * @param filename location to save the GET results to (assumes data in JSON format)
@@ -287,32 +242,6 @@ AMVP_RESULT amvp_set_get_save_file(AMVP_CTX *ctx, char *filename);
  * @return AMVP_RESULT
  */
 AMVP_RESULT amvp_mark_as_delete_only(AMVP_CTX *ctx, char *request_url);
-
-AMVP_RESULT amvp_oe_ingest_metadata(AMVP_CTX *ctx, const char *metadata_file);
-
-AMVP_RESULT amvp_oe_set_fips_validation_metadata(AMVP_CTX *ctx,
-                                                 unsigned int module_id,
-                                                 unsigned int oe_id);
-
-AMVP_RESULT amvp_oe_module_new(AMVP_CTX *ctx,
-                               unsigned int id,
-                               const char *name);
-
-AMVP_RESULT amvp_oe_module_set_type_version_desc(AMVP_CTX *ctx,
-                                                 unsigned int id,
-                                                 const char *type,
-                                                 const char *version,
-                                                 const char *description);
-
-AMVP_RESULT amvp_oe_dependency_new(AMVP_CTX *ctx, unsigned int id);
-
-AMVP_RESULT amvp_oe_oe_new(AMVP_CTX *ctx,
-                           unsigned int id,
-                           const char *oe_name);
-
-AMVP_RESULT amvp_oe_oe_set_dependency(AMVP_CTX *ctx,
-                                      unsigned int oe_id,
-                                      unsigned int dependency_id);
 
 /**
  * @brief amvp_set_2fa_callback() sets a callback function which will create or obtain a TOTP
@@ -362,10 +291,7 @@ const char *amvp_protocol_version(void);
 
 AMVP_RESULT amvp_check_cert_req_status(AMVP_CTX *ctx);
 AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx);
-AMVP_RESULT amvp_mark_as_cert_req(AMVP_CTX *ctx, const char *module_name, int vendor_id);
-AMVP_RESULT amvp_cert_req_add_contact(AMVP_CTX *ctx, const char *contact_id, AMVP_CONTACT_TYPE contact_type);
-AMVP_RESULT amvp_cert_req_add_sub_cert(AMVP_CTX *ctx, const char *cert_id, AMVP_CERT_TYPE type);
-AMVP_RESULT amvp_get_module_request(AMVP_CTX *ctx, char *filename);
+AMVP_RESULT amvp_mark_as_cert_req(AMVP_CTX *ctx, const char *module_name);
 AMVP_RESULT amvp_submit_evidence(AMVP_CTX *ctx, const char *filename);
 AMVP_RESULT amvp_submit_security_policy(AMVP_CTX *ctx, const char *filename);
 AMVP_RESULT amvp_submit_security_policy_template(AMVP_CTX *ctx, const char *filename);

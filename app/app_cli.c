@@ -64,6 +64,7 @@ static void print_usage(int code) {
     printf("      --get_source_code_schema [version]\n");
     printf("      --get_security_policy_schema [version]\n");
     printf("      --get_other_documentation_schema [version]\n");
+    printf("      --get_cert_req_schema [version]\n");
     printf("      Omit version to list available versions. Provide version argument to fetch that schema.\n");
     printf("      Only one schema type may be requested per invocation; if multiple are given, the first one is used.\n");
     printf("      Use --save_to to save the result to a file instead of printing it.\n");
@@ -75,21 +76,9 @@ static void print_usage(int code) {
     printf("      --save_to <file>\n");
     printf("      -s <file>\n");
     printf("\n");
-    printf("To create a cert request, there are two ways to provide the needed information:\n");
-    printf("via command line arguments, or a config file.\n");
-    printf("\n");
-    printf("Method 1 - Command line arguments:\n");
-    printf("      --module_cert_req [module_file] --with_vendor <vendor_id_number>\n");
-    printf("      --with_tester <CMVP contact ID> or --with_reviewer <CMVP contact ID>\n");
-    printf("      Optional: --with_acv_cert <CAVP certificate ID> --with_esv_cert <ESVP certificate ID>\n");
-    printf("      These options can also be used with --for_cert_request (or -f) to add to existing requests.\n");
-    printf("\n");
-    printf("Method 2 - Configuration file:\n");
-    printf("      --config <cert_config.json>\n");
-    printf("      Config file can contain: vendor, testers, reviewers, acvCerts, esvCerts\n");
-    printf("      Config file can also be specified using the %s environment variable.\n", AMVP_CONFIG_CERT_REQUEST_ENV);
-    printf("\n");
-    printf("NOTE: Cannot combine config file with individual CLI arguments - use one method or the other.\n");
+    printf("To create a cert request:\n");
+    printf("      --module_cert_req <module_file>\n");
+    printf("      The module file should contain all needed information (vendor, contacts, certs, module info).\n");
     printf("\n");
 
     printf("In addition some options are passed to amvp_app using\n");
@@ -100,7 +89,6 @@ static void print_usage(int code) {
     printf("    AMV_CA_FILE\n");
     printf("    AMV_CERT_FILE\n");
     printf("    AMV_KEY_FILE\n");
-    printf("    %s (path to certification config file)\n", AMVP_CONFIG_CERT_REQUEST_ENV);
     printf("The CA certificates, cert and key should be PEM encoded. There should be no\n");
     printf("password on the key file.\n\n");
     printf("Some options can be passed to the library itself with environment variables:\n\n");
@@ -134,11 +122,6 @@ static ko_longopt_t longopts[] = {
     { "submit_evidence", ko_required_argument, 411 },
     { "submit_security_policy", ko_required_argument, 412 },
     { "submit_sp_template", ko_required_argument, 413 },
-    { "with_vendor", ko_required_argument, 421 },
-    { "with_tester", ko_required_argument, 422 },
-    { "with_reviewer", ko_required_argument, 423 },
-    { "with_acv_cert", ko_required_argument, 424 },
-    { "with_esv_cert", ko_required_argument, 425 },
     { "get", ko_required_argument, 431 },
     { "delete", ko_required_argument, 432 },
     { "get_security_policy", ko_no_argument, 433 },
@@ -146,9 +129,10 @@ static ko_longopt_t longopts[] = {
     { "get_source_code_schema", ko_optional_argument, 442 },
     { "get_security_policy_schema", ko_optional_argument, 443 },
     { "get_other_documentation_schema", ko_optional_argument, 444 },
+    { "get_cert_req_schema", ko_optional_argument, 445 },
     { "save_to", ko_required_argument, 451 },
-    { "config", ko_required_argument, 452 },
     { "for_cert_request", ko_required_argument, 453 },
+
     { NULL, 0, 0 }
 };
 
@@ -168,7 +152,6 @@ static const char* lookup_arg_name(int c) {
     return NULL;
 }
 
-//return 0 if fails check, 1 if passes
 static int check_option_length(const char *opt, int c, int maxAllowed) {
     if ((int)strnlen_s(opt, maxAllowed + 1) > maxAllowed) {
         const char *argName = lookup_arg_name(c);
@@ -184,8 +167,6 @@ static int check_option_length(const char *opt, int c, int maxAllowed) {
 int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
     ketopt_t opt = KETOPT_INIT;
     int c = 0, diff = 0, tmp = 0;
-    int has_config_file = 0;
-    int has_cli_cert_args = 0;
 
     /* Set the default configuration values */
     default_config(cfg);
@@ -282,68 +263,6 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
             strcpy_s(cfg->sp_template_file, JSON_FILENAME_LENGTH + 1, opt.arg);
             break;
 
-        case 421:
-            tmp = atoi(opt.arg);
-            if (!tmp) {
-                printf("Invalid vendor ID format\n");
-                return 1;
-            }
-            cfg->vendor_id = tmp;
-            has_cli_cert_args = 1;
-            break;
-
-        case 422:
-            if (cfg->num_testers >= AMVP_MAX_CONTACTS_PER_CERT_REQ) {
-                printf("Too many tester contacts provided for cert req\n");
-                return 1;
-            }
-            if (!check_option_length(opt.arg, c, AMVP_CONTACT_STR_MAX_LEN)) {
-                return 1;
-            }
-            strcpy_s(cfg->tester_ids[cfg->num_testers], AMVP_CONTACT_STR_MAX_LEN + 1, opt.arg);
-            cfg->num_testers++;
-            has_cli_cert_args = 1;
-            break;
-
-        case 423:
-            if (cfg->num_reviewers >= AMVP_MAX_CONTACTS_PER_CERT_REQ) {
-                printf("Too many reviewer contacts provided for cert req\n");
-                return 1;
-            }
-            if (!check_option_length(opt.arg, c, AMVP_CONTACT_STR_MAX_LEN)) {
-                return 1;
-            }
-            strcpy_s(cfg->reviewer_ids[cfg->num_reviewers], AMVP_CONTACT_STR_MAX_LEN + 1, opt.arg);
-            cfg->num_reviewers++;
-            has_cli_cert_args = 1;
-            break;
-
-        case 424:
-            if (cfg->num_acv_certs >= AMVP_MAX_ACV_CERTS_PER_CERT_REQ) {
-                printf("Too many algorithm certs provided for cert req\n");
-                return 1;
-            }
-            if (!check_option_length(opt.arg, c, AMVP_CERT_STR_MAX_LEN)) {
-                return 1;
-            }
-            strcpy_s(cfg->acv_certs[cfg->num_acv_certs], AMVP_CERT_STR_MAX_LEN + 1, opt.arg);
-            cfg->num_acv_certs++;
-            has_cli_cert_args = 1;
-            break;
-
-        case 425:
-            if (cfg->num_esv_certs >= AMVP_MAX_ESV_CERTS_PER_CERT_REQ) {
-                printf("Too many algorithm certs provided for cert req\n");
-                return 1;
-            }
-            if (!check_option_length(opt.arg, c, AMVP_CERT_STR_MAX_LEN)) {
-                return 1;
-            }
-            strcpy_s(cfg->esv_certs[cfg->num_esv_certs], AMVP_CERT_STR_MAX_LEN + 1, opt.arg);
-            cfg->num_esv_certs++;
-            has_cli_cert_args = 1;
-            break;
-
         case 431:
             cfg->get = 1;
             if (!check_option_length(opt.arg, c, JSON_REQUEST_LENGTH)) {
@@ -424,6 +343,21 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
             }
             break;
 
+        case 445:
+            if (cfg->get_schema) {
+                printf(ANSI_COLOR_YELLOW "Warning: multiple schema type options provided, ignoring.\n" ANSI_COLOR_RESET);
+                break;
+            }
+            cfg->get_schema = 1;
+            cfg->schema_type = AMVP_SCHEMA_CERT_REQ;
+            if (opt.arg) {
+                if (!check_option_length(opt.arg, c, APP_SCHEMA_VERSION_MAX_LEN)) {
+                    return 1;
+                }
+                strcpy_s(cfg->schema_version, APP_SCHEMA_VERSION_MAX_LEN + 1, opt.arg);
+            }
+            break;
+
         case 's':
         case 451:
             cfg->save_to = 1;
@@ -431,14 +365,6 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
                 return 1;
             }
             strcpy_s(cfg->save_file, JSON_FILENAME_LENGTH + 1, opt.arg);
-            break;
-
-        case 452:
-            if (!check_option_length(opt.arg, c, JSON_FILENAME_LENGTH)) {
-                return 1;
-            }
-            strcpy_s(cfg->config_file, JSON_FILENAME_LENGTH + 1, opt.arg);
-            has_config_file = 1;
             break;
 
         case 'f':
@@ -476,19 +402,6 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
             printf(ANSI_COLOR_RED "unknown option: %s\n" ANSI_COLOR_RESET, argv[c]);
         }
         printf("%s\n", AMVP_APP_HELP_MSG);
-        return 1;
-    }
-
-    /* Check for conflicting cert request approaches */
-    if ((has_config_file || getenv(AMVP_CONFIG_CERT_REQUEST_ENV)) && has_cli_cert_args) {
-        printf("Error: Cannot combine config file with cert request CLI arguments\n");
-        printf("Use either config file (--config or %s) OR individual --with_* arguments, not both.\n", AMVP_CONFIG_CERT_REQUEST_ENV);
-        return 1;
-    }
-
-    /* Only validate CLI arguments if not using config file */
-    if (cfg->mod_cert_req && !has_config_file && !getenv(AMVP_CONFIG_CERT_REQUEST_ENV) && !has_cli_cert_args) {
-        printf("Module cert request requires module ID, vendor ID, and at least one contact (tester or reviewer) to be provided\n");
         return 1;
     }
 

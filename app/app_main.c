@@ -23,11 +23,11 @@
 
 static int app_setup_two_factor_auth(AMVP_CTX *ctx);
 
-const char *server;
-int port;
-const char *ca_chain_file;
-const char *cert_file;
-const char *key_file;
+static const char *server;
+static int port;
+static const char *ca_chain_file;
+static const char *cert_file;
+static const char *key_file;
 
 #define CHECK_ENABLE_CAP_RV(rv) \
     if (rv != AMVP_SUCCESS) { \
@@ -93,7 +93,6 @@ static AMVP_RESULT progress(char *msg, AMVP_LOG_LVL level) {
 }
 
 static void app_cleanup(AMVP_CTX *ctx) {
-    // Routines for libamvp
     amvp_cleanup(ctx);
 }
 
@@ -106,13 +105,6 @@ int main(int argc, char **argv) {
 
     memset_s(&cfg, sizeof(APP_CONFIG), 0, sizeof(APP_CONFIG));
     if (ingest_cli(&cfg, argc, argv)) {
-        return 1;
-    }
-
-    /* Load certification configuration from file if specified */
-    rv = load_cert_config(&cfg);
-    if (rv != AMVP_SUCCESS) {
-        printf("Failed to load certification configuration: %s\n", amvp_lookup_error_string(rv));
         return 1;
     }
 
@@ -134,8 +126,6 @@ int main(int argc, char **argv) {
         printf("Failed to set server/port\n");
         goto end;
     }
-
-
 
     if (ca_chain_file) {
         /*
@@ -166,7 +156,7 @@ int main(int argc, char **argv) {
      * This may or may not be turned on...
      */
     if (app_setup_two_factor_auth(ctx)) {
-        printf("Error setting  up two factor auth\n");
+        printf("Error setting up two factor auth\n");
         goto end;
     }
 
@@ -212,46 +202,10 @@ int main(int argc, char **argv) {
     }
 
     if (cfg.mod_cert_req) {
-        rv = amvp_mark_as_cert_req(ctx, cfg.create_module_file, cfg.vendor_id);
+        rv = amvp_mark_as_cert_req(ctx, cfg.create_module_file);
         if (rv != AMVP_SUCCESS) {
             printf("Failed to mark as cert request: %s\n", amvp_lookup_error_string(rv));
             goto end;
-        }
-
-        /* Add tester contacts */
-        for (diff = 0; diff < cfg.num_testers; diff++) {
-            rv = amvp_cert_req_add_contact(ctx, cfg.tester_ids[diff], AMVP_CONTACT_TYPE_TESTER);
-            if (rv != AMVP_SUCCESS) {
-                printf("Failed to add tester contact: %s\n", amvp_lookup_error_string(rv));
-                goto end;
-            }
-        }
-
-        /* Add reviewer contacts */
-        for (diff = 0; diff < cfg.num_reviewers; diff++) {
-            rv = amvp_cert_req_add_contact(ctx, cfg.reviewer_ids[diff], AMVP_CONTACT_TYPE_REVIEWER);
-            if (rv != AMVP_SUCCESS) {
-                printf("Failed to add reviewer contact: %s\n", amvp_lookup_error_string(rv));
-                goto end;
-            }
-        }
-
-        /* Add ACV certificates */
-        for (diff = 0; diff < cfg.num_acv_certs; diff++) {
-            rv = amvp_cert_req_add_sub_cert(ctx, cfg.acv_certs[diff], AMVP_CERT_TYPE_ACV);
-            if (rv != AMVP_SUCCESS) {
-                printf("Failed to add ACV certificate: %s\n", amvp_lookup_error_string(rv));
-                goto end;
-            }
-        }
-
-        /* Add ESV certificates */
-        for (diff = 0; diff < cfg.num_esv_certs; diff++) {
-            rv = amvp_cert_req_add_sub_cert(ctx, cfg.esv_certs[diff], AMVP_CERT_TYPE_ESV);
-            if (rv != AMVP_SUCCESS) {
-                printf("Failed to add ESV certificate: %s\n", amvp_lookup_error_string(rv));
-                goto end;
-            }
         }
     }
 

@@ -134,9 +134,11 @@ const char *amvp_lookup_error_string(AMVP_RESULT rv) {
         { AMVP_MALLOC_FAIL,        "Error allocating memory"                          },
         { AMVP_NO_CTX,             "No valid context found"                           },
         { AMVP_TRANSPORT_FAIL,     "Error using transport library"                    },
+        { AMVP_PROTOCOL_RSP_ERR,   "Server returned protocol error response"          },
         { AMVP_NO_DATA,            "Trying to use data but none was found"            },
         { AMVP_UNSUPPORTED_OP,     "Unsupported operation"                            },
         { AMVP_KAT_DOWNLOAD_RETRY, "Error, need to retry"                             },
+        { AMVP_RETRY_OPERATION,    "Operation should be retried"                      },
         { AMVP_INVALID_ARG,        "Invalid argument"                                 },
         { AMVP_MISSING_ARG,        "Missing a required argument"                      },
         { AMVP_JSON_ERR,           "Error using JSON library"                         },
@@ -144,7 +146,7 @@ const char *amvp_lookup_error_string(AMVP_RESULT rv) {
         { AMVP_CTX_NOT_EMPTY,      "ctx already initialized"                          },
         { AMVP_JWT_MISSING,        "Error using JWT"                                  },
         { AMVP_JWT_EXPIRED,        "Provided JWT has expired"                         },
-        { AMVP_JWT_INVALID,        "Proivded JWT is not valid"                        },
+        { AMVP_JWT_INVALID,        "Provided JWT is not valid"                        },
         { AMVP_INTERNAL_ERR,       "Unexpected error occurred internally"              }
     };
 
@@ -204,62 +206,6 @@ const char *amvp_lookup_sp_section_name(int id) {
 }
 
 
-#define AMVP_UTIL_KV_STR_MAX 256
-
-AMVP_RESULT amvp_kv_list_append(AMVP_KV_LIST **kv_list,
-                                const char *key,
-                                const char *value) {
-    AMVP_KV_LIST *kv = NULL;
-
-    if (kv_list == NULL || key == NULL || value == NULL) {
-        return AMVP_INVALID_ARG;
-    }
-    if (!string_fits(key, AMVP_UTIL_KV_STR_MAX)) {
-        return AMVP_INVALID_ARG;
-    }
-    if (!string_fits(value, AMVP_UTIL_KV_STR_MAX)) {
-        return AMVP_INVALID_ARG;
-    }
-
-    if (*kv_list == NULL) {
-        *kv_list = calloc(1, sizeof(AMVP_KV_LIST));
-        if (*kv_list == NULL) return AMVP_MALLOC_FAIL;
-        kv = *kv_list;
-    } else {
-        AMVP_KV_LIST *current = *kv_list;
-        while (current->next) {
-            current = current->next;
-        }
-
-        // Append the next entry
-        current->next = calloc(1, sizeof(AMVP_KV_LIST));
-        if (current->next == NULL) return AMVP_MALLOC_FAIL;
-        kv = current->next;
-    }
-
-    kv->key = calloc(AMVP_UTIL_KV_STR_MAX + 1, sizeof(char));
-    if (kv->key == NULL) return AMVP_MALLOC_FAIL;
-    kv->value = calloc(AMVP_UTIL_KV_STR_MAX + 1, sizeof(char));
-    if (kv->value == NULL) return AMVP_MALLOC_FAIL;
-
-    strcpy_s(kv->key, AMVP_UTIL_KV_STR_MAX + 1, key);
-    strcpy_s(kv->value, AMVP_UTIL_KV_STR_MAX + 1, value);
-
-    return AMVP_SUCCESS;
-}
-
-void amvp_kv_list_free(AMVP_KV_LIST *kv_list) {
-    AMVP_KV_LIST *tmp;
-
-    while (kv_list) {
-        tmp = kv_list;
-        kv_list = kv_list->next;
-        if (tmp->key) free(tmp->key);
-        if (tmp->value) free(tmp->value);
-        free(tmp);
-    }
-}
-
 JSON_Object *amvp_get_obj_from_rsp(AMVP_CTX *ctx, JSON_Value *arry_val) {
     JSON_Object *obj = NULL;
 
@@ -270,13 +216,6 @@ JSON_Object *amvp_get_obj_from_rsp(AMVP_CTX *ctx, JSON_Value *arry_val) {
 
     obj = json_value_get_object(arry_val);
     return obj;
-}
-
-void amvp_release_json(JSON_Value *r_vs_val,
-                       JSON_Value *r_gval) {
-
-    if (r_gval) json_value_free(r_gval);
-    if (r_vs_val) json_value_free(r_vs_val);
 }
 
 /**
@@ -345,41 +284,6 @@ AMVP_RESULT amvp_append_sl_list(AMVP_SL_LIST **list, int length) {
                 return AMVP_MALLOC_FAIL;
             }
             current->next->length = length;
-            return AMVP_SUCCESS;
-        }
-        current = current->next;
-    }
-
-    /* Code should never reach here */
-    return AMVP_UNSUPPORTED_OP;
-}
-
-/**
- * Simple utility function to add an entry to a param list. if the list is NULL, it is created
- * with the given entry being the first one.
- */
-AMVP_RESULT amvp_append_param_list(AMVP_PARAM_LIST **list, int param) {
-    AMVP_PARAM_LIST *current = NULL;
-    if (!list) {
-        return AMVP_NO_DATA;
-    }
-
-    if (*list == NULL) {
-        *list = calloc(1, sizeof(AMVP_PARAM_LIST));
-        if (!*list) {
-            return AMVP_MALLOC_FAIL;
-        }
-        (*list)->param = param;
-        return AMVP_SUCCESS;
-    }
-    current = *list;
-    while (current) {
-        if (!current->next) {
-            current->next = calloc(1, sizeof(AMVP_PARAM_LIST));
-            if (!current->next) {
-                return AMVP_MALLOC_FAIL;
-            }
-            current->next->param = param;
             return AMVP_SUCCESS;
         }
         current = current->next;
@@ -514,34 +418,6 @@ int amvp_lookup_str_list(AMVP_STRING_LIST **list, const char *string) {
         tmp = tmp->next;
     }
     return 0;
-}
-
-/**
- * Simple utility for searching if a value already exists in a
- * param list.
- */
-int amvp_lookup_param_list(AMVP_PARAM_LIST *list, int value) {
-    if (!list) {
-        return 0;
-    }
-    while(list) {
-        if (value == list->param) {
-            return 1;
-        } else {
-            list = list->next;
-        }
-    }
-    return 0;
-}
-
-/**
- * Checks if a domain value in a capability object has already been set
- * if all values are 0, then domain is considered empty
- * helps keep code cleaner in places where we woud need to reference
- * through several unions/pointers
- */
-int amvp_is_domain_already_set(AMVP_JSON_DOMAIN_OBJ *domain) {
-    return domain->min + domain->max + domain->increment;
 }
 
 AMVP_RESULT amvp_json_serialize_to_file_pretty_a(const JSON_Value *value, const char *filename) {
@@ -720,8 +596,8 @@ void amvp_free_nl(AMVP_NAME_LIST *list) {
 
 /*
  * This is a retry handler, which pauses for a specific time.
- * This allows the server time to generate the vectors on behalf of
- * the client and to process the vector responses. The caller of this function
+ * This allows the server time to process certificate requests and
+ * generate related artifacts. The caller of this function
  * can choose to implement a retry backoff using 'modifier'. Additionally, this
  * function will ensure that retry periods will sum to no longer than AMVP_MAX_WAIT_TIME.
  */
@@ -943,94 +819,4 @@ AMVP_CERT_REQ_STATUS amvp_parse_cert_req_status_str(JSON_Object *json) {
     if (!diff) return AMVP_CERT_REQ_STATUS_ERROR;
 
     return AMVP_CERT_REQ_STATUS_UNKNOWN;
-}
-
-/*
- * Internal validation functions for certification request parameters
- */
-
-/*
- * Validate contact ID format (CVP-XXXXXX)
- * Used internally by amvp_cert_req_add_contact
- */
-AMVP_RESULT amvp_validate_contact_id(const char *id) {
-    size_t len;
-    int i;
-
-    if (!id) {
-        return AMVP_INVALID_ARG;
-    }
-
-    len = strnlen_s(id, AMVP_CONTACT_STR_MAX_LEN + 1);
-    if (len != 10) {  /* CVP-XXXXXX = 10 characters */
-        return AMVP_INVALID_ARG;
-    }
-
-    /* Check CVP- prefix */
-    if (strncmp(id, "CVP-", 4) != 0) {
-        return AMVP_INVALID_ARG;
-    }
-
-    /* Check that last 6 characters are digits */
-    for (i = 4; i < 10; i++) {
-        if (!isdigit(id[i])) {
-            return AMVP_INVALID_ARG;
-        }
-    }
-
-    return AMVP_SUCCESS;
-}
-
-/*
- * Validate ACV certificate ID format (A<number>)
- * Used internally by amvp_cert_req_add_sub_cert
- */
-AMVP_RESULT amvp_validate_acv_cert_id(const char *id) {
-    size_t len;
-    int i;
-
-    if (!id) {
-        return AMVP_INVALID_ARG;
-    }
-
-    len = strnlen_s(id, AMVP_CERT_STR_MAX_LEN + 1);
-    if (len < 2 || id[0] != 'A') {
-        return AMVP_INVALID_ARG;
-    }
-
-    /* Check that characters after 'A' are digits */
-    for (i = 1; i < (int)len; i++) {
-        if (!isdigit(id[i])) {
-            return AMVP_INVALID_ARG;
-        }
-    }
-
-    return AMVP_SUCCESS;
-}
-
-/*
- * Validate ESV certificate ID format (E<number>)
- * Used internally by amvp_cert_req_add_sub_cert
- */
-AMVP_RESULT amvp_validate_esv_cert_id(const char *id) {
-    size_t len;
-    int i;
-
-    if (!id) {
-        return AMVP_INVALID_ARG;
-    }
-
-    len = strnlen_s(id, AMVP_CERT_STR_MAX_LEN + 1);
-    if (len < 2 || id[0] != 'E') {
-        return AMVP_INVALID_ARG;
-    }
-
-    /* Check that characters after 'E' are digits */
-    for (i = 1; i < (int)len; i++) {
-        if (!isdigit(id[i])) {
-            return AMVP_INVALID_ARG;
-        }
-    }
-
-    return AMVP_SUCCESS;
 }
