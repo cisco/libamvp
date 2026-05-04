@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Cisco Systems, Inc.
+ * Copyright (c) 2026, Cisco Systems, Inc.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -33,9 +33,14 @@ typedef struct app_config {
     AMVP_LOG_LVL level;
     int get;
     int delete;
+    int put;
+    int post;
     int save_to;
     char get_string[JSON_REQUEST_LENGTH + 1];
     char delete_url[JSON_REQUEST_LENGTH + 1];
+    char put_url[JSON_REQUEST_LENGTH + 1];
+    char post_url[JSON_REQUEST_LENGTH + 1];
+    char data_file[JSON_FILENAME_LENGTH + 1];
     char save_file[JSON_FILENAME_LENGTH + 1];
     char mod_cert_req_file[JSON_FILENAME_LENGTH + 1];
     char create_module_file[JSON_FILENAME_LENGTH + 1];

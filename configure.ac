@@ -91,7 +91,7 @@ fi
 if test "x$disable_lib" != "xyes" ; then
     AC_ARG_WITH([libcurl-dir],
         [AS_HELP_STRING([--with-libcurl-dir],
-        [enable support for client proxy using libcurl])],
+        [Path to libcurl install directory])],
         [libcurldir="$withval"],
         [libcurldir="/usr"])
 
@@ -130,16 +130,13 @@ pre_libs="$LIBS"
 # script modifies LDFLAGS to correctly search for libs. we unset these changes so
 # makefile.am have complete control over linker flags
 pre_ldflags="$LDFLAGS"
-found_crypto="false"
-found_ssl="false"
-ssl_lib64="false"
 
 # Be more lenient in library detection stage
 LDFLAGS=" -Wl,--allow-multiple-definition $LDFLAGS"
 
 if test "x$disable_lib" = "xyes" ; then
     if test "x$libamvpdir" != "x" ; then
-        LDFLAGS="$LDFLAGS -L$libalibcvpdir/lib"
+        LDFLAGS="$LDFLAGS -L$libamvpdir/lib"
     else
         LDFLAGS="$LDFLAGS -Lsrc/.libs"
     fi
@@ -151,7 +148,7 @@ fi
 if test "x$libcurldir" != "x" ; then
     LDFLAGS="$LDFLAGS -L$libcurldir/lib"
     AC_CHECK_LIB([curl], [curl_easy_init], [],
-        [AC_MSG_FAILURE(Curl not found in provided curl dir)], ["$lib_dependencies"])
+        [AC_MSG_FAILURE(Curl not found in provided curl dir)], [])
 fi
 
 if test "x$libcurldir" != "x" ; then
@@ -188,7 +185,7 @@ if test "x$enable_gcov" != "xfalse" ; then
   AC_SUBST(CLEANFILES)
 fi
 
-if test "x$with_criterion" != "xno" ; then
+if test "x$with_criteriondir" != "xno" ; then
     AC_SUBST([CRITERION_CFLAGS], "-I$criteriondir/include")
     AC_SUBST([CRITERION_LDFLAGS], "-L$criteriondir/lib -lcriterion")
 fi
@@ -203,9 +200,6 @@ AC_SUBST(SAFEC_STUB_DIR)
 safecdir="$SAFEC_STUB_DIR"
 AC_SUBST([SAFEC_CFLAGS], "-I$safecdir/include")
 AC_SUBST([SAFEC_LDFLAGS], "$safecdir/lib/libsafe_lib.la")
-
-#At the end, SUBST any conditional algorithm cflags we have acquired
-AC_SUBST([COND_ALG_CFLAGS], "$cond_alg_cflags")
 
 # Default installation directory
 AC_PREFIX_DEFAULT([/usr/local/amvp])

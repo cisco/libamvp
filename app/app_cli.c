@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Cisco Systems, Inc.
+ * Copyright (c) 2026, Cisco Systems, Inc.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -9,7 +9,6 @@
 
 
 #include <stdio.h>
-#include <stdlib.h>
 #include "ketopt.h"
 #include "app_lcl.h"
 #include "amvp/amvp.h"
@@ -42,18 +41,11 @@ static void print_usage(int code) {
         printf("-The default logging level provides basic information about the progress of the test\n");
         printf("session or the task being performed. This includes the possibility of logging large\n");
         printf("amounts of data IF the data is specifically requested.\n");
-        printf("-The info logging level provides more information about the information being\n");
-        printf("exchanged, including HTTP actions (get, put, etc). Data in/from these actions is\n");
-        printf("logged but usually truncated.\n");
-        printf("-The verbose logging level is substantially more detailed than even info level, and\n");
-        printf("includes information about each vector set, test group,and even test case being\n");
-        printf("processed. it also will automatically fetch the results of all test cases of a\n");
-        printf("vector set in the event of it failing.\n");
-        printf("\n");
-        printf("For any activity requiring the creation of a test session and/or the processing\n");
-        printf("of test cases, amvp_app requires the specification of at least one algorithm\n");
-        printf("suite. Algorithm suites are enabled or disabled at build time depending on the\n");
-        printf("capabilities of the provided cryptographic library.\n\n");
+        printf("-The info logging level provides additional detail such as HTTP user-agent\n");
+        printf("information collected during session setup.\n");
+        printf("-The verbose logging level includes full HTTP request/response details\n");
+        printf("(URLs, status codes, response bodies) and certification request payloads.\n");
+        printf("This is excessive for most users.\n\n");
     }
 
     printf("To GET status of request, such as validation or metadata:\n");
@@ -71,6 +63,12 @@ static void print_usage(int code) {
     printf("\n");
     printf("To request to DELETE a resource you have created on the server:\n");
     printf("      --delete <url>\n");
+    printf("\n");
+    printf("To PUT data to an endpoint (update a resource):\n");
+    printf("      --put <url> --file <json_file>\n");
+    printf("\n");
+    printf("To POST data to an endpoint (create a resource):\n");
+    printf("      --post <url> --file <json_file>\n");
     printf("\n");
     printf("Some other options may support outputting to log OR saving to a file. To save to a file:\n");
     printf("      --save_to <file>\n");
@@ -92,8 +90,6 @@ static void print_usage(int code) {
     printf("The CA certificates, cert and key should be PEM encoded. There should be no\n");
     printf("password on the key file.\n\n");
     printf("Some options can be passed to the library itself with environment variables:\n\n");
-    printf("    AMV_SESSION_SAVE_PATH (Location where test session info files are saved)\n");
-    printf("    AMV_SESSION_SAVE_PREFIX (Determines file name of info file, followed by ID number\n");
     printf("    The following are used by the library for an HTTP user-agent string, only when\n");
     printf("    the information cannot be automatically collected:\n");
     printf("        AMV_OE_OSNAME\n");
@@ -125,6 +121,9 @@ static ko_longopt_t longopts[] = {
     { "get", ko_required_argument, 431 },
     { "delete", ko_required_argument, 432 },
     { "get_security_policy", ko_no_argument, 433 },
+    { "put", ko_required_argument, 434 },
+    { "post", ko_required_argument, 435 },
+    { "file", ko_required_argument, 436 },
     { "get_evidence_schema", ko_optional_argument, 441 },
     { "get_source_code_schema", ko_optional_argument, 442 },
     { "get_security_policy_schema", ko_optional_argument, 443 },
@@ -283,6 +282,29 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
             cfg->get_sp = 1;
             break;
 
+        case 434:
+            cfg->put = 1;
+            if (!check_option_length(opt.arg, c, JSON_REQUEST_LENGTH)) {
+                return 1;
+            }
+            strcpy_s(cfg->put_url, JSON_REQUEST_LENGTH + 1, opt.arg);
+            break;
+
+        case 435:
+            cfg->post = 1;
+            if (!check_option_length(opt.arg, c, JSON_REQUEST_LENGTH)) {
+                return 1;
+            }
+            strcpy_s(cfg->post_url, JSON_REQUEST_LENGTH + 1, opt.arg);
+            break;
+
+        case 436:
+            if (!check_option_length(opt.arg, c, JSON_FILENAME_LENGTH)) {
+                return 1;
+            }
+            strcpy_s(cfg->data_file, JSON_FILENAME_LENGTH + 1, opt.arg);
+            break;
+
         case 441:
             if (cfg->get_schema) {
                 printf(ANSI_COLOR_YELLOW "Warning: multiple schema type options provided, ignoring.\n" ANSI_COLOR_RESET);
@@ -407,6 +429,20 @@ int ingest_cli(APP_CONFIG *cfg, int argc, char **argv) {
 
     if ((cfg->submit_ev || cfg->submit_sp || cfg->submit_sp_template) && !cfg->ingest_cert_info) {
         printf("Submitting evidence or security policy info requires specifying a cert request info file\n");
+        return 1;
+    }
+
+    if ((cfg->put || cfg->post) && !cfg->data_file[0]) {
+        printf("--put and --post require --file <json_file>\n");
+        return 1;
+    }
+
+    if (cfg->data_file[0] && !cfg->put && !cfg->post) {
+        printf(ANSI_COLOR_YELLOW "Warning: --file was provided but is not used without --put or --post\n" ANSI_COLOR_RESET);
+    }
+
+    if ((cfg->get + cfg->delete + cfg->put + cfg->post) > 1) {
+        printf("Only one of --get, --delete, --put, or --post may be used at a time\n");
         return 1;
     }
 

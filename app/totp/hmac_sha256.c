@@ -10,8 +10,6 @@
 #include "hmac_sha256.h"
 #include "sha256.h"
 
-#include <stdlib.h>
-#include <string.h>
 #include "safe_lib.h"
 
 #define SHA256_BLOCK_SIZE 64

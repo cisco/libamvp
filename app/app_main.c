@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Cisco Systems, Inc.
+ * Copyright (c) 2026, Cisco Systems, Inc.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -28,12 +28,6 @@ static int port;
 static const char *ca_chain_file;
 static const char *cert_file;
 static const char *key_file;
-
-#define CHECK_ENABLE_CAP_RV(rv) \
-    if (rv != AMVP_SUCCESS) { \
-        printf("Failed to register capability with libamvp (rv=%d: %s)\n", rv, amvp_lookup_error_string(rv)); \
-        goto end; \
-    }
 
 /*
  * Read the operational parameters from the various environment
@@ -112,7 +106,7 @@ int main(int argc, char **argv) {
 
     /*
      * We begin the libamvp usage flow here.
-     * First, we create a test session context.
+     * First, we create a context for interacting with the server.
      */
     rv = amvp_init_cert_request(&ctx, &progress, cfg.level);
     if (rv != AMVP_SUCCESS) {
@@ -160,6 +154,20 @@ int main(int argc, char **argv) {
         goto end;
     }
 
+    /*
+     * If a cert request info file was given, load it now so the
+     * cert-request-scoped JWT and session URL are available for
+     * whichever action follows.  This is optional — actions that
+     * don't need it simply won't use it.
+     */
+    if (cfg.ingest_cert_info) {
+        rv = amvp_read_cert_req_info_file(ctx, cfg.mod_cert_req_file);
+        if (rv != AMVP_SUCCESS) {
+            printf("Error reading cert request info file; ensure it exists and is properly formatted\n");
+            goto end;
+        }
+    }
+
     if (cfg.get) {
         if (cfg.save_to) {
             rv = amvp_set_get_save_file(ctx, cfg.save_file);
@@ -168,7 +176,7 @@ int main(int argc, char **argv) {
                 goto end;
             }
         }
-        rv = amvp_get(ctx, cfg.get_string);
+        rv = amvp_generic_get(ctx, cfg.get_string);
         if (rv != AMVP_SUCCESS) {
             printf("Failed to perform GET request.\n");
         }
@@ -192,7 +200,48 @@ int main(int argc, char **argv) {
     }
 
     if (cfg.delete) {
-        amvp_mark_as_delete_only(ctx, cfg.delete_url);
+        if (cfg.save_to) {
+            rv = amvp_set_get_save_file(ctx, cfg.save_file);
+            if (rv != AMVP_SUCCESS) {
+                printf("Failed to set save file for DELETE request\n");
+                goto end;
+            }
+        }
+        rv = amvp_generic_delete(ctx, cfg.delete_url);
+        if (rv != AMVP_SUCCESS) {
+            printf("Failed to perform DELETE request\n");
+        }
+        goto end;
+    }
+
+    if (cfg.put) {
+        if (cfg.save_to) {
+            rv = amvp_set_get_save_file(ctx, cfg.save_file);
+            if (rv != AMVP_SUCCESS) {
+                printf("Failed to set save file for PUT request\n");
+                goto end;
+            }
+        }
+        rv = amvp_generic_put(ctx, cfg.put_url, cfg.data_file);
+        if (rv != AMVP_SUCCESS) {
+            printf("Failed to perform PUT request\n");
+        }
+        goto end;
+    }
+
+    if (cfg.post) {
+        if (cfg.save_to) {
+            rv = amvp_set_get_save_file(ctx, cfg.save_file);
+            if (rv != AMVP_SUCCESS) {
+                printf("Failed to set save file for POST request\n");
+                goto end;
+            }
+        }
+        rv = amvp_generic_post(ctx, cfg.post_url, cfg.data_file);
+        if (rv != AMVP_SUCCESS) {
+            printf("Failed to perform POST request\n");
+        }
+        goto end;
     }
 
     strncmp_s(DEFAULT_SERVER, DEFAULT_SERVER_LEN, server, DEFAULT_SERVER_LEN, &diff);
@@ -201,76 +250,66 @@ int main(int argc, char **argv) {
          printf("Run amvp_app --help for more information on this and other environment variables.\n\n");
     }
 
-    if (cfg.mod_cert_req) {
-        rv = amvp_mark_as_cert_req(ctx, cfg.create_module_file);
+    if (cfg.check_status) {
+        rv = amvp_check_cert_req_status(ctx);
         if (rv != AMVP_SUCCESS) {
-            printf("Failed to mark as cert request: %s\n", amvp_lookup_error_string(rv));
-            goto end;
-        }
-    }
-
-    if (cfg.ingest_cert_info) {
-        rv = amvp_read_cert_req_info_file(ctx, cfg.mod_cert_req_file);
-        if (rv != AMVP_SUCCESS) {
-            printf("Error reading cert request info file; ensure it exists and is properly formatted\n");
-            goto end;
-        }
-        if (cfg.check_status) {
-            rv = amvp_check_cert_req_status(ctx);
-            if (rv != AMVP_SUCCESS) {
-                printf("Error checking cert request status\n");
-                goto end;
-            }
-        }
-        if (cfg.submit_ev) {
-            rv = amvp_submit_evidence(ctx, cfg.ev_file);
-            if (rv != AMVP_SUCCESS) {
-                printf("Error submitting evidence for module cert request\n");
-                goto end;
-            }
-        }
-        if (cfg.submit_sp) {
-            rv = amvp_submit_security_policy(ctx, cfg.sp_file);
-            if (rv != AMVP_SUCCESS) {
-                printf("Error submitting security policy for module cert request\n");
-                goto end;
-            }
-        }
-        if (cfg.submit_sp_template) {
-            rv = amvp_submit_security_policy_template(ctx, cfg.sp_template_file);
-            if (rv != AMVP_SUCCESS) {
-                printf("Error submitting security policy template for module cert request\n");
-                goto end;
-            }
-        }
-        if (cfg.get_sp) {
-            if (!cfg.save_to) {
-                printf("Error: Must use --save_to <file> to get security policy\n");
-                rv = AMVP_INVALID_ARG;
-                goto end;
-            } else {
-                rv = amvp_set_get_save_file(ctx, cfg.save_file);
-                if (rv != AMVP_SUCCESS) {
-                    printf("Failed to set save file for getting security policy\n");
-                    goto end;
-                }
-                rv = amvp_get_security_policy(ctx);
-                if (rv != AMVP_SUCCESS) {
-                    printf("Unable to retrieve generated security policy\n");
-                    goto end;
-                }
-            }
-        }
-        if (cfg.finalize) {
-            amvp_finalize_cert_request(ctx);
-            goto end;
+            printf("Error checking cert request status\n");
         }
         goto end;
     }
 
-    rv = amvp_mod_cert_req(ctx);
-    if (rv != AMVP_SUCCESS) {
-        printf("Error submitting module cert request\n");
+    if (cfg.submit_ev) {
+        rv = amvp_submit_evidence(ctx, cfg.ev_file);
+        if (rv != AMVP_SUCCESS) {
+            printf("Error submitting evidence for module cert request\n");
+        }
+        goto end;
+    }
+
+    if (cfg.submit_sp) {
+        rv = amvp_submit_security_policy(ctx, cfg.sp_file);
+        if (rv != AMVP_SUCCESS) {
+            printf("Error submitting security policy for module cert request\n");
+        }
+        goto end;
+    }
+
+    if (cfg.submit_sp_template) {
+        rv = amvp_submit_security_policy_template(ctx, cfg.sp_template_file);
+        if (rv != AMVP_SUCCESS) {
+            printf("Error submitting security policy template for module cert request\n");
+        }
+        goto end;
+    }
+
+    if (cfg.get_sp) {
+        if (!cfg.save_to) {
+            printf("Error: Must use --save_to <file> to get security policy\n");
+            rv = AMVP_INVALID_ARG;
+            goto end;
+        }
+        rv = amvp_set_get_save_file(ctx, cfg.save_file);
+        if (rv != AMVP_SUCCESS) {
+            printf("Failed to set save file for getting security policy\n");
+            goto end;
+        }
+        rv = amvp_get_security_policy(ctx);
+        if (rv != AMVP_SUCCESS) {
+            printf("Unable to retrieve generated security policy\n");
+        }
+        goto end;
+    }
+
+    if (cfg.finalize) {
+        amvp_finalize_cert_request(ctx);
+        goto end;
+    }
+
+    if (cfg.mod_cert_req) {
+        rv = amvp_mod_cert_req(ctx, cfg.create_module_file);
+        if (rv != AMVP_SUCCESS) {
+            printf("Error submitting module cert request\n");
+        }
         goto end;
     }
 

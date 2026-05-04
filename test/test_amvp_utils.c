@@ -222,6 +222,6 @@ Test(GetObjFromRsp, null_ctx) {
     cr_assert(obj != NULL);
     
     json_value_free(val);
-    amvp_free_test_session(ctx);
+    amvp_free_ctx(ctx);
 }
 

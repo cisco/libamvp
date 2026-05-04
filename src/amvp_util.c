@@ -1,6 +1,6 @@
 /** @file */
 /*
- * Copyright (c) 2025, Cisco Systems, Inc.
+ * Copyright (c) 2026, Cisco Systems, Inc.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -92,7 +92,7 @@ AMVP_RESULT amvp_cleanup(AMVP_CTX *ctx) {
 
     if (ctx) {
         /* Only call if ctx is not null */
-        rv = amvp_free_test_session(ctx);
+        rv = amvp_free_ctx(ctx);
         if (rv != AMVP_SUCCESS) {
             AMVP_LOG_ERR("Failed to free parameter 'ctx'");
         }
@@ -124,6 +124,15 @@ AMVP_RESULT amvp_add_version_to_obj(JSON_Object *obj) {
     return AMVP_SUCCESS;
 }
 
+AMVP_RESULT amvp_ensure_version_in_obj(AMVP_CTX *ctx, JSON_Object *obj) {
+    const char *ver = json_object_get_string(obj, "amvVersion");
+    if (!ver) {
+        AMVP_LOG_WARN("Payload missing amvVersion; automatically adding it");
+        return amvp_add_version_to_obj(obj);
+    }
+    return AMVP_SUCCESS;
+}
+
 /*
  * This function returns a string that describes the error
  * code passed in.
@@ -137,7 +146,7 @@ const char *amvp_lookup_error_string(AMVP_RESULT rv) {
         { AMVP_PROTOCOL_RSP_ERR,   "Server returned protocol error response"          },
         { AMVP_NO_DATA,            "Trying to use data but none was found"            },
         { AMVP_UNSUPPORTED_OP,     "Unsupported operation"                            },
-        { AMVP_KAT_DOWNLOAD_RETRY, "Error, need to retry"                             },
+        { AMVP_WAIT_RETRY, "Server not ready, need to retry"                      },
         { AMVP_RETRY_OPERATION,    "Operation should be retried"                      },
         { AMVP_INVALID_ARG,        "Invalid argument"                                 },
         { AMVP_MISSING_ARG,        "Missing a required argument"                      },
@@ -259,41 +268,6 @@ void amvp_free_str_list(AMVP_STRING_LIST **list) {
 }
 
 /**
- * Simple utility function to add an entry to a SL list. if the list is NULL, it is created
- * with the given entry being the first one.
- */
-AMVP_RESULT amvp_append_sl_list(AMVP_SL_LIST **list, int length) {
-    AMVP_SL_LIST *current = NULL;
-    if (!list) {
-        return AMVP_NO_DATA;
-    }
-
-    if (*list == NULL) {
-        *list = calloc(1, sizeof(AMVP_SL_LIST));
-        if (!*list) {
-            return AMVP_MALLOC_FAIL;
-        }
-        (*list)->length = length;
-        return AMVP_SUCCESS;
-    }
-    current = *list;
-    while (current) {
-        if (!current->next) {
-            current->next = calloc(1, sizeof(AMVP_SL_LIST));
-            if (!current->next) {
-                return AMVP_MALLOC_FAIL;
-            }
-            current->next->length = length;
-            return AMVP_SUCCESS;
-        }
-        current = current->next;
-    }
-
-    /* Code should never reach here */
-    return AMVP_UNSUPPORTED_OP;
-}
-
-/**
  * Simple utility function to add a entry to a name list. If the list is NULL, it is created
  * with the given entry being the first one. Note the string is REFERENCED, not copied.
  * This function should be able to accomdate the removal of names from the list if needed in the
@@ -328,24 +302,6 @@ AMVP_RESULT amvp_append_name_list(AMVP_NAME_LIST **list, const char *string) {
     }
     /* Code should never reach here */
     return AMVP_UNSUPPORTED_OP;
-}
-
-/**
- * Check if a REFERENCE to a certain string already exists in a name list
- */
-int amvp_is_in_name_list(AMVP_NAME_LIST *list, const char *string) {
-    AMVP_NAME_LIST *current = NULL;
-    if (!list) {
-        return 0;
-    }
-    current = list;
-    while (current) {
-        if (current->name && current->name == string) {
-            return 1;
-        }
-        current = current->next;
-    }
-    return 0;
 }
 
 /**
@@ -564,21 +520,6 @@ end:
 
 
 /*
- * Simple utility function to free a supported length
- * list from the capabilities structure.
- */
-void amvp_free_sl(AMVP_SL_LIST *list) {
-    AMVP_SL_LIST *top = list;
-    AMVP_SL_LIST *tmp;
-
-    while (top) {
-        tmp = top;
-        top = top->next;
-        free(tmp);
-    }
-}
-
-/*
  * Simple utility function to free a name
  * list from the capabilities structure.
  */
@@ -601,9 +542,7 @@ void amvp_free_nl(AMVP_NAME_LIST *list) {
  * can choose to implement a retry backoff using 'modifier'. Additionally, this
  * function will ensure that retry periods will sum to no longer than AMVP_MAX_WAIT_TIME.
  */
-AMVP_RESULT amvp_retry_handler(AMVP_CTX *ctx, int *retry_period, unsigned int *waited_so_far, int modifier, AMVP_WAITING_STATUS situation) {
-    /* perform check at beginning of function call, so library can check one more time when max
-     * time is reached to see if server status has changed */
+AMVP_RESULT amvp_retry_handler(AMVP_CTX *ctx, int *retry_period, unsigned int *waited_so_far) {
     if (*waited_so_far >= AMVP_MAX_WAIT_TIME) {
         return AMVP_TRANSPORT_FAIL;
     }
@@ -615,35 +554,17 @@ AMVP_RESULT amvp_retry_handler(AMVP_CTX *ctx, int *retry_period, unsigned int *w
         *retry_period = AMVP_RETRY_TIME_MAX;
         AMVP_LOG_WARN("retry_period not found, using max retry period!");
     }
-    if (situation == AMVP_WAITING_FOR_TESTS) {
-        AMVP_LOG_STATUS("Certification request session not yet ready, server requests we wait %u seconds and try again...", *retry_period);
-    } else if (situation == AMVP_WAITING_FOR_RESULTS) {
-        AMVP_LOG_STATUS("Results not ready, waiting %u seconds and trying again...", *retry_period);
-    } else {
-        AMVP_LOG_STATUS("Waiting %u seconds and trying again...", *retry_period);
-    }
+    AMVP_LOG_STATUS("Server not yet ready, waiting %u seconds and trying again...", *retry_period);
 
     #ifdef _WIN32
-    /*
-     * Windows uses milliseconds
-     */
     Sleep(*retry_period * 1000);
     #else
     sleep(*retry_period);
     #endif
 
-    /* ensure that all parameters are valid and that we do not wait longer than AMVP_MAX_WAIT_TIME */
-    if (modifier < 1 || modifier > AMVP_RETRY_MODIFIER_MAX) {
-        AMVP_LOG_WARN("retry modifier not valid, defaulting to 1 (no change)");
-        modifier = 1;
-    }
-    if ((*retry_period *= modifier) > AMVP_RETRY_TIME_MAX) {
-        *retry_period = AMVP_RETRY_TIME_MAX;
-    }
-
     *waited_so_far += *retry_period;
 
-    return AMVP_KAT_DOWNLOAD_RETRY;
+    return AMVP_WAIT_RETRY;
 }
 
 
@@ -819,4 +740,47 @@ AMVP_CERT_REQ_STATUS amvp_parse_cert_req_status_str(JSON_Object *json) {
     if (!diff) return AMVP_CERT_REQ_STATUS_ERROR;
 
     return AMVP_CERT_REQ_STATUS_UNKNOWN;
+}
+
+/*
+ * Saves the contents of ctx->curl_buf to ctx->save_filename.
+ * On success, frees and NULLs ctx->save_filename (clear after use).
+ * Returns AMVP_INTERNAL_ERR on file I/O failure.
+ */
+AMVP_RESULT amvp_save_curl_buf_to_file(AMVP_CTX *ctx) {
+    FILE *fp = NULL;
+    size_t buf_len = 0;
+
+    if (!ctx) {
+        return AMVP_NO_CTX;
+    }
+    if (!ctx->save_filename) {
+        AMVP_LOG_ERR("No save filename set");
+        return AMVP_MISSING_ARG;
+    }
+    if (!ctx->curl_buf || ctx->curl_read_ctr <= 0) {
+        AMVP_LOG_WARN("No response data to save");
+        return AMVP_SUCCESS;
+    }
+
+    buf_len = (size_t)ctx->curl_read_ctr;
+
+    fp = fopen(ctx->save_filename, "w");
+    if (!fp) {
+        AMVP_LOG_ERR("Failed to open save file: %s", ctx->save_filename);
+        return AMVP_INTERNAL_ERR;
+    }
+
+    if (fwrite(ctx->curl_buf, 1, buf_len, fp) != buf_len) {
+        AMVP_LOG_ERR("Failed to write response to file: %s", ctx->save_filename);
+        fclose(fp);
+        return AMVP_INTERNAL_ERR;
+    }
+
+    AMVP_LOG_STATUS("Response saved to file: %s", ctx->save_filename);
+    fclose(fp);
+    free(ctx->save_filename);
+    ctx->save_filename = NULL;
+
+    return AMVP_SUCCESS;
 }

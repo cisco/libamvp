@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Cisco Systems, Inc.
+ * Copyright (c) 2026, Cisco Systems, Inc.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -95,14 +95,12 @@
 #define AMVP_SP_STATUS_REJECTED "rejected"
 #define AMVP_SP_STATUS_INCOMPLETE "incomplete"
 
-#define AMVP_CAPABILITY_STR_MAX 512 /**< Arbitrary string length limit */
-
 #define AMVP_CURL_BUF_MAX       (1024 * 1024 * 64) /**< 64 MB */
 #define AMVP_RETRY_TIME_MIN     5 /* seconds */
 #define AMVP_RETRY_TIME_MAX     300 
 #define AMVP_MAX_WAIT_TIME      7200
 #define AMVP_RETRY_TIME         30
-#define AMVP_RETRY_MODIFIER_MAX 10
+
 #define AMVP_JWT_TOKEN_MAX      2048
 #define AMVP_ATTR_URL_MAX       2083 /* MS IE's limit - arbitrary */
 
@@ -182,14 +180,6 @@ struct amvp_sp_section_name_t {
 };
 
 
-/*
- * Supported length list
- */
-typedef struct amvp_sl_list_t {
-    int length;
-    struct amvp_sl_list_t *next;
-} AMVP_SL_LIST;
-
 typedef struct amvp_name_list_t {
     const char *name;
     struct amvp_name_list_t *next;
@@ -209,11 +199,6 @@ typedef enum amvp_request_status {
     AMVP_REQUEST_STATUS_APPROVED,
     AMVP_REQUEST_STATUS_REJECTED
 } AMVP_REQUEST_STATUS;
-
-typedef enum amvp_waiting_status {
-    AMVP_WAITING_FOR_TESTS = 1,
-    AMVP_WAITING_FOR_RESULTS,
-} AMVP_WAITING_STATUS;
 
 typedef enum amvp_cert_req_status {
     AMVP_CERT_REQ_STATUS_UNKNOWN = 1,
@@ -255,29 +240,21 @@ struct amvp_ctx_t {
     char *http_user_agent;   /* String containing info to be sent with HTTP requests, currently OE info */
     char *session_file_path; /* String containing the path of the testSession file after it is created when applicable */
 
-    AMVP_STRING_LIST *vsid_url_list;
     char *session_url;
     int session_file_has_te_list;
 
-    char *get_string;       /* string used for get  request */
-    char *delete_string;    /* string used for delete request */
     char *save_filename;    /* string used for file to save certain HTTP requests to */
     char *mod_cert_req_file;    /* string used for file to save certain HTTP requests to */
-    char cert_req_module_file[AMVP_JSON_FILENAME_MAX + 1]; /* Module file for cert request */
 
     /* test session data */
     char *jwt_token; /* access_token provided by server for authenticating REST calls */
     char *tmp_jwt; /* access_token provided by server for authenticating a single REST call */
     int use_tmp_jwt; /* 1 if the tmp_jwt should be used */
-    JSON_Value *registration; /* The capability registration string sent when creating a test session */
-
     /* application callbacks */
     AMVP_RESULT (*test_progress_cb) (char *msg, AMVP_LOG_LVL level);
 
     /* Two-factor authentication callback */
     AMVP_RESULT (*totp_cb) (char **token, int token_max);
-
-    JSON_Value *kat_resp; /* holds the current set of vector responses */
 
     char *curl_buf;       /**< Data buffer for inbound Curl messages */
     int curl_read_ctr;    /**< Total number of bytes written to the curl_buf */
@@ -312,19 +289,15 @@ AMVP_RESULT amvp_send_sp_template(AMVP_CTX *ctx, const char *url, const char *fi
 
 AMVP_RESULT amvp_create_response_obj(JSON_Object **obj, JSON_Value **val);
 AMVP_RESULT amvp_add_version_to_obj(JSON_Object *obj);
+AMVP_RESULT amvp_ensure_version_in_obj(AMVP_CTX *ctx, JSON_Object *obj);
 JSON_Object *amvp_get_obj_from_rsp(AMVP_CTX *ctx, JSON_Value *arry_val);
-
-AMVP_RESULT amvp_verify_fips_validation_metadata(AMVP_CTX *ctx);
 
 void amvp_log_msg(AMVP_CTX *ctx, AMVP_LOG_LVL level, const char *func, int line, int use_large_buffer, const char *format, ...);
 
 void amvp_free_str_list(AMVP_STRING_LIST **list);
-AMVP_RESULT amvp_append_sl_list(AMVP_SL_LIST **list, int length);
 AMVP_RESULT amvp_append_name_list(AMVP_NAME_LIST **list, const char *string);
 AMVP_RESULT amvp_append_str_list(AMVP_STRING_LIST **list, const char *string);
-int amvp_is_in_name_list(AMVP_NAME_LIST *list, const char *string);
 int amvp_lookup_str_list(AMVP_STRING_LIST **list, const char *string);
-void amvp_free_sl(AMVP_SL_LIST *list);
 void amvp_free_nl(AMVP_NAME_LIST *list);
 
 unsigned char* amvp_decode_base64(const char *val, unsigned int *output_len);
@@ -332,13 +305,14 @@ unsigned char* amvp_decode_base64(const char *val, unsigned int *output_len);
 int string_fits(const char *string, unsigned int max_allowed);
 const char *amvp_lookup_sp_section_name(int id);
 
-AMVP_RESULT amvp_retry_handler(AMVP_CTX *ctx, int *retry_period, unsigned int *waited_so_far, int modifier, AMVP_WAITING_STATUS situation);
+AMVP_RESULT amvp_retry_handler(AMVP_CTX *ctx, int *retry_period, unsigned int *waited_so_far);
 AMVP_RESULT amvp_handle_protocol_error(AMVP_CTX *ctx, AMVP_PROTOCOL_ERR *err);
 int amvp_get_request_status(AMVP_CTX *ctx, char **output);
 
 AMVP_RESULT amvp_save_cert_req_info_file(AMVP_CTX *ctx, JSON_Object *contents);
 AMVP_RESULT amvp_json_serialize_to_file_pretty_a(const JSON_Value *value, const char *filename);
 AMVP_RESULT amvp_json_serialize_to_file_pretty_w(const JSON_Value *value, const char *filename);
+AMVP_RESULT amvp_save_curl_buf_to_file(AMVP_CTX *ctx);
 AMVP_CERT_REQ_STATUS amvp_parse_cert_req_status_str(JSON_Object *json);
 
 /* Display/output functions */
