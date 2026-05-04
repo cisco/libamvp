@@ -16,6 +16,9 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #include "app_lcl.h"
 
 #include "safe_mem_lib.h"
@@ -96,6 +99,13 @@ int main(int argc, char **argv) {
     AMVP_CTX *ctx = NULL;
     APP_CONFIG cfg;
     int diff = 0;
+
+#ifdef _WIN32
+    // This enables unicode support in Windows Terminal to properly display table symbols.
+    // If you need cmd support, you should remove this call and adjust remove unicode output from
+    // amvp_display.c.
+    SetConsoleOutputCP(CP_UTF8);
+#endif
 
     memset_s(&cfg, sizeof(APP_CONFIG), 0, sizeof(APP_CONFIG));
     if (ingest_cli(&cfg, argc, argv)) {

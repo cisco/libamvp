@@ -5,18 +5,18 @@ EXPORTS
   amvp_set_server
   amvp_set_cacerts
   amvp_set_certkey
+  amvp_generic_get
+  amvp_generic_delete
+  amvp_generic_put
+  amvp_generic_post
   amvp_set_get_save_file
   amvp_set_2fa_callback
   amvp_lookup_error_string
   amvp_cleanup
   amvp_version
   amvp_protocol_version
-  amvp_generic_get
-  amvp_generic_delete
-  amvp_generic_put
-  amvp_generic_post
-  amvp_mod_cert_req
   amvp_check_cert_req_status
+  amvp_mod_cert_req
   amvp_submit_evidence
   amvp_submit_security_policy
   amvp_submit_security_policy_template
@@ -24,3 +24,10 @@ EXPORTS
   amvp_read_cert_req_info_file
   amvp_finalize_cert_request
   amvp_get_schema_info
+  json_parse_file
+  json_value_get_object
+  json_object_get_number
+  json_object_get_array
+  json_array_get_count
+  json_array_get_string
+  json_value_free
