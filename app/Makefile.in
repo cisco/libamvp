@@ -110,7 +110,7 @@ am__objects_1 = amvp_app-app_main.$(OBJEXT) amvp_app-app_cli.$(OBJEXT) \
 	totp/amvp_app-sha256.$(OBJEXT)
 am_amvp_app_OBJECTS = $(am__objects_1)
 amvp_app_OBJECTS = $(am_amvp_app_OBJECTS)
-amvp_app_DEPENDENCIES =
+amvp_app_LDADD = $(LDADD)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
@@ -196,7 +196,6 @@ CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
 CLEANFILES = @CLEANFILES@
-COND_ALG_CFLAGS = @COND_ALG_CFLAGS@
 CPPFLAGS = @CPPFLAGS@
 CRITERION_CFLAGS = @CRITERION_CFLAGS@
 CRITERION_LDFLAGS = @CRITERION_LDFLAGS@
@@ -324,9 +323,8 @@ tmp_sources = app_main.c \
 
 amvp_app_includedir = $(includedir)/amvp
 amvp_app_SOURCES = ${tmp_sources}
-amvp_app_CFLAGS = -g -fPIE $(LIBAMVP_CFLAGS) $(SSL_CFLAGS) $(SAFEC_CFLAGS) $(COND_ALG_CFLAGS) $(LIBCURL_CFLAGS)
-amvp_app_LDFLAGS = $(LIBAMVP_LDFLAGS) $(SSL_LDFLAGS) $(LIBCURL_LDFLAGS)
-amvp_app_LDADD = $(ADDL_LIB_DEPENDENCIES)
+amvp_app_CFLAGS = -g -fPIE $(LIBAMVP_CFLAGS) $(SAFEC_CFLAGS) $(LIBCURL_CFLAGS)
+amvp_app_LDFLAGS = $(LIBAMVP_LDFLAGS) $(LIBCURL_LDFLAGS)
 all: all-am
 
 .SUFFIXES:

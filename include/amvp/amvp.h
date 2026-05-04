@@ -56,10 +56,10 @@ typedef enum amvp_schema_type {
  *        Warning level logging will create output for situations where the user may want to intervene,
  *        but are not neccessarily issues and running will continue.
  *        Status level logging is the default and will include high-level information about the progress
- *        of the test session and status of processing.
- *        Info level logging contains more info about network activity, metadata processing, and login.
- *        Verbose level logging is extensive and contains info about test groups and cases being run,
- *        more network activity, and other information. This is excessive for most users.
+ *        of the session and status of processing.
+ *        Info level logging contains additional detail such as HTTP user-agent information.
+ *        Verbose level logging includes full HTTP request/response details and certification
+ *        request payloads. This is excessive for most users.
  */
 typedef enum amvp_log_lvl {
     AMVP_LOG_LVL_NONE = 0,
@@ -74,19 +74,19 @@ typedef enum amvp_log_lvl {
 
 /**
  * @struct AMVP_CTX
- * @brief This opaque structure is used to maintain the state of a session with an AMVP server.
- *        A single instance of this context represents a session with the AMVP server. A session
- *        can consist of a regular test session, or various types of requests (like requesting a
- *        metadata listing.) Largely, This context is used by the application layer to perform the
- *        steps to conduct a test session. These steps are:
+ * @brief This opaque structure is used to maintain the state of a certification request
+ *        interaction with an ACMVP server. A single instance of this context represents
+ *        the current state of communication with the server. The overall certification
+ *        workflow consists of:
  *
- *        1. Create the context
- *        2. Specify the server hostname
- *        3. Specify the crypto algorithms to test
- *        4. Register with the AMVP server
- *        5. Commence the test with the server
- *        6. Check the test results
- *        7. Free the context
+ *        1. Creating a module certification request
+ *        2. Retrieving the list of requirements
+ *        3. Submitting evidence for the requirements
+ *        4. Generating and submitting a security policy
+ *        5. Finalizing and formally submitting the request
+ *
+ *        These steps are typically performed across separate sessions, each with its own
+ *        context, though multiple steps may be performed within a single context lifetime.
  */
 typedef struct amvp_ctx_t AMVP_CTX;
 
@@ -105,8 +105,8 @@ typedef enum amvp_result {
     AMVP_UNSUPPORTED_OP,     /**< An operation has been requested that is not supported. This can
                                   either be because parameters are not valid or because the library
                                   does not support something at the time */
-    AMVP_KAT_DOWNLOAD_RETRY, /**< Does not neccessarily indicate an error, but that data requested
-                                  from server is not yet ready to be accessed */
+    AMVP_WAIT_RETRY, /**< Indicates that the requested data is not yet ready;
+                          the caller should wait and retry */
     AMVP_RETRY_OPERATION,    /**< Indiciate to a caller to attempt to retry an operation */
     AMVP_INVALID_ARG,        /**< A provided argument or parameter is not valid for the given operation */
     AMVP_MISSING_ARG,        /**< A required argument or parameter is not provided/null/0 */
@@ -133,7 +133,7 @@ typedef enum amvp_result {
  * @brief amvp_init_cert_request() creates a context that can be used to commence a test session
  *        with an AMVP server. This function should be called first to create a context that is
  *        used to manage all the API calls into libamvp. The context should be released after the
- *        test session has completed by invoking amvp_free_test_session().
+ *        test session has completed by invoking amvp_free_ctx().
  *
  *        When creating a new test session, a function pointer can be provided to receive logging
  *        messages from libamvp. The application can then forward the log messages to any logging
@@ -150,7 +150,7 @@ AMVP_RESULT amvp_init_cert_request(AMVP_CTX **ctx,
                                      AMVP_LOG_LVL level);
 
 /**
- * @brief amvp_free_test_session() releases the memory associated withan AMVP_CTX. This function
+ * @brief amvp_free_ctx() releases the memory associated with an AMVP_CTX. This function
  *        will free an AMVP_CTX. Failure to invoke this function will result in a memory leak in
  *        the application layer. This function should be invoked after a test session has completed
  *        and a reference to the context is no longer needed.
@@ -159,7 +159,7 @@ AMVP_RESULT amvp_init_cert_request(AMVP_CTX **ctx,
  *
  * @return AMVP_RESULT
  */
-AMVP_RESULT amvp_free_test_session(AMVP_CTX *ctx);
+AMVP_RESULT amvp_free_ctx(AMVP_CTX *ctx);
 
 /**
  * @brief amvp_set_server() specifies the AMVP server and TCP port number to use when contacting
@@ -210,38 +210,66 @@ AMVP_RESULT amvp_set_cacerts(AMVP_CTX *ctx, const char *ca_file);
 AMVP_RESULT amvp_set_certkey(AMVP_CTX *ctx, const char *cert_file, const char *key_file);
 
 /**
- * @brief amvp_get() performs an immediate GET request to the specified endpoint. This function
- *        will authenticate using existing JWT from cert req info file if available, or perform
- *        login if needed. Use amvp_set_get_save_file() to save response to a file.
+ * @brief amvp_generic_get() performs an immediate GET request to the specified endpoint.
+ *        Authenticates using existing JWT if available, or performs login if needed.
+ *        Use amvp_set_get_save_file() to save response to a file.
  *
  * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_init_cert_request().
  * @param endpoint_path The endpoint path to access via GET request (starting with /)
  *
  * @return AMVP_RESULT
  */
-AMVP_RESULT amvp_get(AMVP_CTX *ctx, const char *endpoint_path);
+AMVP_RESULT amvp_generic_get(AMVP_CTX *ctx, const char *endpoint_path);
 
 /**
- * @brief amvp_set_get_save_file() indicates a file to save certain requests to. It will take a
- *        string parameter for the location to save the results from the request as a file.
+ * @brief amvp_generic_delete() performs an immediate DELETE request to the specified endpoint.
+ *        Authenticates using existing JWT if available, or performs login if needed.
+ *
+ * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_init_cert_request().
+ * @param endpoint_path The endpoint path of the resource to delete (starting with /)
+ *
+ * @return AMVP_RESULT
+ */
+AMVP_RESULT amvp_generic_delete(AMVP_CTX *ctx, const char *endpoint_path);
+
+/**
+ * @brief amvp_generic_put() performs an immediate PUT request to the specified endpoint.
+ *        Authenticates using existing JWT if available, or performs login if needed.
+ *        Reads the JSON payload from the specified file.
+ *
+ * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_init_cert_request().
+ * @param endpoint_path The endpoint path to access via PUT request (starting with /)
+ * @param filename Path to a JSON file containing the payload to send
+ *
+ * @return AMVP_RESULT
+ */
+AMVP_RESULT amvp_generic_put(AMVP_CTX *ctx, const char *endpoint_path, const char *filename);
+
+/**
+ * @brief amvp_generic_post() performs an immediate POST request to the specified endpoint.
+ *        Authenticates using existing JWT if available, or performs login if needed.
+ *        Reads the JSON payload from the specified file.
+ *
+ * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_init_cert_request().
+ * @param endpoint_path The endpoint path to access via POST request (starting with /)
+ * @param filename Path to a JSON file containing the payload to send
+ *
+ * @return AMVP_RESULT
+ */
+AMVP_RESULT amvp_generic_post(AMVP_CTX *ctx, const char *endpoint_path, const char *filename);
+
+/**
+ * @brief amvp_set_get_save_file() sets a file path to save the response from the next request
+ *        that supports it (e.g. amvp_generic_get, amvp_get_schema_info, amvp_get_security_policy).
+ *        The save file is automatically cleared after a successful save, so it must be set again
+ *        before each request that should save to a file.
  *
  * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_init_cert_request.
- * @param filename location to save the GET results to (assumes data in JSON format)
+ * @param filename location to save the response to
  *
  * @return AMVP_RESULT
  */
 AMVP_RESULT amvp_set_get_save_file(AMVP_CTX *ctx, char *filename);
-
-/**
- * @brief amvp_mark_as_delete only() marks the operation as a DELETE only. This function will
- *        perform an HTTP DELETE call on the resource at the givenURL.
- *
- * @param ctx Pointer to AMVP_CTX that was previously created by calling amvp_init_cert_request.
- * @param request_url url of resource to delete
- *
- * @return AMVP_RESULT
- */
-AMVP_RESULT amvp_mark_as_delete_only(AMVP_CTX *ctx, char *request_url);
 
 /**
  * @brief amvp_set_2fa_callback() sets a callback function which will create or obtain a TOTP
@@ -290,8 +318,7 @@ const char *amvp_version(void);
 const char *amvp_protocol_version(void);
 
 AMVP_RESULT amvp_check_cert_req_status(AMVP_CTX *ctx);
-AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx);
-AMVP_RESULT amvp_mark_as_cert_req(AMVP_CTX *ctx, const char *module_name);
+AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx, const char *module_file);
 AMVP_RESULT amvp_submit_evidence(AMVP_CTX *ctx, const char *filename);
 AMVP_RESULT amvp_submit_security_policy(AMVP_CTX *ctx, const char *filename);
 AMVP_RESULT amvp_submit_security_policy_template(AMVP_CTX *ctx, const char *filename);

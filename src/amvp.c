@@ -104,13 +104,12 @@ AMVP_RESULT amvp_set_2fa_callback(AMVP_CTX *ctx, AMVP_RESULT (*totp_cb)(char **t
  * The application will invoke this to free the AMVP context
  * when the test session is finished.
  */
-AMVP_RESULT amvp_free_test_session(AMVP_CTX *ctx) {
+AMVP_RESULT amvp_free_ctx(AMVP_CTX *ctx) {
     if (!ctx) {
         AMVP_LOG_STATUS("No ctx to free");
         return AMVP_SUCCESS;
     }
 
-    if (ctx->kat_resp) { json_value_free(ctx->kat_resp); }
     if (ctx->curl_buf) { free(ctx->curl_buf); }
     if (ctx->server_name) { free(ctx->server_name); }
     if (ctx->cacerts_file) { free(ctx->cacerts_file); }
@@ -119,19 +118,11 @@ AMVP_RESULT amvp_free_test_session(AMVP_CTX *ctx) {
     if (ctx->http_user_agent) { free(ctx->http_user_agent); }
     if (ctx->session_file_path) { free(ctx->session_file_path); }
     if (ctx->session_url) { free(ctx->session_url); }
-    if (ctx->get_string) { free(ctx->get_string); }
-    if (ctx->delete_string) { free(ctx->delete_string); }
     if (ctx->save_filename) { free(ctx->save_filename); }
     if (ctx->mod_cert_req_file) { free(ctx->mod_cert_req_file); }
     if (ctx->jwt_token) { free(ctx->jwt_token); }
     if (ctx->tmp_jwt) { free(ctx->tmp_jwt); }
     if (ctx->error) { amvp_free_protocol_err(ctx->error); ctx->error = NULL; }
-    if (ctx->vsid_url_list) {
-        amvp_free_str_list(&ctx->vsid_url_list);
-    }
-    if (ctx->registration) {
-            json_value_free(ctx->registration);
-    }
 
     /* Free the AMVP_CTX struct */
     free(ctx);
@@ -248,7 +239,11 @@ AMVP_RESULT amvp_set_certkey(AMVP_CTX *ctx, const char *cert_file, const char *k
     return AMVP_SUCCESS;
 }
 
-AMVP_RESULT amvp_get(AMVP_CTX *ctx, const char *endpoint_path) {
+/*
+ * Common setup for generic HTTP operations: validates endpoint path,
+ * ensures authentication is available (login if needed).
+ */
+static AMVP_RESULT amvp_generic_request_setup(AMVP_CTX *ctx, const char *endpoint_path) {
     AMVP_RESULT rv = AMVP_SUCCESS;
 
     if (!ctx) {
@@ -264,13 +259,23 @@ AMVP_RESULT amvp_get(AMVP_CTX *ctx, const char *endpoint_path) {
         return AMVP_INVALID_ARG;
     }
 
-    /* Check if we have authentication - either from cert req info file or need to login */
     if (!ctx->jwt_token) {
         rv = amvp_login(ctx, 0);
         if (rv != AMVP_SUCCESS) {
-            AMVP_LOG_ERR("Failed to login for GET request");
+            AMVP_LOG_ERR("Failed to login for request");
             return rv;
         }
+    }
+
+    return AMVP_SUCCESS;
+}
+
+AMVP_RESULT amvp_generic_get(AMVP_CTX *ctx, const char *endpoint_path) {
+    AMVP_RESULT rv = AMVP_SUCCESS;
+
+    rv = amvp_generic_request_setup(ctx, endpoint_path);
+    if (rv != AMVP_SUCCESS) {
+        return rv;
     }
 
     /* Perform the GET request through endpoints abstraction */
@@ -288,31 +293,199 @@ AMVP_RESULT amvp_get(AMVP_CTX *ctx, const char *endpoint_path) {
     }
 
     /* Check if we have response data */
-    if (!ctx->curl_buf || strlen(ctx->curl_buf) == 0) {
+    if (!ctx->curl_buf || ctx->curl_read_ctr <= 0) {
         AMVP_LOG_WARN("No response data received");
         return AMVP_SUCCESS;
     }
 
     /* Use existing get save file mechanism - ctx->save_filename is set via amvp_set_get_save_file() */
     if (ctx->save_filename) {
-        FILE *fp = fopen(ctx->save_filename, "w");
-        if (!fp) {
-            AMVP_LOG_ERR("Failed to open save file: %s", ctx->save_filename);
-            return AMVP_INTERNAL_ERR;
+        rv = amvp_save_curl_buf_to_file(ctx);
+        if (rv != AMVP_SUCCESS) {
+            return rv;
         }
-
-        if (fwrite(ctx->curl_buf, 1, strlen(ctx->curl_buf), fp) != strlen(ctx->curl_buf)) {
-            AMVP_LOG_ERR("Failed to write response to file: %s", ctx->save_filename);
-            fclose(fp);
-            return AMVP_INTERNAL_ERR;
-        }
-        AMVP_LOG_STATUS("Response saved to file: %s", ctx->save_filename);
-        fclose(fp);
     } else {
         AMVP_LOG_STATUS("Response:\n%s", ctx->curl_buf);
     }
 
     return AMVP_SUCCESS;
+}
+
+AMVP_RESULT amvp_generic_delete(AMVP_CTX *ctx, const char *endpoint_path) {
+    AMVP_RESULT rv = AMVP_SUCCESS;
+
+    rv = amvp_generic_request_setup(ctx, endpoint_path);
+    if (rv != AMVP_SUCCESS) {
+        return rv;
+    }
+
+    AMVP_LOG_STATUS("Performing DELETE request to: %s", endpoint_path);
+    rv = amvp_transport_delete(ctx, endpoint_path);
+    if (rv == AMVP_PROTOCOL_RSP_ERR) {
+        rv = amvp_handle_protocol_error(ctx, ctx->error);
+        if (rv == AMVP_RETRY_OPERATION) {
+            rv = amvp_transport_delete(ctx, endpoint_path);
+        }
+    }
+    if (rv != AMVP_SUCCESS) {
+        AMVP_LOG_ERR("DELETE request failed");
+        return rv;
+    }
+
+    AMVP_LOG_STATUS("DELETE request successful");
+    if (ctx->curl_buf && ctx->curl_read_ctr > 0) {
+        if (ctx->save_filename) {
+            rv = amvp_save_curl_buf_to_file(ctx);
+            if (rv != AMVP_SUCCESS) {
+                return rv;
+            }
+        } else {
+            AMVP_LOG_STATUS("Response:\n%s", ctx->curl_buf);
+        }
+    }
+    return AMVP_SUCCESS;
+}
+
+AMVP_RESULT amvp_generic_put(AMVP_CTX *ctx, const char *endpoint_path, const char *filename) {
+    AMVP_RESULT rv = AMVP_SUCCESS;
+    JSON_Value *val = NULL;
+    JSON_Object *obj = NULL;
+    char *data = NULL;
+    int data_len = 0;
+
+    rv = amvp_generic_request_setup(ctx, endpoint_path);
+    if (rv != AMVP_SUCCESS) {
+        return rv;
+    }
+
+    if (!filename) {
+        AMVP_LOG_ERR("No JSON file provided for PUT request");
+        return AMVP_MISSING_ARG;
+    }
+
+    if (strnlen_s(filename, AMVP_JSON_FILENAME_MAX + 1) > AMVP_JSON_FILENAME_MAX) {
+        AMVP_LOG_ERR("Provided filename is too long");
+        return AMVP_INVALID_ARG;
+    }
+
+    val = json_parse_file(filename);
+    if (!val) {
+        AMVP_LOG_ERR("Provided JSON file is invalid or does not exist: %s", filename);
+        return AMVP_INVALID_ARG;
+    }
+
+    obj = json_value_get_object(val);
+    if (obj) {
+        amvp_ensure_version_in_obj(ctx, obj);
+    }
+
+    data = json_serialize_to_string(val, &data_len);
+    if (!data || data_len <= 0) {
+        AMVP_LOG_ERR("Failed to serialize JSON from file");
+        json_value_free(val);
+        return AMVP_JSON_ERR;
+    }
+
+    AMVP_LOG_STATUS("Performing PUT request to: %s", endpoint_path);
+    rv = amvp_transport_put(ctx, endpoint_path, data, data_len);
+    if (rv == AMVP_PROTOCOL_RSP_ERR) {
+        rv = amvp_handle_protocol_error(ctx, ctx->error);
+        if (rv == AMVP_RETRY_OPERATION) {
+            rv = amvp_transport_put(ctx, endpoint_path, data, data_len);
+        }
+    }
+    if (rv != AMVP_SUCCESS) {
+        AMVP_LOG_ERR("PUT request failed");
+        goto end;
+    }
+
+    AMVP_LOG_STATUS("PUT request successful");
+    if (ctx->curl_buf && ctx->curl_read_ctr > 0) {
+        if (ctx->save_filename) {
+            rv = amvp_save_curl_buf_to_file(ctx);
+            if (rv != AMVP_SUCCESS) {
+                goto end;
+            }
+        } else {
+            AMVP_LOG_STATUS("Response:\n%s", ctx->curl_buf);
+        }
+    }
+
+end:
+    if (data) json_free_serialized_string(data);
+    if (val) json_value_free(val);
+    return rv;
+}
+
+AMVP_RESULT amvp_generic_post(AMVP_CTX *ctx, const char *endpoint_path, const char *filename) {
+    AMVP_RESULT rv = AMVP_SUCCESS;
+    JSON_Value *val = NULL;
+    JSON_Object *obj = NULL;
+    char *data = NULL;
+    int data_len = 0;
+
+    rv = amvp_generic_request_setup(ctx, endpoint_path);
+    if (rv != AMVP_SUCCESS) {
+        return rv;
+    }
+
+    if (!filename) {
+        AMVP_LOG_ERR("No JSON file provided for POST request");
+        return AMVP_MISSING_ARG;
+    }
+
+    if (strnlen_s(filename, AMVP_JSON_FILENAME_MAX + 1) > AMVP_JSON_FILENAME_MAX) {
+        AMVP_LOG_ERR("Provided filename is too long");
+        return AMVP_INVALID_ARG;
+    }
+
+    val = json_parse_file(filename);
+    if (!val) {
+        AMVP_LOG_ERR("Provided JSON file is invalid or does not exist: %s", filename);
+        return AMVP_INVALID_ARG;
+    }
+
+    obj = json_value_get_object(val);
+    if (obj) {
+        amvp_ensure_version_in_obj(ctx, obj);
+    }
+
+    data = json_serialize_to_string(val, &data_len);
+    if (!data || data_len <= 0) {
+        AMVP_LOG_ERR("Failed to serialize JSON from file");
+        json_value_free(val);
+        return AMVP_JSON_ERR;
+    }
+
+    AMVP_LOG_STATUS("Performing POST request to: %s", endpoint_path);
+    rv = amvp_transport_post(ctx, endpoint_path, data, data_len);
+    if (rv == AMVP_PROTOCOL_RSP_ERR) {
+        rv = amvp_handle_protocol_error(ctx, ctx->error);
+        if (rv == AMVP_RETRY_OPERATION) {
+            rv = amvp_transport_post(ctx, endpoint_path, data, data_len);
+        }
+    }
+    if (rv != AMVP_SUCCESS) {
+        AMVP_LOG_ERR("POST request failed");
+        goto end;
+    }
+
+    AMVP_LOG_STATUS("POST request successful");
+    if (ctx->curl_buf && ctx->curl_read_ctr > 0) {
+        if (ctx->save_filename) {
+            rv = amvp_save_curl_buf_to_file(ctx);
+            if (rv != AMVP_SUCCESS) {
+                goto end;
+            }
+        } else {
+            AMVP_LOG_STATUS("Response:\n%s", ctx->curl_buf);
+        }
+    }
+
+end:
+    if (data) json_free_serialized_string(data);
+    if (val) json_value_free(val);
+    return rv;
 }
 
 AMVP_RESULT amvp_set_get_save_file(AMVP_CTX *ctx, char *filename) {
@@ -336,46 +509,6 @@ AMVP_RESULT amvp_set_get_save_file(AMVP_CTX *ctx, char *filename) {
         return AMVP_MALLOC_FAIL;
     }
     strncpy_s(ctx->save_filename, filenameLen + 1, filename, filenameLen);
-    return AMVP_SUCCESS;
-}
-
-AMVP_RESULT amvp_mark_as_cert_req(AMVP_CTX *ctx, const char *module_file) {
-    if (!ctx) {
-        return AMVP_NO_CTX;
-    }
-
-    if (!module_file) {
-        AMVP_LOG_ERR("Missing module file");
-        return AMVP_INVALID_ARG;
-    }
-    if (strnlen_s(module_file, AMVP_JSON_FILENAME_MAX + 1) > AMVP_JSON_FILENAME_MAX) {
-        AMVP_LOG_ERR("Module file name is suspiciously long...");
-        return AMVP_INVALID_ARG;
-    }
-
-    strcpy_s(ctx->cert_req_module_file, AMVP_JSON_FILENAME_MAX + 1, module_file);
-    return AMVP_SUCCESS;
-}
-
-AMVP_RESULT amvp_mark_as_delete_only(AMVP_CTX *ctx, char *request_url) {
-    if (!ctx) {
-        return AMVP_NO_CTX;
-    }
-    if (!request_url) {
-        return AMVP_MISSING_ARG;
-    }
-    int requestLen = strnlen_s(request_url, AMVP_REQUEST_STR_LEN_MAX + 1);
-    if (requestLen > AMVP_REQUEST_STR_LEN_MAX || requestLen <= 0) {
-        AMVP_LOG_ERR("Request URL is too long or too short");
-        return AMVP_INVALID_ARG;
-    }
-
-    ctx->delete_string = calloc(AMVP_REQUEST_STR_LEN_MAX + 1, sizeof(char));
-    if (!ctx->delete_string) {
-        return AMVP_MALLOC_FAIL;
-    }
-
-    strcpy_s(ctx->delete_string, AMVP_REQUEST_STR_LEN_MAX + 1, request_url);
     return AMVP_SUCCESS;
 }
 
@@ -648,7 +781,7 @@ AMVP_RESULT amvp_check_cert_req_status(AMVP_CTX *ctx) {
         switch (status) {
         case AMVP_CERT_REQ_STATUS_INITIAL:
             AMVP_LOG_STATUS("Certification request is still initializing...");
-            rv = amvp_retry_handler(ctx, &retry_period, &time_waited_so_far, 1, AMVP_WAITING_FOR_TESTS);
+            rv = amvp_retry_handler(ctx, &retry_period, &time_waited_so_far);
             retry = 1;
             if (val) json_value_free(val);
             val = NULL;
@@ -699,7 +832,7 @@ end:
  * the server.  The server will respond with a set of vector set
  * identifiers that the client will need to process.
  */
-AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx) {
+AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx, const char *module_file) {
     AMVP_RESULT rv = AMVP_SUCCESS;
     char *reg = NULL;
     int reg_len = 0;
@@ -711,12 +844,17 @@ AMVP_RESULT amvp_mod_cert_req(AMVP_CTX *ctx) {
         return AMVP_NO_CTX;
     }
 
-    if (ctx->cert_req_module_file[0] == '\0') {
-        AMVP_LOG_ERR("Must provide module file name before certifying");
+    if (!module_file) {
+        AMVP_LOG_ERR("Must provide module file path");
         return AMVP_MISSING_ARG;
     }
 
-    module_file_val = json_parse_file(ctx->cert_req_module_file);
+    if (strnlen_s(module_file, AMVP_JSON_FILENAME_MAX + 1) > AMVP_JSON_FILENAME_MAX) {
+        AMVP_LOG_ERR("Module file name is suspiciously long...");
+        return AMVP_INVALID_ARG;
+    }
+
+    module_file_val = json_parse_file(module_file);
     if (!module_file_val) {
         AMVP_LOG_ERR("Provided module file is invalid or does not exist");
         return AMVP_INVALID_ARG;
@@ -1054,6 +1192,8 @@ AMVP_RESULT amvp_get_security_policy(AMVP_CTX *ctx) {
         }
 
         AMVP_LOG_STATUS("Security policy saved to file %s", ctx->save_filename);
+        free(ctx->save_filename);
+        ctx->save_filename = NULL;
         break;
     case AMVP_SP_STATUS_UNKNOWN:
     case AMVP_SP_STATUS_ERROR:
@@ -1373,24 +1513,16 @@ AMVP_RESULT amvp_get_schema_info(AMVP_CTX *ctx, AMVP_SCHEMA_TYPE schema_type, co
         return rv;
     }
 
-    if (!ctx->curl_buf || strlen(ctx->curl_buf) == 0) {
+    if (!ctx->curl_buf || ctx->curl_read_ctr <= 0) {
         AMVP_LOG_WARN("No response data received");
         return AMVP_SUCCESS;
     }
 
     if (ctx->save_filename) {
-        FILE *fp = fopen(ctx->save_filename, "w");
-        if (!fp) {
-            AMVP_LOG_ERR("Failed to open save file: %s", ctx->save_filename);
-            return AMVP_INTERNAL_ERR;
+        rv = amvp_save_curl_buf_to_file(ctx);
+        if (rv != AMVP_SUCCESS) {
+            return rv;
         }
-        if (fwrite(ctx->curl_buf, 1, strlen(ctx->curl_buf), fp) != strlen(ctx->curl_buf)) {
-            AMVP_LOG_ERR("Failed to write schema response to file: %s", ctx->save_filename);
-            fclose(fp);
-            return AMVP_INTERNAL_ERR;
-        }
-        fclose(fp);
-        AMVP_LOG_STATUS("Schema response saved to: %s", ctx->save_filename);
     } else {
         if (version && strnlen_s(version, AMVP_ATTR_URL_MAX) > 0) {
             AMVP_LOG_STATUS("Schema response:\n%s", ctx->curl_buf);

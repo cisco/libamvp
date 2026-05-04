@@ -428,7 +428,7 @@ Test(SET_SESSION_PARAMS, mark_as_sample_null_ctx, .init = setup, .fini = teardow
  * This test frees ctx
  */
 Test(FREE_TEST_SESSION, good, .init = setup) {
-    rv = amvp_free_test_session(ctx);
+    rv = amvp_free_ctx(ctx);
     cr_assert(rv == AMVP_SUCCESS);
 }
 
@@ -438,7 +438,7 @@ Test(FREE_TEST_SESSION, good, .init = setup) {
 Test(FREE_TEST_SESSION, null_ctx, .init = setup) {
     free(ctx);    /* it got allocated in setup */
     ctx = NULL;
-    rv = amvp_free_test_session(ctx);
+    rv = amvp_free_ctx(ctx);
     cr_assert(rv == AMVP_SUCCESS);
 }
 
@@ -446,7 +446,7 @@ Test(FREE_TEST_SESSION, null_ctx, .init = setup) {
  * This test frees ctx - should still succeed
  */
 Test(FREE_TEST_SESSION, good_full, .init = setup_full_ctx) {
-    rv = amvp_free_test_session(ctx);
+    rv = amvp_free_ctx(ctx);
     cr_assert(rv == AMVP_SUCCESS);
 }
 
@@ -631,10 +631,10 @@ Test(REFRESH, good_with_totp, .init = setup_full_ctx, .fini = teardown) {
  * Good tests - should still pass even if ctx is null
  */
 Test(FREE_CTX, good, .init = setup_full_ctx) {
-    rv = amvp_free_test_session(ctx);
+    rv = amvp_free_ctx(ctx);
     cr_assert(rv == AMVP_SUCCESS);
     ctx = NULL;
-    rv = amvp_free_test_session(ctx);
+    rv = amvp_free_ctx(ctx);
     cr_assert(rv == AMVP_SUCCESS);
 }
 
